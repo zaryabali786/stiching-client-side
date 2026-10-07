@@ -47,6 +47,16 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/orders/order-detail/order-detail.page').then((m) => m.OrderDetailPage),
       },
       {
+        path: 'inbox',
+        title: 'Inbox',
+        loadComponent: () => import('./pages/inbox/inbox.page').then((m) => m.InboxPage),
+      },
+      {
+        path: 'inbox/:id',
+        title: 'Email',
+        loadComponent: () => import('./pages/inbox/inbox.page').then((m) => m.InboxPage),
+      },
+      {
         path: 'sizes',
         title: 'Sizes',
         loadComponent: () => import('./pages/sizes/sizes.page').then((m) => m.SizesPage),

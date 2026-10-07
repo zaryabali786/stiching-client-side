@@ -67,7 +67,7 @@ import { copyText } from '../core/utils/image';
     .ship-card {
       background: linear-gradient(160deg, var(--c-brand) 0%, var(--c-brand-2) 100%);
       color: var(--c-on-dark); border-radius: 20px; padding: 18px; position: relative; overflow: hidden;
-      box-shadow: 0 10px 26px rgba(15, 57, 43, 0.2);
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);
     }
     .ship-card::after {
       content: ''; position: absolute; right: -40px; top: -40px; width: 140px; height: 140px; border-radius: 50%;

@@ -18,6 +18,16 @@
         <ion-icon [name]="copied() ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon>
       </button>
     }
+    <a
+      class="bell"
+      routerLink="/app/inbox"
+      [attr.aria-label]="mailbox.unread() > 0 ? 'Inbox, ' + mailbox.unread() + ' unread' : 'Inbox'"
+    >
+      <ion-icon name="mail-outline" aria-hidden="true"></ion-icon>
+      @if (mailbox.unread() > 0) {
+        <span class="badge" aria-hidden="true">{{ mailBadge() }}</span>
+      }
+    </a>
     <button
       type="button"
       class="bell"

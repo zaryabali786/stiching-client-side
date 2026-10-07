@@ -71,6 +71,24 @@ export class OverviewPage {
     return m.length ? `${m[0].month} – ${m[m.length - 1].month}` : '';
   });
 
+  currentMonthKey = computed(() => new Date().toISOString().slice(0, 7));
+  activeBarMonth = signal<string | null>(null);
+
+  monthlyTotal = computed(() => {
+    return (this.overview()?.monthly ?? []).reduce((acc, m) => acc + (m.count || 0), 0);
+  });
+
+  highestMonth = computed(() => {
+    const list = this.overview()?.monthly ?? [];
+    if (!list.length) return null;
+    const sorted = [...list].sort((a, b) => b.count - a.count);
+    return sorted[0].count > 0 ? sorted[0] : null;
+  });
+
+  hoverBar(key: string | null): void {
+    this.activeBarMonth.set(key);
+  }
+
   private overview$ = new Subject<Period>();
 
   constructor() {
@@ -150,6 +168,6 @@ export class OverviewPage {
   }
 
   actionVerb(status: string): string {
-    return status === 'customer_approval' ? 'Review' : 'Pay now';
+    return status === 'draft' ? 'Complete' : status === 'customer_approval' ? 'Review' : 'Pay now';
   }
 }

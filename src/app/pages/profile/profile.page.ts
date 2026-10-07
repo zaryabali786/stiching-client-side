@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { MailboxService } from '../../core/services/mailbox.service';
 import { FormsModule } from '@angular/forms';
 import { IonIcon, IonSpinner } from '@ionic/angular';
 import { AuthService } from '../../core/services/auth.service';
@@ -11,7 +13,7 @@ import { COUNTRIES, passwordStrength } from '../auth/register/register.data';
 
 @Component({
   selector: 'app-profile',
-  imports: [DatePipe, FormsModule, IonIcon, IonSpinner, ShipToCardComponent],
+  imports: [DatePipe, RouterLink, FormsModule, IonIcon, IonSpinner, ShipToCardComponent],
   templateUrl: './profile.page.html',
   styleUrl: './profile.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -19,6 +21,7 @@ import { COUNTRIES, passwordStrength } from '../auth/register/register.data';
 export class ProfilePage {
   protected auth = inject(AuthService);
   private toast = inject(ToastService);
+  protected mailbox = inject(MailboxService);
 
   readonly countries = COUNTRIES;
   user = this.auth.user;
@@ -119,6 +122,22 @@ export class ProfilePage {
       this.pwError.set(errorMessage(err));
     } finally {
       this.changingPw.set(false);
+    }
+  }
+
+  /** The personal shopping email shown on the profile (type it at any shop's checkout; the mail lands in the Inbox). */
+  shoppingEmail = computed(() => this.user()?.mailbox_address ?? null);
+  mailCopied = signal(false);
+
+  async copyShoppingEmail(): Promise<void> {
+    const a = this.shoppingEmail();
+    if (!a) return;
+    if (await copyText(a)) {
+      this.toast.success("Shopping email copied — paste it at the shop's checkout.");
+      this.mailCopied.set(true);
+      setTimeout(() => this.mailCopied.set(false), 2000);
+    } else {
+      this.toast.error('Could not copy — your shopping email is ' + a + '.');
     }
   }
 

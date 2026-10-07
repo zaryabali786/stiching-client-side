@@ -130,6 +130,12 @@ export class NotificationService {
     });
   }
 
+  /** A notification arrived over the websocket: add it to the open list at once and confirm the count with the server. */
+  pushLive(n: AppNotification | null | undefined): void {
+    if (n?.id) this.items.update((list) => (list.some((x) => x.id === n.id) ? list : [n, ...list]));
+    this.refreshCount();
+  }
+
   refreshCount(): void {
     this.api.get<{ unreadCount: number }>('/notifications/unread-count').subscribe({
       next: (r) => this.unreadCount.set(r.unreadCount ?? 0),

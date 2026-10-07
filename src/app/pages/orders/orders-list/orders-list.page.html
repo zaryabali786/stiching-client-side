@@ -60,7 +60,10 @@
   } @else {
     <div class="list" [class.refreshing]="loading()" [attr.aria-busy]="loading()">
       @for (o of items(); track o.id) {
-        <a class="order-tile" [routerLink]="['/app/orders', o.id]">
+        <a class="order-tile" [class.is-draft]="o.status === 'draft'" [routerLink]="['/app/orders', o.id]">
+          @if (o.status === 'draft') {
+            <span class="draft-corner"><ion-icon name="mail-outline" aria-hidden="true"></ion-icon> Draft · from mail</span>
+          }
           <span [class]="'brand-swatch ' + swatch(o.brand).cls" aria-hidden="true">{{ swatch(o.brand).initial }}</span>
           <div class="tile-body">
             <div class="tile-top">

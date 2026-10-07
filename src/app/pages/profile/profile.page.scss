@@ -141,3 +141,52 @@
     text-align: right;
   }
 }
+
+.shopping-mail {
+  .mail-address {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    min-height: 48px;
+    margin-top: 4px;
+    padding: 10px 14px;
+    border: 1px dashed #ead9b8;
+    border-radius: 12px;
+    background: var(--gold-tint);
+    color: var(--c-ink);
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+
+    .mono {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    ion-icon {
+      flex: none;
+      font-size: 20px;
+    }
+  }
+
+  .mail-note {
+    margin: 10px 0 0;
+    color: var(--c-muted);
+    font-size: 13px;
+  }
+
+  .mail-count {
+    min-width: 18px;
+    margin-left: 4px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--t-red-dot);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+  }
+}

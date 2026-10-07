@@ -8,6 +8,7 @@ import { OrderStatus } from '../models/api.models';
 export type StatusTone = 'neutral' | 'blue' | 'amber' | 'green' | 'purple' | 'red';
 
 const TONES: Record<OrderStatus, StatusTone> = {
+  draft: 'amber',
   submitted: 'neutral',
   received: 'blue',
   assigned: 'blue',
@@ -28,7 +29,7 @@ const TONES: Record<OrderStatus, StatusTone> = {
 
 /** Statuses where the customer has to do something (pay / approve). */
 export function needsCustomerAction(status: string | null | undefined): boolean {
-  return status === 'customer_approval' || status === 'invoice_issued' || status === 'awaiting_payment';
+  return status === 'draft' || status === 'customer_approval' || status === 'invoice_issued' || status === 'awaiting_payment';
 }
 
 export function statusTone(status: string | null | undefined): StatusTone {
@@ -46,6 +47,7 @@ export function humanizeStatus(status: string | null | undefined): string {
 export const PROGRESS_STEPS = ['Submitted', 'Received', 'Stitching', 'Packed', 'Paid', 'Shipped', 'Delivered'] as const;
 
 const STEP_INDEX: Record<OrderStatus, number> = {
+  draft: -1,
   submitted: 0,
   received: 1,
   assigned: 1,
@@ -71,6 +73,8 @@ export function progressIndex(status: OrderStatus): number {
 /** Short, friendly hint for what happens next in each status. */
 export function statusHint(status: OrderStatus): string {
   switch (status) {
+    case 'draft':
+      return 'We made this draft from your email. Add your courier and sizes, then submit it.';
     case 'submitted':
       return 'Waiting for your parcel to arrive at our atelier.';
     case 'received':

@@ -3,24 +3,71 @@
   justify-content: space-between;
   align-items: flex-end;
   gap: 12px;
+  margin-bottom: 2px;
+
+  .eyebrow {
+    font-size: var(--fs-2xs);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--c-gold-dark);
+    margin-bottom: 2px;
+  }
+
+  .page-title {
+    font-family: var(--font-serif);
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--c-ink);
+    letter-spacing: -0.01em;
+  }
 }
 
 .new-btn {
   flex: none;
+  min-height: 42px;
+  padding: 0 18px;
+  font-size: 12.5px;
 }
 
-.search .input {
-  -webkit-appearance: none;
+.search {
+  margin: 4px 0 2px;
 
-  &::-webkit-search-cancel-button {
-    display: none;
+  .input-affix {
+    .input {
+      min-height: 46px;
+      border-radius: 999px;
+      background: var(--c-surface);
+      border: 1px solid var(--c-line);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+      padding-left: 42px;
+      padding-right: 42px;
+      font-size: var(--fs-body);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+      &:focus {
+        border-color: var(--c-brand);
+        box-shadow: 0 0 0 3px var(--c-brand-glow);
+      }
+
+      &::-webkit-search-cancel-button {
+        display: none;
+      }
+    }
+
+    .affix-icon {
+      left: 14px;
+      font-size: 18px;
+      color: var(--c-muted);
+    }
   }
 }
 
 .list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   transition: opacity 0.2s ease;
 
   &.refreshing {
@@ -28,11 +75,55 @@
   }
 }
 
+.load-more-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 0;
+  font-size: var(--fs-sm);
+  color: var(--c-muted);
+
+  &.end {
+    font-size: var(--fs-xs);
+    color: var(--c-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+}
+
 .sentinel {
   height: 1px;
 }
 
-.end {
-  font-size: var(--fs-sm);
-  color: var(--c-faint);
+/* An order made automatically from an email: a label in the top-right corner until the customer submits it */
+.order-tile {
+  position: relative;
+
+  &.is-draft {
+    padding-top: 30px;
+    border-color: var(--t-amber-line);
+    background: var(--t-amber-bg);
+  }
+}
+
+.draft-corner {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px 3px 9px;
+  border-radius: 0 17px 0 12px;
+  background: var(--t-amber-dot);
+  color: #ffffff;
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+
+  ion-icon {
+    font-size: 12px;
+  }
 }

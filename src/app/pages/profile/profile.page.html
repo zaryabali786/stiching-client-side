@@ -15,6 +15,28 @@
       <p class="member">Member since {{ u.created_at | date: 'MMMM y' }}</p>
     </section>
 
+    <!-- Shopping email: use it at any shop's checkout -->
+    <section class="card shopping-mail">
+      <div class="card-head">
+        <h3 class="card-title">Your shopping email</h3>
+        <a class="btn btn-ghost btn-sm" routerLink="/app/inbox">
+          <ion-icon name="mail-outline" aria-hidden="true"></ion-icon> Inbox
+          @if (mailbox.unread() > 0) {
+            <span class="mail-count">{{ mailbox.unread() }}</span>
+          }
+        </a>
+      </div>
+      @if (shoppingEmail(); as mail) {
+        <button type="button" class="mail-address" (click)="copyShoppingEmail()" aria-label="Copy your shopping email">
+          <span class="mono">{{ mail }}</span>
+          <ion-icon [name]="mailCopied() ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon>
+        </button>
+        <p class="mail-note">Type this email when you check out at any online shop. Their order emails arrive in your Inbox, and we turn them into a draft order for you.</p>
+      } @else {
+        <p class="mail-note">Your shopping email isn't ready yet. Open your Inbox to create it.</p>
+      }
+    </section>
+
     <!-- Details / edit -->
     <section class="card">
       <div class="card-head">

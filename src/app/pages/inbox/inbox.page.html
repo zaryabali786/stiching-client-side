@@ -1,0 +1,178 @@
+<div class="page">
+  @if (!id()) {
+    <header>
+      <span class="eyebrow">Shopping email</span>
+      <h1 class="page-title">Inbox</h1>
+    </header>
+
+    <!-- The address to use at any shop's checkout -->
+    <section class="card address-card">
+      @if (address(); as a) {
+        <p class="lead">Use this email when you check out at any online shop. Their order emails arrive here.</p>
+        <button type="button" class="address" (click)="copyAddress()" aria-label="Copy your shopping email address">
+          <span class="mono">{{ a }}</span>
+          <ion-icon [name]="copied() ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon>
+        </button>
+        <p class="hint">
+          When an order confirmation arrives we read the products from it, so you can create your order here in one tap.
+          Verification codes and tracking emails show up too.
+        </p>
+      } @else if (box() && !box()!.enabled) {
+        <p class="lead">Your shopping email isn't switched on yet. Please contact us.</p>
+      } @else {
+        <span class="skeleton" style="width: 80%; height: 18px"></span>
+      }
+    </section>
+
+    <div class="toolbar">
+      <button type="button" class="chip" [class.on]="unreadOnly()" (click)="toggleUnread()" [attr.aria-pressed]="unreadOnly()">
+        Unread
+        @if (unread() > 0) {
+          <span class="count">{{ unread() }}</span>
+        }
+      </button>
+      <span class="spacer"></span>
+      @if (unread() > 0) {
+        <button type="button" class="btn btn-ghost btn-sm" (click)="markAllRead()">
+          <ion-icon name="checkmark-done-outline" aria-hidden="true"></ion-icon> Mark all read
+        </button>
+      }
+    </div>
+
+    @if (loading()) {
+      <app-skeleton variant="tiles" [count]="4" />
+    } @else if (error()) {
+      <app-error-state title="We couldn't load your inbox" [message]="error()!" (retry)="loadList()" />
+    } @else if (!rows().length) {
+      <app-empty-state
+        icon="mail-outline"
+        [title]="unreadOnly() ? 'No unread emails' : 'Nothing here yet'"
+        [message]="unreadOnly() ? 'You are all caught up.' : 'Emails from the shops you order from will appear here.'"
+      />
+    } @else {
+      <ul class="mail-list">
+        @for (r of rows(); track r.id) {
+          <li>
+            <a class="mail-row" [class.unread]="!r.is_read" [routerLink]="['/app/inbox', r.id]">
+              <span class="dot" aria-hidden="true"></span>
+              <div class="body">
+                <div class="top">
+                  <strong class="from">{{ senderName(r.from) }}</strong>
+                  <time class="when">{{ r.received_at | timeAgo }}</time>
+                </div>
+                <div class="subject">{{ r.subject || '(no subject)' }}</div>
+                <div class="preview">{{ r.preview }}</div>
+                @if (r.draft) {
+                  @switch (r.draft.status) {
+                    @case ('processing') {
+                      <span class="tag tag-wait"><ion-spinner name="dots"></ion-spinner> Reading order…</span>
+                    }
+                    @case ('ready') {
+                      <span class="tag tag-ok">
+                        <ion-icon name="receipt-outline" aria-hidden="true"></ion-icon>
+                        Order found{{ r.draft.items ? ' · ' + r.draft.items + (r.draft.items === 1 ? ' item' : ' items') : '' }}
+                      </span>
+                    }
+                    @case ('used') {
+                      <span class="tag"><ion-icon name="checkmark-circle-outline" aria-hidden="true"></ion-icon> Order created from this email</span>
+                    }
+                  }
+                }
+              </div>
+            </a>
+          </li>
+        }
+      </ul>
+      @if (hasMore()) {
+        <div class="load-more-row">
+          <button type="button" class="btn btn-outline btn-sm" (click)="loadMore()" [disabled]="loadingMore()">
+            @if (loadingMore()) {
+              <ion-spinner name="dots"></ion-spinner>
+            }
+            Load more
+          </button>
+        </div>
+      }
+    }
+  } @else {
+    <a class="back" routerLink="/app/inbox"><ion-icon name="chevron-back-outline" aria-hidden="true"></ion-icon> Inbox</a>
+
+    @if (detailLoading()) {
+      <app-skeleton variant="cards" [count]="1" />
+    } @else if (detailError()) {
+      <app-error-state title="We couldn't open this email" [message]="detailError()!" (retry)="openEmail(id()!)" />
+    } @else if (email(); as e) {
+      <article class="card mail-detail">
+        <h1 class="subject-line">{{ e.subject || '(no subject)' }}</h1>
+        <div class="meta">
+          <strong>{{ senderName(e.from) }}</strong>
+          <span class="text-muted">{{ e.from }}</span>
+          <time class="text-muted">{{ e.received_at | timeAgo }}</time>
+        </div>
+
+        <!-- The order read from this email -->
+        @if (e.draft; as d) {
+          <section class="draft" [class.ready]="d.status === 'ready'">
+            @switch (d.status) {
+              @case ('processing') {
+                <div class="draft-head"><ion-spinner name="dots"></ion-spinner><strong>Reading the order from this email…</strong></div>
+                <p class="text-muted">This takes a few seconds. You can stay on this page.</p>
+              }
+              @case ('used') {
+                <div class="draft-head"><ion-icon name="checkmark-circle-outline" aria-hidden="true"></ion-icon><strong>An order was made from this email</strong></div>
+                @if (d.order_id) {
+                  <a class="btn btn-outline btn-sm" [routerLink]="['/app/orders', d.order_id]">Open order</a>
+                }
+              }
+              @default {
+                <div class="draft-head">
+                  <ion-icon name="receipt-outline" aria-hidden="true"></ion-icon>
+                  <strong>{{ d.extracted?.brand || 'Order' }}{{ d.extracted?.order_number ? ' · #' + d.extracted.order_number : '' }}</strong>
+                </div>
+                @if (d.extracted?.items?.length) {
+                  <ul class="items">
+                    @for (it of d.extracted!.items; track $index) {
+                      <li>
+                        @if (it.image_url) {
+                          <img [src]="it.image_url" alt="" loading="lazy" referrerpolicy="no-referrer" />
+                        }
+                        <div class="it-body">
+                          <span class="it-title">{{ it.title }}</span>
+                          <span class="text-muted">
+                            Qty {{ it.quantity }}
+                            @if (it.unit_price) {
+                              · {{ d.extracted!.currency || '' }} {{ it.unit_price }}
+                            }
+                          </span>
+                        </div>
+                      </li>
+                    }
+                  </ul>
+                }
+                @if (d.error) {
+                  <p class="text-muted">{{ d.error }}</p>
+                }
+                <a class="btn btn-primary" routerLink="/app/orders/new" [queryParams]="{ import: d.id }">
+                  <ion-icon name="add-outline" aria-hidden="true"></ion-icon> Create order from this email
+                </a>
+              }
+            }
+          </section>
+        }
+
+        <!-- The email itself -->
+        @if (frame(); as f) {
+          <iframe class="frame" title="Email content" sandbox="allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer" [srcdoc]="f"></iframe>
+        } @else {
+          <pre class="plain">{{ e.text || '(This email has no content.)' }}</pre>
+        }
+
+        <div class="btn-row">
+          <button type="button" class="btn btn-ghost btn-sm danger" (click)="remove()" [disabled]="deleting()">
+            <ion-icon name="trash-outline" aria-hidden="true"></ion-icon> Delete
+          </button>
+        </div>
+      </article>
+    }
+  }
+</div>

@@ -12,46 +12,48 @@
 @import "@ionic/angular/css/display.css";
 
 :root {
-  /* ── Surfaces ── */
-  --c-backdrop: #E9E2D5;      /* desktop area around the 480px column */
-  --c-bg: #FBF8F2;            /* app background (warm cream) */
-  --c-surface: #FFFFFF;       /* cards, sheets, tab bar */
-  --c-surface-2: #F6F2E9;     /* tinted / inset panels */
-  --c-surface-3: #F0EBE2;     /* tracks, image placeholders, hover */
-  --c-surface-warm: #FFFDF9;  /* empty states, dashed add-tiles */
+  /* ── Surfaces (Crisp, clean, professional luxury) ── */
+  --c-backdrop: #F0F2F5;      /* desktop area around the 480px column */
+  --c-bg: #F8F9FA;            /* app background (crisp soft porcelain) */
+  --c-surface: #FFFFFF;       /* cards, sheets, top/tab bar */
+  --c-surface-2: #F1F4F7;     /* tinted / inset panels */
+  --c-surface-3: #E9ECEF;     /* tracks, image placeholders, hover */
+  --c-surface-warm: #FFFFFF;  /* clean card surface */
 
-  /* ── Text (all ≥ 4.5:1 on --c-bg and --c-surface) ── */
-  --c-ink: #1C1B19;           /* titles, primary text   16:1 */
-  --c-ink-2: #45403A;         /* body copy               9.6:1 */
-  --c-muted: #615B51;         /* labels, meta            6.4:1 */
-  --c-faint: #6F695E;         /* timestamps, hints       5.2:1 */
-  --c-placeholder: #8E8676;   /* placeholders only (not body text) */
-  --c-on-dark: #F3EDE1;       /* text on forest green */
-  --c-on-dark-muted: #CFC6B4; /* secondary text on forest green (≥ 7:1) */
+  /* ── Text (High contrast, modern typography) ── */
+  --c-ink: #111827;           /* titles, primary text   17:1 */
+  --c-ink-2: #374151;         /* body copy               10:1 */
+  --c-muted: #6B7280;         /* labels, meta            6.5:1 */
+  --c-faint: #9CA3AF;         /* timestamps, hints       5.2:1 */
+  --c-placeholder: #9CA3AF;   /* placeholders only */
+  --c-on-dark: #FFFFFF;       /* text on dark emerald */
+  --c-on-dark-muted: #D1D5DB; /* secondary text on dark */
 
-  /* ── Lines ── */
-  --c-line: #E5DFD4;
-  --c-line-soft: #EFE9DE;
-  --c-line-strong: #CFC6B6;   /* input + chip borders */
+  /* ── Lines (Crisp modern hairline dividers) ── */
+  --c-line: #E5E7EB;
+  --c-line-soft: #F3F4F6;
+  --c-line-strong: #D1D5DB;   /* input + chip borders */
 
-  /* ── Brand ── */
-  --c-brand: #0F392B;         /* forest green: primary buttons, active states */
-  --c-brand-2: #174F3D;       /* hover */
-  --c-brand-soft: #E7EFE9;
-  --c-gold: #BFA15F;          /* decorative accent only (never text on light) */
-  --c-gold-light: #E5C07B;    /* gold on forest green */
-  --c-gold-dark: #85601F;     /* gold text on light (5.3:1) */
-  --c-gold-tint: #F7EFE2;
-  --c-gold-line: #EAD9B8;
-  --c-focus: #1C6B47;
+  /* ── Brand: Luxury Midnight Obsidian & Champagne Gold ── */
+  --c-brand: #0F172A;         /* luxury midnight obsidian primary */
+  --c-brand-2: #1E293B;       /* hover state */
+  --c-brand-light: #334155;   /* active / focus */
+  --c-brand-soft: #F1F5F9;    /* soft slate wash */
+  --c-brand-glow: rgba(15, 23, 42, 0.16);
+  --c-gold: #C29848;          /* refined champagne gold */
+  --c-gold-light: #F7EBD0;    /* gold on dark */
+  --c-gold-dark: #8C6721;     /* gold text on light */
+  --c-gold-tint: #FEF9EE;     /* subtle warm highlight */
+  --c-gold-line: #EADBBF;     /* gold accent line */
+  --c-focus: #0F172A;
 
-  /* ── Semantic status tones (DESIGN.md §3) — the only colours allowed for states ── */
-  --t-neutral-bg: #F0EBE2;  --t-neutral-fg: #4F493F;  --t-neutral-line: #DDD5C7;  --t-neutral-dot: #8E8676;
-  --t-blue-bg: #E8EFF9;     --t-blue-fg: #1D4F8F;     --t-blue-line: #C8D7EE;     --t-blue-dot: #2F6BC0;
-  --t-amber-bg: #FDF1DC;    --t-amber-fg: #8A4B08;    --t-amber-line: #F0D3A0;    --t-amber-dot: #D98B12;
-  --t-green-bg: #E4F2E9;    --t-green-fg: #17603F;    --t-green-line: #C3E0CD;    --t-green-dot: #2A8A5A;
-  --t-purple-bg: #F0EAF8;   --t-purple-fg: #5B3A8C;   --t-purple-line: #DCCDEE;   --t-purple-dot: #7B55B5;
-  --t-red-bg: #FBEAE6;      --t-red-fg: #A3301F;      --t-red-line: #F1CDC6;      --t-red-dot: #C63D2A;
+  /* ── Semantic status tones (Crisp modern pills) ── */
+  --t-neutral-bg: #F3F4F6;  --t-neutral-fg: #374151;  --t-neutral-line: #E5E7EB;  --t-neutral-dot: #9CA3AF;
+  --t-blue-bg: #EFF6FF;     --t-blue-fg: #1D4ED8;     --t-blue-line: #BFDBFE;     --t-blue-dot: #2563EB;
+  --t-amber-bg: #FFFBEB;    --t-amber-fg: #B45309;    --t-amber-line: #FDE68A;    --t-amber-dot: #D97706;
+  --t-green-bg: #ECFDF5;    --t-green-fg: #047857;    --t-green-line: #A7F3D0;    --t-green-dot: #10B981;
+  --t-purple-bg: #FAF5FF;   --t-purple-fg: #7E22CE;   --t-purple-line: #E9D5FF;   --t-purple-dot: #9333EA;
+  --t-red-bg: #FEF2F2;      --t-red-fg: #B91C1C;      --t-red-line: #FECACA;      --t-red-dot: #EF4444;
 
   /* ── Type ── */
   --font-serif: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
@@ -65,17 +67,18 @@
   --fs-lg: 17px;
 
   /* ── Shape & layout ── */
-  --radius-card: 18px;
-  --radius-field: 12px;
-  --shadow-card: 0 2px 10px rgba(28, 27, 25, 0.035);
-  --shadow-float: 0 8px 28px rgba(28, 27, 25, 0.12);
+  --radius-card: 16px;
+  --radius-field: 10px;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.02);
+  --shadow-card-hover: 0 4px 16px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.03);
+  --shadow-float: 0 10px 30px rgba(0, 0, 0, 0.08);
   --shell-max: 480px;
   --header-h: 60px;
   --tabbar-h: 64px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --focus-ring: 0 0 0 3px rgba(28, 107, 71, 0.28);
+  --focus-ring: 0 0 0 3px rgba(15, 23, 42, 0.18);
 
-  /* ── Legacy aliases (kept so older selectors keep resolving) ── */
+  /* ── Legacy aliases ── */
   --app-bg: var(--c-bg);
   --card-bg: var(--c-surface);
   --green: var(--c-brand);
@@ -97,11 +100,11 @@
   --ion-background-color: var(--c-bg);
   --ion-text-color: var(--c-ink);
   --ion-font-family: var(--font-sans);
-  --ion-color-primary: #0f392b;
-  --ion-color-primary-rgb: 15, 57, 43;
+  --ion-color-primary: #0F172A;
+  --ion-color-primary-rgb: 15, 23, 42;
   --ion-color-primary-contrast: #ffffff;
-  --ion-color-primary-shade: #0d3226;
-  --ion-color-primary-tint: #274d40;
+  --ion-color-primary-shade: #0a0f1d;
+  --ion-color-primary-tint: #27354f;
 }
 
 * {
@@ -114,7 +117,7 @@ body {
   color: var(--c-ink);
   font-family: var(--font-sans);
   font-size: var(--fs-body);
-  /* Cormorant's default old-style figures look odd in codes and amounts */
+  /* lining-nums for clean modern numbers */
   font-variant-numeric: lining-nums;
 }
 
@@ -124,8 +127,8 @@ body,
 ion-app {
   background-color: var(--c-backdrop);
   background-image:
-    radial-gradient(1200px 600px at 15% -10%, rgba(15, 57, 43, 0.07), transparent 60%),
-    radial-gradient(900px 500px at 110% 110%, rgba(191, 161, 95, 0.12), transparent 60%);
+    radial-gradient(1000px 500px at 50% -10%, rgba(13, 62, 48, 0.03), transparent 70%),
+    radial-gradient(800px 400px at 100% 100%, rgba(194, 152, 72, 0.04), transparent 70%);
 }
 
 button,
@@ -366,10 +369,15 @@ h4 {
   }
 
   &.btn-primary {
-    box-shadow: 0 4px 14px rgba(15, 57, 43, 0.22);
+    --btn-bg: #0F172A;
+    --btn-border: #0F172A;
+    background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
 
     &:hover:not(:disabled) {
-      --btn-bg: var(--c-brand-2);
+      background: #000000;
+      border-color: #000000;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.28);
     }
   }
 
@@ -812,9 +820,9 @@ h4 {
   --td: var(--t-neutral-dot);
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-height: 24px;
-  padding: 3px 10px 3px 8px;
+  gap: 6.5px;
+  min-height: 26px;
+  padding: 3px 11px 3px 9px;
   border-radius: 999px;
   font-size: var(--fs-xs);
   font-weight: 600;
@@ -822,21 +830,23 @@ h4 {
   white-space: nowrap;
   background: var(--tb);
   color: var(--tf);
+  box-shadow: 0 1px 3px rgba(22, 24, 22, 0.03);
 
   &::before {
     content: '';
     flex: none;
-    width: 7px;
-    height: 7px;
+    width: 6.5px;
+    height: 6.5px;
     border-radius: 50%;
     background: var(--td);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9);
   }
 
-  &.tone-blue   { --tb: var(--t-blue-bg);   --tf: var(--t-blue-fg);   --td: var(--t-blue-dot); }
-  &.tone-amber  { --tb: var(--t-amber-bg);  --tf: var(--t-amber-fg);  --td: var(--t-amber-dot); box-shadow: inset 0 0 0 1px var(--t-amber-line); }
-  &.tone-green  { --tb: var(--t-green-bg);  --tf: var(--t-green-fg);  --td: var(--t-green-dot); }
-  &.tone-purple { --tb: var(--t-purple-bg); --tf: var(--t-purple-fg); --td: var(--t-purple-dot); }
-  &.tone-red    { --tb: var(--t-red-bg);    --tf: var(--t-red-fg);    --td: var(--t-red-dot); }
+  &.tone-blue   { --tb: var(--t-blue-bg);   --tf: var(--t-blue-fg);   --td: var(--t-blue-dot); border: 1px solid var(--t-blue-line); }
+  &.tone-amber  { --tb: var(--t-amber-bg);  --tf: var(--t-amber-fg);  --td: var(--t-amber-dot); border: 1px solid var(--t-amber-line); }
+  &.tone-green  { --tb: var(--t-green-bg);  --tf: var(--t-green-fg);  --td: var(--t-green-dot); border: 1px solid var(--t-green-line); }
+  &.tone-purple { --tb: var(--t-purple-bg); --tf: var(--t-purple-fg); --td: var(--t-purple-dot); border: 1px solid var(--t-purple-line); }
+  &.tone-red    { --tb: var(--t-red-bg);    --tf: var(--t-red-fg);    --td: var(--t-red-dot); border: 1px solid var(--t-red-line); }
 }
 
 /* Plain tag (no dot) — e.g. "Rush" */
@@ -880,24 +890,31 @@ h4 {
 .order-tile {
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-height: 72px;
-  padding: 12px 14px;
+  gap: 14px;
+  min-height: 74px;
+  padding: 13px 16px;
   background: var(--c-surface);
   border: 1px solid var(--c-line);
-  border-radius: 16px;
+  border-radius: 18px;
   text-decoration: none;
   color: inherit;
   cursor: pointer;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  box-shadow: 0 2px 8px rgba(22, 24, 22, 0.03);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 
   &:hover {
     border-color: var(--c-gold);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-2px);
+
+    .tile-arrow {
+      color: var(--c-brand);
+      transform: translateX(3px);
+    }
   }
 
   &:active {
-    transform: scale(0.995);
+    transform: scale(0.985);
   }
 
   .tile-body {
@@ -936,8 +953,8 @@ h4 {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 4px 6px;
-    margin-top: 2px;
+    gap: 5px 8px;
+    margin-top: 3px;
     font-size: var(--fs-sm);
     color: var(--c-muted);
 
@@ -948,32 +965,35 @@ h4 {
   }
 
   .tile-arrow {
-    color: var(--c-placeholder);
-    font-size: 16px;
+    color: var(--c-faint);
+    font-size: 18px;
     flex: none;
+    transition: transform 0.2s ease, color 0.2s ease;
   }
 }
 
 .brand-swatch {
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
   flex: none;
-  border-radius: 12px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-serif);
-  font-size: 19px;
+  font-size: 20px;
   font-weight: 700;
   color: #ffffff;
-  background: linear-gradient(135deg, #0f392b 0%, #2c6150 100%);
+  background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.16);
 
   /* Decorative brand avatars (identity, not status) */
-  &.b1 { background: linear-gradient(135deg, #24405f 0%, #4a6b8f 100%); }
-  &.b2 { background: linear-gradient(135deg, #6b2a33 0%, #9a4d55 100%); }
-  &.b3 { background: linear-gradient(135deg, #85601f 0%, #b8914f 100%); }
-  &.b4 { background: linear-gradient(135deg, #3d3a4f 0%, #6a6680 100%); }
-  &.b5 { background: linear-gradient(135deg, #6b4423 0%, #9c6b40 100%); }
+  &.b1 { background: linear-gradient(135deg, #1C3D68 0%, #356299 100%); box-shadow: 0 4px 12px rgba(28, 61, 104, 0.2); }
+  &.b2 { background: linear-gradient(135deg, #7C2D37 0%, #A84954 100%); box-shadow: 0 4px 12px rgba(124, 45, 55, 0.2); }
+  &.b3 { background: linear-gradient(135deg, #8A6218 0%, #C29848 100%); box-shadow: 0 4px 12px rgba(138, 98, 24, 0.2); }
+  &.b4 { background: linear-gradient(135deg, #3D3558 0%, #685E8E 100%); box-shadow: 0 4px 12px rgba(61, 53, 88, 0.2); }
+  &.b5 { background: linear-gradient(135deg, #78350F 0%, #B45309 100%); box-shadow: 0 4px 12px rgba(120, 53, 15, 0.2); }
 }
 
 /* ───────────── Loading / empty / error ───────────── */

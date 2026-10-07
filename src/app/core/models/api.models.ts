@@ -49,6 +49,8 @@ export interface Profile {
   role: UserRole;
   requested_role: UserRole | null;
   customer_code: string | null;
+  /** Personal shopping address (customers): type it at any shop's checkout, the mail lands in the Inbox. */
+  mailbox_address?: string | null;
   is_active: boolean;
   created_at: string;
 }
@@ -141,6 +143,7 @@ export interface NotificationMeta {
 // ───────────── Orders ─────────────
 
 export type OrderStatus =
+  | 'draft'
   | 'submitted'
   | 'received'
   | 'assigned'
@@ -179,6 +182,8 @@ export interface OrderListRow {
   status: OrderStatus;
   status_label: string;
   has_issue: boolean;
+  /** 'email' for an order made from an email in the Inbox. */
+  import_source?: 'manual' | 'invoice' | 'link' | 'email';
   created_at: string;
   destination_city: string | null;
   destination_country: string | null;
@@ -310,6 +315,7 @@ export interface Order {
   customer_name: string | null;
   customer_code: string | null;
   brand: string;
+  import_source?: 'manual' | 'invoice' | 'link' | 'email';
   brand_id?: string | null;
   brand_order_number: string | null;
   tracking_number: string | null;
@@ -373,6 +379,8 @@ export interface OrderInput {
   international_shipping: boolean;
   brand_order_number: string | null;
   note: string | null;
+  /** Draft read from an email / invoice / links that this order was made from (marks it used). */
+  import_id?: string | null;
   units: UnitInput[];
 }
 
@@ -601,4 +609,65 @@ export interface SizeChartInput {
   measurements: Measurements;
   notes: string | null;
   notes_audio?: VoiceRef | null;
+}
+
+// ───────────── Inbox (migration 0010) ─────────────
+
+export interface ImportItem {
+  title: string;
+  quantity: number;
+  unit_price: number | null;
+  url: string | null;
+  image_url: string | null;
+  sku: string | null;
+  notes: string | null;
+}
+
+/** The order read from an email / invoice / links; prefills the new-order form. */
+export interface OrderImport {
+  id: string;
+  source: 'invoice' | 'link' | 'email';
+  status: 'processing' | 'ready' | 'failed' | 'used';
+  email_from: string | null;
+  email_subject: string | null;
+  extracted: {
+    brand: string | null;
+    order_number: string | null;
+    currency: string | null;
+    total: number | null;
+    tracking_number: string | null;
+    items: ImportItem[];
+  } | null;
+  error: string | null;
+  order_id: string | null;
+}
+
+export interface InboxRow {
+  id: string;
+  from: string | null;
+  subject: string | null;
+  preview: string;
+  received_at: string;
+  is_read: boolean;
+  import_id: string | null;
+  draft: { status: OrderImport['status']; brand: string | null; items: number } | null;
+}
+
+export interface InboxEmail {
+  id: string;
+  from: string | null;
+  to: string | null;
+  subject: string | null;
+  text: string | null;
+  html: string | null;
+  received_at: string;
+  is_read: boolean;
+  import_id: string | null;
+  draft: OrderImport | null;
+}
+
+export interface Mailbox {
+  address: string | null;
+  enabled: boolean;
+  unread: number;
 }

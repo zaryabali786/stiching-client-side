@@ -10,7 +10,7 @@
       </a>
     }
     <div>
-      <span class="eyebrow">{{ isEdit() ? 'Edit order' : 'New order' }} · Step {{ step() }} of 3</span>
+      <span class="eyebrow">{{ isDraft() ? 'Draft · from mail' : isEdit() ? 'Edit order' : 'New order' }} · Step {{ step() }} of 3</span>
       <h1 class="page-title">{{ stepTitle() }}</h1>
     </div>
   </header>
@@ -577,9 +577,9 @@
       } @else {
         <button type="button" class="btn btn-primary" (click)="submit()" [disabled]="submitting() || anyUploading()">
           @if (submitting()) {
-            <ion-spinner name="crescent"></ion-spinner> {{ isEdit() ? 'Saving…' : 'Sending…' }}
+            <ion-spinner name="crescent"></ion-spinner> {{ isEdit() && !isDraft() ? 'Saving…' : 'Sending…' }}
           } @else {
-            {{ isEdit() ? 'Save' : 'Submit' }} <ion-icon name="checkmark-outline" aria-hidden="true"></ion-icon>
+            {{ isEdit() && !isDraft() ? 'Save' : 'Submit' }} <ion-icon name="checkmark-outline" aria-hidden="true"></ion-icon>
           }
         </button>
       }

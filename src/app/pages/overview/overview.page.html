@@ -6,21 +6,28 @@
       </button>
       <span class="eyebrow">Welcome aboard</span>
       <h2>Your customer code is <span class="mono">{{ code }}</span></h2>
-      <p>Write it on every parcel you send us. It's always at the top of the app — tap it to copy.</p>
+      <p>Write it on every parcel you send us. It is also displayed in the top bar — tap it anytime to copy.</p>
+      @if (auth.user()?.mailbox_address; as mail) {
+        <p>
+          Your shopping email is <strong class="mono">{{ mail }}</strong>. Use it at any shop's checkout and the order email
+          lands in your <a routerLink="/app/inbox">Inbox</a>.
+        </p>
+      }
     </section>
   }
 
-  <section class="hero">
-    <span class="eyebrow">{{ greeting() }}</span>
-    <h1 class="page-title">Hello, {{ firstName() }}</h1>
+  <!-- Clean, elegant hero -->
+  <section class="hero-clean">
+    <span class="eyebrow">Customer Atelier</span>
+    <h1 class="page-title">{{ greeting() }}, {{ firstName() }}</h1>
     <p class="page-subtitle">{{ heroLine() }}</p>
   </section>
 
-  <!-- 1 · Action needed (amber = your action) -->
+  <!-- 1 · Action needed (only when customer action is required) -->
   @if (overview()?.actionNeeded?.length) {
     <section class="action-card" aria-labelledby="action-title">
       <div class="action-head">
-        <span class="ah-icon" aria-hidden="true"><ion-icon name="warning-outline"></ion-icon></span>
+        <span class="ah-icon" aria-hidden="true"><ion-icon name="alert-circle-outline"></ion-icon></span>
         <div>
           <h2 id="action-title">Action needed</h2>
           <span>{{ overview()!.actionNeeded.length }} order{{ overview()!.actionNeeded.length === 1 ? ' is' : 's are' }} waiting for you</span>
@@ -33,7 +40,7 @@
               <strong>{{ a.brand }}</strong>
               <span class="ai-meta"><span class="mono">{{ a.reference }}</span> · {{ a.status_label }}</span>
             </div>
-            <span class="ai-btn">{{ actionVerb(a.status) }}<ion-icon name="chevron-forward-outline" aria-hidden="true"></ion-icon></span>
+            <span class="ai-btn">{{ actionVerb(a.status) }} <ion-icon name="chevron-forward-outline" aria-hidden="true"></ion-icon></span>
           </a>
         }
       </div>
@@ -87,6 +94,7 @@
                 }
               </span>
             </div>
+            <ion-icon name="chevron-forward-outline" class="tile-arrow" aria-hidden="true"></ion-icon>
           </a>
         }
       </div>
@@ -134,28 +142,56 @@
         </div>
       </div>
 
+      <!-- Clean Professional Bar Chart -->
       <div class="card chart-card" [class.dim]="overviewLoading()">
         <div class="chart-head">
-          <h3>Articles stitched by month</h3>
-          <span>{{ chartRange() }}</span>
+          <div>
+            <h3>Articles stitched by month</h3>
+            <span class="chart-range-text">{{ chartRange() }}</span>
+          </div>
+          @if (hasChartData()) {
+            <span class="chart-total-tag">{{ monthlyTotal() }} stitched</span>
+          }
         </div>
+
         @if (hasChartData()) {
-          <div class="bars" role="list">
-            @for (m of o.monthly; track m.key) {
-              <div class="bar-col" role="listitem" [attr.aria-label]="m.month + ': ' + m.count + ' articles'">
-                <span class="bar-val" aria-hidden="true">{{ m.count || '' }}</span>
-                <div class="bar-track" aria-hidden="true">
-                  <div class="bar-fill" [style.height.%]="m.count ? (m.pct < 6 ? 6 : m.pct) : 0"></div>
+          <div class="chart-canvas">
+            <div class="chart-lines" aria-hidden="true">
+              <div class="cl-line"></div>
+              <div class="cl-line"></div>
+              <div class="cl-line"></div>
+            </div>
+
+            <div class="bars" role="list">
+              @for (m of o.monthly; track m.key) {
+                <div
+                  class="bar-col"
+                  role="listitem"
+                  [class.is-current]="m.key === currentMonthKey()"
+                  [class.has-count]="m.count > 0"
+                  [attr.aria-label]="m.month + ': ' + m.count + ' articles'"
+                >
+                  <span class="bar-val" aria-hidden="true">{{ m.count ? m.count : '' }}</span>
+                  <div class="bar-track" aria-hidden="true">
+                    <div
+                      class="bar-fill"
+                      [style.height.%]="m.count ? (m.pct < 12 ? 12 : m.pct) : 0"
+                    ></div>
+                  </div>
+                  <span class="bar-label" aria-hidden="true">{{ m.month }}</span>
+                  @if (m.key === currentMonthKey()) {
+                    <span class="current-dot" title="Current Month"></span>
+                  }
                 </div>
-                <span class="bar-label" aria-hidden="true">{{ m.month }}</span>
-              </div>
-            }
+              }
+            </div>
           </div>
         } @else {
           <p class="chart-empty">Finished articles will appear here month by month once your first order is packed.</p>
         }
       </div>
 
+      <!-- Who you stitch for Card -->
       <div class="card" [class.dim]="overviewLoading()">
         <h3 class="card-title">Who you stitch for</h3>
         @if (o.whoYouStitchFor.length) {
@@ -166,7 +202,9 @@
                   <span class="p-name">{{ p.name }}</span>
                   <span class="p-count">{{ p.count }} article{{ p.count === 1 ? '' : 's' }}</span>
                 </div>
-                <div class="track" aria-hidden="true"><div class="fill" [style.width.%]="p.pct"></div></div>
+                <div class="track" aria-hidden="true">
+                  <div class="fill" [style.width.%]="p.pct"></div>
+                </div>
               </div>
             }
           </div>

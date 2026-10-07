@@ -6,6 +6,7 @@ import { IonIcon } from '@ionic/angular';
 import { AuthService } from '../../core/services/auth.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ConfigService } from '../../core/services/config.service';
+import { MailboxService } from '../../core/services/mailbox.service';
 import { ChatSocketService } from '../../core/services/chat-socket.service';
 import { OrderEventsService } from '../../core/services/order-events.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -14,7 +15,7 @@ import { ShellUiService } from '../../core/services/shell-ui.service';
 import { NotificationModalComponent } from '../../pages/components/notification-modal/notification-modal.component';
 import { ChatDockComponent } from '../../shared/chat-dock.component';
 
-type TabKey = 'home' | 'orders' | 'new' | 'sizes' | 'profile';
+type TabKey = 'home' | 'orders' | 'new' | 'sizes' | 'profile' | 'inbox';
 
 /**
  * Persistent chrome for every /app/* page: header (brand, customer code, bell), one scroll area
@@ -35,6 +36,8 @@ export class ClientShellComponent {
   /** Instantiated here so the live connection (and bell refreshes) runs on every page. */
   private chatSocket = inject(ChatSocketService);
   private orderEvents = inject(OrderEventsService);
+  /** Instantiated here so the Inbox badge stays live on every page. */
+  protected mailbox = inject(MailboxService);
   private router = inject(Router);
   private shellUi = inject(ShellUiService);
   private toast = inject(ToastService);
@@ -67,6 +70,7 @@ export class ClientShellComponent {
     if (path.startsWith('/app/orders')) return 'orders';
     if (path.startsWith('/app/sizes')) return 'sizes';
     if (path.startsWith('/app/profile')) return 'profile';
+    if (path.startsWith('/app/inbox')) return 'inbox';
     return 'home';
   });
 
@@ -75,6 +79,11 @@ export class ClientShellComponent {
 
   protected badge = computed(() => {
     const n = this.notif.unreadCount();
+    return n > 99 ? '99+' : String(n);
+  });
+
+  protected mailBadge = computed(() => {
+    const n = this.mailbox.unread();
     return n > 99 ? '99+' : String(n);
   });
 

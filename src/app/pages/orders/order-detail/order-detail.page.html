@@ -46,7 +46,7 @@
       </div>
       <p class="hint">{{ hint() }}</p>
 
-      @if (o.status !== 'cancelled') {
+      @if (o.status !== 'cancelled' && o.status !== 'draft') {
         <ol class="tracker" aria-label="Progress">
           @for (s of steps; track s; let i = $index) {
             <li class="t-seg" [class]="'t-seg ' + stepState(i)">
@@ -413,115 +413,187 @@
       }
     </section>
 
-    <!-- Articles -->
-    <section class="stack" aria-labelledby="articles-title">
+    <!-- Articles (Accordion) -->
+    <section class="stack articles-section" aria-labelledby="articles-title">
       <div class="section-head">
-        <h2 id="articles-title">Articles</h2>
-        <span class="count">{{ o.units.length }} article{{ o.units.length === 1 ? '' : 's' }} · {{ totalPieces() }} pc</span>
+        <div>
+          <h2 id="articles-title">Articles</h2>
+          <span class="count">{{ o.units.length }} article{{ o.units.length === 1 ? '' : 's' }} · {{ totalPieces() }} pc</span>
+        </div>
+        @if (o.units.length > 1) {
+          <button type="button" class="btn btn-ghost btn-xs accordion-all-btn" (click)="toggleAllUnits()">
+            {{ allUnitsExpanded() ? 'Collapse all' : 'Expand all' }}
+          </button>
+        }
       </div>
-      @for (u of o.units; track u.id) {
-        <article class="card unit">
-          <div class="unit-head">
-            @if (u.product_image_url) {
-              <button type="button" class="unit-img" (click)="viewer.set(u.product_image_url!)" [attr.aria-label]="'Open picture of ' + u.unit_title">
-                <img [src]="u.product_image_url" alt="" loading="lazy" referrerpolicy="no-referrer" />
-              </button>
-            } @else {
-              <span class="unit-num" aria-hidden="true">{{ u.line_no }}</span>
-            }
-            <div class="unit-titles">
-              <strong>{{ u.unit_title }}</strong>
-              <span>@if (u.stitching_type) {{{ u.stitching_type }} · }Qty {{ u.quantity }}</span>
-            </div>
-            <span class="status-badge" [class]="'status-badge ' + unitTone(u.status)">{{ unitLabel(u.status) }}</span>
-          </div>
 
-          <div class="unit-body">
-            @if (u.size_chart) {
-              <div class="u-row">
-                <ion-icon name="options-outline" aria-hidden="true"></ion-icon>
-                <app-size-summary [chart]="u.size_chart" />
-              </div>
-            } @else {
-              <div class="u-row muted"><ion-icon name="options-outline" aria-hidden="true"></ion-icon><div><span>No size chart selected</span></div></div>
-            }
-            @if (u.selected_articles?.length) {
-              <div class="u-row">
-                <ion-icon name="shirt-outline" aria-hidden="true"></ion-icon>
-                <div class="opt-chips">
-                  @for (s of u.selected_articles; track s.article_id) {
-                    <span class="opt-chip">
-                      @if (s.image_url) {
-                        <img class="opt-img" [src]="s.image_url" alt="" loading="lazy" />
-                      }
-                      <span class="opt-t">{{ s.type_name }}</span>
-                      <span class="opt-v">{{ s.name }}</span>
-                    </span>
-                  }
+      <div class="units-accordion-list">
+        @for (u of o.units; track u.id) {
+          <article class="card unit-accordion" [class.is-expanded]="isUnitExpanded(u.id)">
+            <header
+              class="unit-accordion-head"
+              (click)="toggleUnit(u.id)"
+              [attr.aria-expanded]="isUnitExpanded(u.id)"
+              role="button"
+              tabindex="0"
+              (keydown.enter)="toggleUnit(u.id)"
+              (keydown.space)="$event.preventDefault(); toggleUnit(u.id)"
+            >
+              <div class="unit-head-start">
+                @if (u.product_image_url) {
+                  <button
+                    type="button"
+                    class="unit-img"
+                    (click)="$event.stopPropagation(); viewer.set(u.product_image_url!)"
+                    [attr.aria-label]="'Open picture of ' + u.unit_title"
+                    title="Zoom photo"
+                  >
+                    <img [src]="u.product_image_url" alt="" loading="lazy" referrerpolicy="no-referrer" />
+                  </button>
+                } @else {
+                  <span class="unit-num" aria-hidden="true">{{ u.line_no }}</span>
+                }
+                <div class="unit-titles">
+                  <div class="unit-title-line">
+                    <strong class="unit-title-text">{{ u.unit_title }}</strong>
+                    @if (u.status === 'issue') {
+                      <span class="unit-mini-issue"><ion-icon name="alert-circle" aria-hidden="true"></ion-icon>Issue</span>
+                    }
+                  </div>
+                  <span class="unit-subtitle">
+                    @if (u.stitching_type) {{{ u.stitching_type }} · }Qty {{ u.quantity }}
+                    @if (u.size_chart) {
+                      <span class="unit-size-name">· {{ u.size_chart.name }}</span>
+                    }
+                  </span>
                 </div>
               </div>
-            } @else if (designText(u)) {
-              <div class="u-row"><ion-icon name="shirt-outline" aria-hidden="true"></ion-icon><div><span>{{ designText(u) }}</span></div></div>
-            }
-            @if (u.product_link) {
-              <div class="u-row"><ion-icon name="link-outline" aria-hidden="true"></ion-icon><div><a [href]="u.product_link" target="_blank" rel="noopener">View product on {{ hostOf(u.product_link) }}<span class="sr-only"> (opens in a new tab)</span></a></div></div>
-            }
-            @if (u.notes) {
-              <p class="quote">“{{ u.notes }}”</p>
-            }
-            @if (u.notes_audio?.url; as src) {
-              <app-voice-player [src]="src" [duration]="u.notes_audio!.duration" [mime]="u.notes_audio!.mime" (loadFailed)="onAudioFailed()" />
-            }
-            @if (u.reference_images?.length) {
-              <div class="thumbs">
-                @for (img of u.reference_images; track img.url; let i = $index) {
-                  <button type="button" class="thumb" (click)="viewer.set(img.url)" [attr.aria-label]="'Open reference photo ' + (i + 1)"><img [src]="img.url" alt="" loading="lazy" /></button>
-                }
-              </div>
-            }
 
-            <!-- This article's own timeline -->
-            @if (latestStep(u); as last) {
-              <div class="u-timeline">
-                <button type="button" class="tl-toggle" (click)="toggleUnitTimeline(u)" [attr.aria-expanded]="timelineOpenFor(u)" [attr.aria-controls]="'tl-' + u.id">
-                  <span class="tl-title">Timeline</span>
-                  @if (!timelineOpenFor(u)) {
-                    <span class="tl-last">{{ last.label }} · {{ last.at | date: 'd MMM' }}</span>
-                  }
-                  <ion-icon [name]="timelineOpenFor(u) ? 'chevron-up-outline' : 'chevron-down-outline'" aria-hidden="true"></ion-icon>
-                </button>
-                @if (timelineOpenFor(u)) {
-                  <ol class="tl" [id]="'tl-' + u.id">
-                    @for (st of stepsNewestFirst(u); track $index; let first = $first) {
-                      <li [class]="'tl-step tone-' + stepTone(st.status)" [class.latest]="first">
-                        <span class="tl-dot" aria-hidden="true"></span>
-                        <div class="tl-body">
-                          <div class="tl-top">
-                            <strong>{{ st.label }}</strong>
-                            <time [attr.datetime]="st.at">{{ st.at | date: 'd MMM, HH:mm' }}</time>
-                          </div>
-                          @if (st.note) {
-                            <p>{{ st.note }}</p>
+              <div class="unit-head-end">
+                <span class="status-badge" [class]="'status-badge ' + unitTone(u.status)">{{ unitLabel(u.status) }}</span>
+                <span class="accordion-arrow" [class.rotated]="isUnitExpanded(u.id)" aria-hidden="true">
+                  <ion-icon name="chevron-down-outline"></ion-icon>
+                </span>
+              </div>
+            </header>
+
+            @if (isUnitExpanded(u.id)) {
+              <div class="unit-body" [id]="'unit-content-' + u.id">
+                @if (u.size_chart) {
+                  <div class="u-row">
+                    <ion-icon name="options-outline" aria-hidden="true"></ion-icon>
+                    <app-size-summary [chart]="u.size_chart" />
+                  </div>
+                } @else {
+                  <div class="u-row muted"><ion-icon name="options-outline" aria-hidden="true"></ion-icon><div><span>No size chart selected</span></div></div>
+                }
+                @if (u.selected_articles?.length) {
+                  <div class="u-row">
+                    <ion-icon name="shirt-outline" aria-hidden="true"></ion-icon>
+                    <div class="opt-chips">
+                      @for (s of u.selected_articles; track s.article_id) {
+                        <span class="opt-chip">
+                          @if (s.image_url) {
+                            <img class="opt-img" [src]="s.image_url" alt="" loading="lazy" />
                           }
-                        </div>
-                      </li>
-                    }
-                  </ol>
+                          <span class="opt-t">{{ s.type_name }}</span>
+                          <span class="opt-v">{{ s.name }}</span>
+                        </span>
+                      }
+                    </div>
+                  </div>
+                } @else if (designText(u)) {
+                  <div class="u-row"><ion-icon name="shirt-outline" aria-hidden="true"></ion-icon><div><span>{{ designText(u) }}</span></div></div>
                 }
+                @if (u.product_link) {
+                  <div class="u-row"><ion-icon name="link-outline" aria-hidden="true"></ion-icon><div><a [href]="u.product_link" target="_blank" rel="noopener">View product on {{ hostOf(u.product_link) }}<span class="sr-only"> (opens in a new tab)</span></a></div></div>
+                }
+                @if (u.notes) {
+                  <p class="quote">“{{ u.notes }}”</p>
+                }
+                @if (u.notes_audio?.url; as src) {
+                  <app-voice-player [src]="src" [duration]="u.notes_audio!.duration" [mime]="u.notes_audio!.mime" (loadFailed)="onAudioFailed()" />
+                }
+                @if (u.reference_images?.length) {
+                  <div class="thumbs">
+                    @for (img of u.reference_images; track img.url; let i = $index) {
+                      <button type="button" class="thumb" (click)="viewer.set(img.url)" [attr.aria-label]="'Open reference photo ' + (i + 1)"><img [src]="img.url" alt="" loading="lazy" /></button>
+                    }
+                  </div>
+                }
+
+                <!-- This article's own timeline -->
+                @if (latestStep(u); as last) {
+                  <div class="u-timeline">
+                    <button type="button" class="tl-toggle" (click)="toggleUnitTimeline(u)" [attr.aria-expanded]="timelineOpenFor(u)" [attr.aria-controls]="'tl-' + u.id">
+                      <span class="tl-title">Timeline</span>
+                      @if (!timelineOpenFor(u)) {
+                        <span class="tl-last">{{ last.label }} · {{ last.at | date: 'd MMM' }}</span>
+                      }
+                      <ion-icon [name]="timelineOpenFor(u) ? 'chevron-up-outline' : 'chevron-down-outline'" aria-hidden="true"></ion-icon>
+                    </button>
+                    @if (timelineOpenFor(u)) {
+                      <ol class="tl" [id]="'tl-' + u.id">
+                        @for (st of stepsNewestFirst(u); track $index; let first = $first) {
+                          <li [class]="'tl-step tone-' + stepTone(st.status)" [class.latest]="first">
+                            <span class="tl-dot" aria-hidden="true"></span>
+                            <div class="tl-body">
+                              <div class="tl-top">
+                                <strong>{{ st.label }}</strong>
+                                <time [attr.datetime]="st.at">{{ st.at | date: 'd MMM, HH:mm' }}</time>
+                              </div>
+                              @if (st.note) {
+                                <p>{{ st.note }}</p>
+                              }
+                            </div>
+                          </li>
+                        }
+                      </ol>
+                    }
+                  </div>
+                }
+
+                <button type="button" class="btn btn-outline btn-sm chat-unit-btn" (click)="openChat(u.id)">
+                  <ion-icon name="chatbubbles-outline" aria-hidden="true"></ion-icon>
+                  Chat about this article
+                  @if (scopeUnread(u.id) > 0) {
+                    <span class="unit-badge" [attr.aria-label]="scopeUnread(u.id) + ' unread'">{{ scopeUnread(u.id) }}</span>
+                  }
+                </button>
               </div>
             }
-
-            <button type="button" class="btn btn-outline btn-sm chat-unit-btn" (click)="openChat(u.id)">
-              <ion-icon name="chatbubbles-outline" aria-hidden="true"></ion-icon>
-              Chat about this article
-              @if (scopeUnread(u.id) > 0) {
-                <span class="unit-badge" [attr.aria-label]="scopeUnread(u.id) + ' unread'">{{ scopeUnread(u.id) }}</span>
-              }
-            </button>
-          </div>
-        </article>
-      }
+          </article>
+        }
+      </div>
     </section>
+
+    <!-- A draft made automatically from an email: nothing has been sent to us yet -->
+    @if (o.status === 'draft') {
+      <section class="card draft-card">
+        <span class="draft-tag"><ion-icon name="mail-outline" aria-hidden="true"></ion-icon> Draft · from mail</span>
+        <h3 class="card-title">Finish your order</h3>
+        <p class="muted-note">
+          We made this order from your email{{ o.brand_order_number ? ' (order ' + o.brand_order_number + ')' : '' }}. Nothing has been sent to us yet.
+          Check the products, choose your courier, set sizes and any stitching details, then submit it.
+        </p>
+        @if (confirmDiscard()) {
+          <div class="confirm-panel" role="alertdialog" aria-label="Confirm discarding the draft">
+            <p>Discard this draft? The email stays in your Inbox, so you can create the order again later.</p>
+            <div class="btn-row">
+              <button type="button" class="btn btn-outline btn-sm" (click)="confirmDiscard.set(false)" [disabled]="pending() === 'discard'">Keep draft</button>
+              <button type="button" class="btn btn-danger btn-sm" (click)="discardDraft()" [disabled]="pending() === 'discard'">
+                @if (pending() === 'discard') {
+                  <ion-spinner name="crescent"></ion-spinner>
+                }
+                Discard draft
+              </button>
+            </div>
+          </div>
+        } @else {
+          <button type="button" class="btn btn-danger-outline btn-sm" (click)="confirmDiscard.set(true)">Discard draft</button>
+        }
+      </section>
+    }
 
     @if (o.status === 'submitted') {
       <section class="card">
@@ -593,6 +665,14 @@
         <button type="button" class="btn btn-primary" (click)="pay()" [disabled]="!!pending()">
           <ion-icon name="card-outline" aria-hidden="true"></ion-icon> Pay {{ payAmount() }}
         </button>
+      </div>
+    } @else if (o.status === 'draft' && !confirmDiscard()) {
+      <div class="action-bar" role="region" aria-label="Draft actions">
+        <div class="ab-text">
+          <span class="ab-k">Draft · from mail</span>
+          <span class="ab-sub">Add courier and sizes, then submit</span>
+        </div>
+        <a class="btn btn-primary" [routerLink]="['/app/orders', o.id, 'edit']"><ion-icon name="create-outline" aria-hidden="true"></ion-icon> Complete order</a>
       </div>
     } @else if (o.status === 'submitted' && !confirmCancel()) {
       <div class="action-bar" role="region" aria-label="Order actions">

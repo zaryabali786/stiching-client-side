@@ -50,6 +50,11 @@ export class OrderService {
     return this.api.patch<OrderDetail>(`/client/orders/${encodeURIComponent(id)}`, body);
   }
 
+  /** Throws away a draft made from an email (the email's order stays available in the Inbox). */
+  discardDraft(id: string): Observable<ApiResult<null>> {
+    return this.api.delete(`/client/orders/${encodeURIComponent(id)}`);
+  }
+
   cancel(id: string): Observable<ApiResult<null>> {
     return this.api.post(`/client/orders/${encodeURIComponent(id)}/cancel`);
   }

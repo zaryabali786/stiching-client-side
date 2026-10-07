@@ -9,6 +9,7 @@ import { SizeService } from '../../../core/services/size.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { CatalogService } from '../../../core/services/catalog.service';
 import { ChatService } from '../../../core/services/chat.service';
+import { MailboxService } from '../../../core/services/mailbox.service';
 import { errorMessage } from '../../../core/services/api.service';
 import { Article, ArticleType, Brand, Courier, OrderDetail, OrderInput, SizeChart, UnitInput, VoiceNote } from '../../../core/models/api.models';
 import { isStoredVoice, voiceField } from '../../../core/utils/voice-note';
@@ -104,6 +105,7 @@ export class OrderFormPage {
   private sizes = inject(SizeService);
   private catalog = inject(CatalogService);
   private chat = inject(ChatService);
+  private mailbox = inject(MailboxService);
   private toast = inject(ToastService);
   private router = inject(Router);
   private destroyRef = inject(DestroyRef);
@@ -111,6 +113,13 @@ export class OrderFormPage {
   /** Route param (edit mode) — bound by withComponentInputBinding. */
   readonly id = input<string>();
   readonly isEdit = computed(() => !!this.id());
+  /** Editing a draft made from an email: saving submits it. */
+  isDraft = signal(false);
+  /** `?import=<id>`: a draft read from an email (Inbox) to prefill this new order from. */
+  readonly importId = input<string | undefined>(undefined, { alias: 'import' });
+  /** The draft this order was prefilled from; sent with the order so the draft is marked used. */
+  private fromImport: string | null = null;
+  importing = signal(false);
 
   readonly maxPhotos = MAX_PHOTOS;
   readonly stepLabels = ['Order', 'Articles', 'Notes & review'];
@@ -129,7 +138,7 @@ export class OrderFormPage {
   stepTitle = computed(() => {
     switch (this.step()) {
       case 1:
-        return this.isEdit() ? 'Update your order' : 'Order details';
+        return this.isDraft() ? 'Complete your order' : this.isEdit() ? 'Update your order' : 'Order details';
       case 2:
         return 'Your articles';
       default:
@@ -146,7 +155,7 @@ export class OrderFormPage {
         return `${n} article${n === 1 ? '' : 's'} · ${this.totalPieces()} pc`;
       }
       default:
-        return this.isEdit() ? 'Save your changes' : 'Then ship your parcel';
+        return this.isDraft() ? 'Submit it to send it on' : this.isEdit() ? 'Save your changes' : 'Then ship your parcel';
     }
   });
 
@@ -246,9 +255,13 @@ export class OrderFormPage {
 
     effect(() => {
       const id = this.id();
+      const imp = this.importId();
       untracked(() => {
         if (id) this.loadOrder(id);
-        else this.initCreate();
+        else {
+          this.initCreate();
+          if (imp) this.applyImport(imp);
+        }
       });
     });
 
@@ -357,8 +370,70 @@ export class OrderFormPage {
     this.draftEnabled = true;
   }
 
+  /** Fill the new order from a draft read out of an email: order number, tracking, brand and every product. */
+  private applyImport(importId: string): void {
+    this.importing.set(true);
+    this.mailbox
+      .importDraft(importId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (imp) => {
+          this.importing.set(false);
+          const x = imp.extracted;
+          if (imp.status === 'used') {
+            this.toast.info('An order was already created from this email.');
+            return;
+          }
+          if (!x) {
+            this.toast.info('We could not read this email — fill the order in by hand.');
+            return;
+          }
+          this.fromImport = imp.id;
+          this.clearDraft();
+          this.resetForCreate();
+          this.draftEnabled = true;
+          if (x.order_number) this.brandOrderNumber.set(x.order_number);
+          if (x.tracking_number) this.trackingNumber.set(x.tracking_number);
+          if (x.items.length) {
+            this.articles.set(
+              x.items.slice(0, MAX_ARTICLES).map((it) => ({
+                ...this.newArticle(),
+                unit_title: (it.title || '').slice(0, 200),
+                product_link: it.url && /^https?:\/\/\S+$/i.test(it.url) ? it.url : '',
+                product_image_url: it.image_url && /^https?:\/\//i.test(it.image_url) ? it.image_url : '',
+                quantity: Math.min(20, Math.max(1, Math.round(Number(it.quantity)) || 1)),
+              })),
+            );
+          }
+          if (x.brand) this.matchBrand(x.brand);
+          this.toast.info('Filled in from your email — check the details, then choose your courier and sizes.');
+        },
+        error: (err: unknown) => {
+          this.importing.set(false);
+          this.toast.error(err);
+        },
+      });
+  }
+
+  /** Pick the catalogue brand that matches the name read from the email (exact name, or the only search result). */
+  private matchBrand(name: string): void {
+    this.catalog
+      .brands(1, name)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: ({ items }) => {
+          const wanted = name.trim().toLowerCase();
+          const hit = items.find((b) => b.name.trim().toLowerCase() === wanted) ?? (items.length === 1 ? items[0] : null);
+          if (hit) this.brand.set(hit);
+          else this.toast.info(`Choose the brand — the email is from "${name}".`);
+        },
+        error: () => undefined, // the customer simply picks the brand themselves
+      });
+  }
+
   /** Throw the draft away and begin a clean order. */
   startOver(): void {
+    this.fromImport = null;
     this.clearDraft();
     this.resetForCreate();
     this.draftRestored.set(false);
@@ -431,10 +506,11 @@ export class OrderFormPage {
       .subscribe({
         next: (order) => {
           this.loadingOrder.set(false);
-          if (order.status !== 'submitted') {
+          if (order.status !== 'submitted' && order.status !== 'draft') {
             this.notEditable.set(order);
             return;
           }
+          this.isDraft.set(order.status === 'draft');
           this.prefill(order);
         },
         error: (err: Error) => {
@@ -833,6 +909,7 @@ export class OrderFormPage {
       international_shipping: this.international() === true,
       brand_order_number: this.brandOrderNumber().trim() || null,
       note: this.note().trim() || null,
+      ...(this.fromImport && !this.id() ? { import_id: this.fromImport } : {}),
       units: this.articles().map((a): UnitInput => {
         const unit: UnitInput = {
           unit_title: a.unit_title.trim(),
@@ -876,15 +953,16 @@ export class OrderFormPage {
     this.submitError.set(null);
     const body = this.buildBody();
     const id = this.id();
+    const wasDraft = this.isDraft();
     const req$ = id ? this.orders.update(id, body) : this.orders.create(body);
     req$.subscribe({
       next: async ({ data, message }) => {
         const voiceOk = await this.sendVoiceNote(data.id);
         this.submitting.set(false);
         this.clearDraft();
-        if (voiceOk) this.toast.success(message || (id ? 'Order updated.' : 'Order created.'));
+        if (voiceOk) this.toast.success(message || (id && !wasDraft ? 'Order updated.' : 'Order created.'));
         else this.toast.error('Order created, but the voice note could not be sent. Send it from the chat.', undefined, 7000);
-        void this.router.navigate(['/app/orders', data.id], { queryParams: id ? {} : { created: 1 } });
+        void this.router.navigate(['/app/orders', data.id], { queryParams: id && !wasDraft ? {} : { created: 1 } });
       },
       error: (err) => {
         this.submitting.set(false);

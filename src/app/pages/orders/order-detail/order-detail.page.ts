@@ -26,7 +26,7 @@ import { VoiceNote } from '../../../core/models/api.models';
 import { isStoredVoice, toVoiceRef } from '../../../core/utils/voice-note';
 import { PaymentSheetComponent } from '../../../shared/payment-sheet.component';
 
-type Action = 'cancel' | 'approve' | 'changes' | 'pay';
+type Action = 'cancel' | 'approve' | 'changes' | 'pay' | 'discard';
 
 /** Key of the single order-level approval card used by old orders (no per-article approval data). */
 export const LEGACY_KEY = '__order';
@@ -84,6 +84,8 @@ export class OrderDetailPage {
 
   pending = signal<Action | null>(null);
   confirmCancel = signal(false);
+  /** Asking before a draft made from an email is thrown away. */
+  confirmDiscard = signal(false);
   /** Which approval card has its change box open (a unit id, or LEGACY_KEY). */
   changesFor = signal<string | null>(null);
   /** The approval action in flight: `<unit id>`, `__all` or LEGACY_KEY. */
@@ -103,6 +105,41 @@ export class OrderDetailPage {
   orderTimelineOpen = signal(false);
   /** Articles whose own timeline was toggled by hand (otherwise: open when it has 3 steps or fewer). */
   private unitTimelineToggled = signal<ReadonlyMap<string, boolean>>(new Map());
+  /** Expanded unit IDs for article accordion (first unit open by default). */
+  expandedUnits = signal<ReadonlySet<string>>(new Set());
+
+  allUnitsExpanded = computed(() => {
+    const o = this.order();
+    if (!o || !o.units.length) return false;
+    const current = this.expandedUnits();
+    return o.units.every((u) => current.has(u.id));
+  });
+
+  isUnitExpanded(unitId: string): boolean {
+    return this.expandedUnits().has(unitId);
+  }
+
+  toggleUnit(unitId: string): void {
+    this.expandedUnits.update((set) => {
+      const next = new Set(set);
+      if (next.has(unitId)) {
+        next.delete(unitId);
+      } else {
+        next.add(unitId);
+      }
+      return next;
+    });
+  }
+
+  toggleAllUnits(): void {
+    const o = this.order();
+    if (!o || !o.units.length) return;
+    if (this.allUnitsExpanded()) {
+      this.expandedUnits.set(new Set());
+    } else {
+      this.expandedUnits.set(new Set(o.units.map((u) => u.id)));
+    }
+  }
 
   // Chats: General + one per article. The sheet and the floating button live in the app shell (ChatUiService);
   // this page keeps the per-article unread badges and opens an article's own chat from its card.
@@ -176,6 +213,7 @@ export class OrderDetailPage {
     const o = this.order();
     if (!o) return false;
     if (this.isAwaitingPayment() && o.invoice) return true;
+    if (o.status === 'draft') return !this.confirmDiscard();
     return o.status === 'submitted' && !this.confirmCancel();
   });
 
@@ -333,6 +371,14 @@ export class OrderDetailPage {
           this.order.set(o);
           this.loading.set(false);
           this.error.set(null);
+          if (this.expandedUnits().size === 0 && o.units?.length) {
+            const target = this.unit();
+            if (target && o.units.some((u) => u.id === target)) {
+              this.expandedUnits.set(new Set([target]));
+            } else {
+              this.expandedUnits.set(new Set([o.units[0].id]));
+            }
+          }
           this.openChatLinkIfReady();
           if (this.pendingFocus) {
             this.pendingFocus = false;
@@ -369,6 +415,24 @@ export class OrderDetailPage {
       error: (err) => {
         this.pending.set(null);
         this.pendingKey.set(null);
+        this.toast.error(err);
+      },
+    });
+  }
+
+  /** Throw a draft made from an email away; the email's order stays available in the Inbox. */
+  discardDraft(): void {
+    if (this.pending()) return;
+    this.pending.set('discard');
+    this.orders.discardDraft(this.id()).subscribe({
+      next: ({ message }) => {
+        this.pending.set(null);
+        this.toast.success(message || 'Draft discarded.');
+        this.notif.refreshCount();
+        void this.router.navigate(['/app/orders']);
+      },
+      error: (err) => {
+        this.pending.set(null);
         this.toast.error(err);
       },
     });

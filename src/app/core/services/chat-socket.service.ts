@@ -2,7 +2,7 @@ import { Injectable, effect, inject, signal, untracked } from '@angular/core';
 import { Subject, firstValueFrom } from 'rxjs';
 import { Socket, io } from 'socket.io-client';
 import { environment } from '../../../environments/environment';
-import { ChatMessage, UserRole } from '../models/api.models';
+import { AppNotification, ChatMessage, UserRole } from '../models/api.models';
 import { AuthService } from './auth.service';
 import { NotificationService } from './notification.service';
 import { SessionRefreshService } from './session-refresh.service';
@@ -66,6 +66,8 @@ export class ChatSocketService {
   readonly orderUpdate$ = new Subject<OrderUpdateEvent>();
   /** Something changed in an order's chats (new message, or read elsewhere): refresh unread counts and the chat list. */
   readonly inboxUpdate$ = new Subject<{ orderId: string }>();
+  /** An email reached the customer's shopping address (`mailbox:new`) or its order draft finished reading (`mailbox:update`). */
+  readonly mailbox$ = new Subject<{ id: string; kind: 'new' | 'update' }>();
   /** Fires after every (re)connect so open conversations can re-sync what they missed. */
   readonly reconnected$ = new Subject<void>();
 
@@ -108,7 +110,9 @@ export class ChatSocketService {
     socket.on('message:read', (e: ReadEvent) => this.messageRead$.next(e));
     socket.on('typing', (e: TypingEvent) => this.typing$.next(e));
     socket.on('order:update', (e: OrderUpdateEvent) => this.orderUpdate$.next(e));
-    socket.on('notification:new', () => this.notif.refreshCount());
+    socket.on('notification:new', (e?: { notification?: AppNotification | null }) => this.notif.pushLive(e?.notification));
+    socket.on('mailbox:new', (e: { id: string }) => this.mailbox$.next({ id: e?.id, kind: 'new' }));
+    socket.on('mailbox:update', (e: { id: string }) => this.mailbox$.next({ id: e?.id, kind: 'update' }));
     socket.on('inbox:update', (e: { orderId: string }) => {
       this.notif.refreshCount();
       if (e?.orderId) this.inboxUpdate$.next(e);
