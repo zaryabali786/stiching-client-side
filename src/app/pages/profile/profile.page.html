@@ -1,0 +1,165 @@
+<div class="page">
+  <header>
+    <span class="eyebrow">Your account</span>
+    <h1 class="page-title">Profile</h1>
+  </header>
+
+  @if (user(); as u) {
+    <section class="card profile-card">
+      <div class="avatar">{{ initial() }}</div>
+      <h2>{{ u.full_name || u.email }}</h2>
+      <button type="button" class="code" (click)="copyCode()" title="Copy your customer code">
+        <span class="mono">{{ u.customer_code }}</span>
+        <ion-icon name="copy-outline"></ion-icon>
+      </button>
+      <p class="member">Member since {{ u.created_at | date: 'MMMM y' }}</p>
+    </section>
+
+    <!-- Details / edit -->
+    <section class="card">
+      <div class="card-head">
+        <h3 class="card-title">Contact &amp; delivery</h3>
+        @if (!editing()) {
+          <button type="button" class="btn btn-ghost btn-sm" (click)="startEdit()"><ion-icon name="create-outline"></ion-icon> Edit</button>
+        }
+      </div>
+
+      @if (!editing()) {
+        <div class="detail"><ion-icon name="mail-outline"></ion-icon><span>{{ u.email }}</span></div>
+        <div class="detail"><ion-icon name="call-outline"></ion-icon><span>{{ u.phone || 'Add a phone number' }}</span></div>
+        <div class="detail">
+          <ion-icon name="location-outline"></ion-icon>
+          <span>
+            @if (u.address || u.city || u.country) {
+              {{ u.address }}@if (u.address) {<br />}
+              {{ u.city }}{{ u.city && u.postal_code ? ' ' : '' }}{{ u.postal_code }}@if (u.city || u.postal_code) {<br />}
+              {{ u.country }}
+            } @else {
+              Add your delivery address
+            }
+          </span>
+        </div>
+      } @else {
+        <form class="edit-form" (ngSubmit)="saveProfile()" novalidate>
+          @if (profileError()) {
+            <div class="form-error" role="alert"><ion-icon name="alert-circle-outline"></ion-icon><span>{{ profileError() }}</span></div>
+          }
+          <div class="field">
+            <label for="p-name">Full name</label>
+            <input id="p-name" class="input" name="fullName" autocomplete="name" [(ngModel)]="fullName" />
+          </div>
+          <div class="field">
+            <label for="p-email">Email</label>
+            <input id="p-email" class="input" [value]="u.email" disabled />
+            <span class="hint">Contact us to change your email.</span>
+          </div>
+          <div class="field">
+            <label for="p-phone">Phone</label>
+            <input id="p-phone" class="input" type="tel" name="phone" autocomplete="tel" [(ngModel)]="phone" />
+          </div>
+          <div class="field">
+            <label for="p-country">Country</label>
+            <select id="p-country" class="select" name="country" [(ngModel)]="country">
+              <option value="" disabled>Choose your country</option>
+              @for (c of countries; track c) {
+                <option [value]="c">{{ c }}</option>
+              }
+            </select>
+            @if (country() === 'Other') {
+              <input class="input" name="otherCountry" placeholder="Type your country" [(ngModel)]="otherCountry" />
+            }
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label for="p-city">City</label>
+              <input id="p-city" class="input" name="city" autocomplete="address-level2" [(ngModel)]="city" />
+            </div>
+            <div class="field">
+              <label for="p-postal">Postcode</label>
+              <input id="p-postal" class="input" name="postalCode" autocomplete="postal-code" [(ngModel)]="postalCode" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="p-address">Street address</label>
+            <textarea id="p-address" class="textarea" name="address" rows="2" autocomplete="street-address" [(ngModel)]="address"></textarea>
+          </div>
+          <div class="btn-row">
+            <button type="button" class="btn btn-outline btn-sm" (click)="editing.set(false)" [disabled]="saving()">Cancel</button>
+            <button type="submit" class="btn btn-primary btn-sm" [disabled]="saving()">
+              @if (saving()) {
+                <ion-spinner name="crescent"></ion-spinner>
+              }
+              Save
+            </button>
+          </div>
+        </form>
+      }
+    </section>
+
+    <app-ship-to-card />
+
+    <!-- Password -->
+    <section class="card">
+      <div class="card-head">
+        <h3 class="card-title">Password</h3>
+        @if (!pwOpen()) {
+          <button type="button" class="btn btn-ghost btn-sm" (click)="pwOpen.set(true)"><ion-icon name="lock-closed-outline"></ion-icon> Change</button>
+        }
+      </div>
+      @if (pwOpen()) {
+        <form class="edit-form" (ngSubmit)="changePassword()" novalidate>
+          @if (pwError()) {
+            <div class="form-error" role="alert"><ion-icon name="alert-circle-outline"></ion-icon><span>{{ pwError() }}</span></div>
+          }
+          <div class="field">
+            <label for="pw-current">Current password</label>
+            <div class="input-affix">
+              <input id="pw-current" class="input" [type]="showPw() ? 'text' : 'password'" name="current" autocomplete="current-password" [(ngModel)]="currentPassword" />
+              <button type="button" class="affix-btn" (click)="showPw.set(!showPw())" [attr.aria-label]="showPw() ? 'Hide passwords' : 'Show passwords'">
+                <ion-icon [name]="showPw() ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+              </button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="pw-new">New password</label>
+            <input id="pw-new" class="input" [type]="showPw() ? 'text' : 'password'" name="new" autocomplete="new-password" placeholder="At least 8 characters" [(ngModel)]="newPassword" />
+            @if (newPassword()) {
+              <div class="strength">
+                <div class="bars">
+                  @for (i of [1, 2, 3, 4]; track i) {
+                    <span [class]="'bar s' + strength().score + (strength().score >= i ? ' on' : '')"></span>
+                  }
+                </div>
+                <span class="label">{{ strength().label }}</span>
+              </div>
+            }
+          </div>
+          <div class="field">
+            <label for="pw-confirm">Confirm new password</label>
+            <input id="pw-confirm" class="input" [type]="showPw() ? 'text' : 'password'" name="confirm" autocomplete="new-password" [(ngModel)]="confirmPassword" />
+          </div>
+          <div class="btn-row">
+            <button type="button" class="btn btn-outline btn-sm" (click)="pwOpen.set(false)" [disabled]="changingPw()">Cancel</button>
+            <button type="submit" class="btn btn-primary btn-sm" [disabled]="changingPw()">
+              @if (changingPw()) {
+                <ion-spinner name="crescent"></ion-spinner>
+              }
+              Update password
+            </button>
+          </div>
+        </form>
+      } @else {
+        <p class="muted">Keep your account secure with a strong, unique password.</p>
+      }
+    </section>
+
+    <button type="button" class="btn btn-danger-outline btn-block" (click)="logout()" [disabled]="loggingOut()">
+      @if (loggingOut()) {
+        <ion-spinner name="crescent"></ion-spinner>
+      } @else {
+        <ion-icon name="log-out-outline"></ion-icon>
+      }
+      Sign out
+    </button>
+  }
+</div>

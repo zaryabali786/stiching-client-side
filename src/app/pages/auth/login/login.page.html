@@ -1,0 +1,90 @@
+<div class="auth-wrap">
+  <section class="auth-hero">
+    <div class="monogram">{{ (config.brandName() || '·').charAt(0) }}</div>
+    <span class="eyebrow">{{ config.brandName() }} · Bespoke stitching from Pakistan</span>
+    <h1>Welcome back</h1>
+    <p>Sign in to track your parcels, approve your outfits and pay invoices — all in one place.</p>
+  </section>
+
+  <section class="auth-card">
+    <form (ngSubmit)="submit()" novalidate>
+      @if (error()) {
+        <div class="form-error" role="alert">
+          <ion-icon name="alert-circle-outline"></ion-icon>
+          <span>{{ error() }}</span>
+        </div>
+      }
+      @if (info()) {
+        <div class="form-error info" role="status">
+          <ion-icon name="mail-outline"></ion-icon>
+          <span>{{ info() }}</span>
+        </div>
+      }
+
+      <div class="field">
+        <label for="email">Email</label>
+        <div class="input-affix leading">
+          <ion-icon class="affix-icon" name="mail-outline"></ion-icon>
+          <input
+            id="email"
+            class="input"
+            type="email"
+            name="email"
+            autocomplete="email"
+            inputmode="email"
+            placeholder="you@example.com"
+            [class.invalid]="submitted() && !email().trim()"
+            [(ngModel)]="email"
+          />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <div class="input-affix leading">
+          <ion-icon class="affix-icon" name="lock-closed-outline"></ion-icon>
+          <input
+            id="password"
+            class="input"
+            [type]="showPassword() ? 'text' : 'password'"
+            name="password"
+            autocomplete="current-password"
+            placeholder="Your password"
+            [class.invalid]="submitted() && !password()"
+            [(ngModel)]="password"
+          />
+          <button
+            type="button"
+            class="affix-btn"
+            (click)="showPassword.set(!showPassword())"
+            [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+          >
+            <ion-icon [name]="showPassword() ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+          </button>
+        </div>
+      </div>
+
+      <div class="forgot-row">
+        <button type="button" (click)="forgot()" [disabled]="sendingReset() || busy()">
+          {{ sendingReset() ? 'Sending reset link…' : 'Forgot password?' }}
+        </button>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" [disabled]="busy()">
+        @if (submitting()) {
+          <ion-spinner name="crescent"></ion-spinner> Signing in…
+        } @else {
+          Sign in <ion-icon name="arrow-forward-outline"></ion-icon>
+        }
+      </button>
+    </form>
+
+    @if (googleEnabled()) {
+      <app-google-button [busy]="googleBusy()" [disabled]="busy()" (pressed)="startGoogle()" />
+    }
+  </section>
+
+  <p class="auth-switch">
+    New here?<a routerLink="/register">Create your account</a>
+  </p>
+</div>

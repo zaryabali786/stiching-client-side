@@ -1,0 +1,141 @@
+<div class="page">
+  <header class="title-row">
+    <div>
+      <span class="eyebrow">Measurements</span>
+      <h1 class="page-title">Sizes</h1>
+    </div>
+    <button type="button" class="btn btn-outline btn-sm" (click)="openPerson()">
+      <ion-icon name="add-outline" aria-hidden="true"></ion-icon> Person
+    </button>
+  </header>
+
+  @if (loading() && charts().length === 0) {
+    <app-skeleton variant="cards" [count]="2" />
+  } @else if (error()) {
+    <app-error-state [message]="error()!" (retry)="load()" />
+  } @else if (charts().length === 0) {
+    <app-empty-state
+      icon="people-outline"
+      title="No sizes yet"
+      message="Save measurements for yourself and your family once, then pick them for every article you order."
+    >
+      <button type="button" class="btn btn-primary btn-sm" (click)="openPerson()">
+        <ion-icon name="add-outline" aria-hidden="true"></ion-icon> Add your first size
+      </button>
+    </app-empty-state>
+  } @else {
+    <!-- People -->
+    <div class="tabs" #tabs role="tablist" aria-label="People">
+      @for (p of people(); track p) {
+        <button
+          type="button"
+          role="tab"
+          class="tab"
+          [id]="'tab-' + $index"
+          [attr.data-person]="p"
+          [class.active]="p === selectedPerson()"
+          [attr.aria-selected]="p === selectedPerson()"
+          [attr.aria-controls]="'size-panel'"
+          [attr.tabindex]="p === selectedPerson() ? 0 : -1"
+          (click)="selectPerson(p)"
+          (keydown)="onTabKey($event)"
+        >
+          {{ p }}
+        </button>
+      }
+    </div>
+
+    <div id="size-panel" role="tabpanel" [attr.aria-label]="selectedPerson() + ' sizes'" class="panel">
+      <!-- Variations -->
+      <div class="chips" role="group" [attr.aria-label]="'Variations for ' + selectedPerson()">
+        @for (c of personCharts(); track c.id) {
+          <button type="button" class="chip" [class.active]="c.id === current()?.id" [attr.aria-pressed]="c.id === current()?.id" (click)="selectChart(c)">
+            {{ c.variation || 'Standard' }}
+          </button>
+        }
+        <button type="button" class="chip add-chip" (click)="openVariation()">
+          <ion-icon name="add-outline" aria-hidden="true"></ion-icon> Variation
+        </button>
+      </div>
+
+      @if (current(); as c) {
+        <article class="card chart" [attr.aria-label]="c.name">
+          <div class="chart-top">
+            <div class="chart-titles">
+              <h2>{{ c.variation || 'Standard' }}</h2>
+              <span class="updated">Updated {{ c.updated_at || c.created_at | date: 'd MMM y' }}</span>
+            </div>
+            @if (c.nearest_size) {
+              <span class="tag" [attr.aria-label]="'Nearest size ' + c.nearest_size">Nearest size {{ c.nearest_size }}</span>
+            }
+          </div>
+
+          <app-size-view [chart]="c" />
+
+          @if (c.fit_feedback) {
+            <div class="form-error info">
+              <ion-icon name="information-circle-outline" aria-hidden="true"></ion-icon>
+              <span>{{ c.fit_feedback }}</span>
+            </div>
+          }
+          @if (c.notes || c.notes_audio?.url) {
+            <div class="note">
+              <span class="eyebrow">Note for the tailor</span>
+              @if (c.notes) {
+                <p>“{{ c.notes }}”</p>
+              }
+              @if (c.notes_audio?.url; as src) {
+                <app-voice-player [src]="src" [duration]="c.notes_audio!.duration" [mime]="c.notes_audio!.mime" (loadFailed)="load(true)" />
+              }
+            </div>
+          }
+
+          @if (confirmDelete()) {
+            <div class="confirm-panel" role="alertdialog" [attr.aria-label]="'Confirm delete ' + c.name">
+              <p>Delete <b>{{ c.name }}</b>? Orders that already use it keep their own copy.</p>
+              <div class="btn-row">
+                <button type="button" class="btn btn-outline btn-sm" (click)="confirmDelete.set(false)" [disabled]="deleting()">Keep</button>
+                <button type="button" class="btn btn-danger btn-sm" (click)="remove(c)" [disabled]="deleting()">
+                  @if (deleting()) {
+                    <ion-spinner name="crescent"></ion-spinner>
+                  }
+                  Delete
+                </button>
+              </div>
+            </div>
+          } @else {
+            <div class="btn-row">
+              <button type="button" class="btn btn-danger-outline btn-sm" (click)="confirmDelete.set(true)">
+                <ion-icon name="trash-outline" aria-hidden="true"></ion-icon> Delete
+              </button>
+              <button type="button" class="btn btn-outline btn-sm" (click)="openEdit(c)">
+                <ion-icon name="create-outline" aria-hidden="true"></ion-icon> Edit
+              </button>
+            </div>
+          }
+        </article>
+      }
+    </div>
+  }
+
+  <details class="tips card tinted flat">
+    <summary>How to measure <ion-icon name="chevron-down-outline" aria-hidden="true"></ion-icon></summary>
+    <ul>
+      <li>Use a soft tape and measure over light clothing; keep the tape snug, not tight.</li>
+      <li><b>Bust, waist, hip</b>: around the fullest or narrowest part, tape parallel to the floor.</li>
+      <li><b>Front length and trouser length</b>: from the shoulder or waist down to where you want the hem.</li>
+      <li>Not sure? Leave it blank. Our master tailor will confirm before cutting.</li>
+    </ul>
+  </details>
+</div>
+
+<app-size-chart-form
+  [open]="formOpen()"
+  [chart]="editing()"
+  [copyFrom]="copyFrom()"
+  [people]="people()"
+  [lockPerson]="lockPerson()"
+  [defaultPerson]="defaultPerson()"
+  (saved)="onSaved($event)"
+  (closed)="formOpen.set(false)"
+/>

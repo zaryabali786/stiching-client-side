@@ -1,0 +1,625 @@
+<div class="page">
+  <header class="top">
+    <a class="icon-btn" routerLink="/app/orders" aria-label="Back to orders">
+      <ion-icon name="chevron-back-outline" aria-hidden="true"></ion-icon>
+    </a>
+    <div class="top-titles">
+      @if (order(); as o) {
+        <span class="eyebrow mono-ref">{{ o.reference }}</span>
+        <h1>{{ o.brand }}</h1>
+      } @else {
+        <span class="skeleton" style="width: 70px; height: 10px; margin-bottom: 6px"></span>
+        <span class="skeleton" style="width: 140px; height: 20px"></span>
+      }
+    </div>
+    <button type="button" class="icon-btn" (click)="load()" [disabled]="loading()" aria-label="Refresh order">
+      @if (loading() && order()) {
+        <ion-spinner name="crescent"></ion-spinner>
+      } @else {
+        <ion-icon name="refresh-outline" aria-hidden="true"></ion-icon>
+      }
+    </button>
+  </header>
+
+  @if (loading() && !order()) {
+    <app-skeleton variant="cards" [count]="3" />
+  } @else if (error() && !order()) {
+    <app-error-state title="We couldn't load this order" [message]="error()!" (retry)="load()" />
+  } @else if (order(); as o) {
+    <!-- Just created -->
+    @if (showCreated() && o.status === 'submitted') {
+      <section class="created-card" role="status">
+        <button type="button" class="close" (click)="dismissCreated()" aria-label="Dismiss"><ion-icon name="close-outline" aria-hidden="true"></ion-icon></button>
+        <span class="check" aria-hidden="true"><ion-icon name="checkmark-outline"></ion-icon></span>
+        <h2>Order {{ o.reference }} created</h2>
+        <p>Now have the brand deliver your parcel to our atelier — use the address below and write your code on the label.</p>
+      </section>
+    }
+
+    <!-- Status -->
+    <section class="card status-card" id="status-card" tabindex="-1" aria-label="Order status">
+      <div class="status-row">
+        <app-status-badge [status]="o.status" [label]="o.status_label" />
+        @if (o.has_issue) {
+          <span class="issue-flag"><ion-icon name="alert-circle-outline" aria-hidden="true"></ion-icon>Issue</span>
+        }
+      </div>
+      <p class="hint">{{ hint() }}</p>
+
+      @if (o.status !== 'cancelled') {
+        <ol class="tracker" aria-label="Progress">
+          @for (s of steps; track s; let i = $index) {
+            <li class="t-seg" [class]="'t-seg ' + stepState(i)">
+              <span class="sr-only">{{ s }}: {{ stepState(i) === 'done' ? 'done' : stepState(i) === 'current' ? 'current step' : 'to do' }}</span>
+            </li>
+          }
+        </ol>
+        <div class="tracker-caption" aria-hidden="true">
+          @if (o.status === 'delivered') {
+            <span><b>Delivered</b> · all {{ steps.length }} steps complete</span>
+          } @else {
+            <span>Step {{ stepIndex() + 1 }} of {{ steps.length }} · <b>{{ steps[stepIndex()] }}</b></span>
+            @if (nextStep(); as n) {
+              <span class="next">Next: {{ n }}</span>
+            }
+          }
+        </div>
+      }
+    </section>
+
+    <!-- Unit issues (red = problem) -->
+    @if (issueUnits().length) {
+      <section class="card issue-card" role="alert">
+        <h3 class="card-title"><ion-icon name="warning-outline" aria-hidden="true"></ion-icon> We found an issue with your parcel</h3>
+        @for (u of issueUnits(); track u.id) {
+          <div class="issue-item">
+            <strong>{{ u.unit_title }}</strong>
+            @if (u.issue_type) {
+              <span class="issue-type">{{ eventLabel(u.issue_type) }}</span>
+            }
+            @if (u.issue_note) {
+              <p>{{ u.issue_note }}</p>
+            }
+            @if (u.issue_audio?.url; as src) {
+              <app-voice-player [src]="src" [duration]="u.issue_audio!.duration" [mime]="u.issue_audio!.mime" (loadFailed)="onAudioFailed()" />
+            }
+            @if (u.issue_media?.length) {
+              <div class="thumbs">
+                @for (m of u.issue_media; track m.url) {
+                  @if (isImage(m.type, m.url)) {
+                    <button type="button" class="thumb" (click)="viewer.set(m.url)" aria-label="Open issue photo"><img [src]="m.url" alt="" /></button>
+                  }
+                }
+              </div>
+            }
+          </div>
+        }
+        <p class="muted-note">Our team will contact you about the next steps.</p>
+      </section>
+    }
+
+    <!-- ───────── Status-specific panels (primary actions live in the sticky bar below) ───────── -->
+
+    @if (o.status === 'submitted') {
+      <app-ship-to-card [compact]="!showCreated()" />
+    }
+
+    <!-- ───────── Approval, one card per article ───────── -->
+    @if (approvalUnits().length || legacyApproval()) {
+      <section class="approvals" aria-labelledby="appr-title">
+        @if (waitingCount() > 0) {
+          <div class="appr-head">
+            <span class="eyebrow">Your approval is needed</span>
+            <h2 id="appr-title">Review your finished outfits</h2>
+            <p class="muted-note">Approve each article, or tell us what to change. Approved articles go on to packing.</p>
+            @if (pendingUnits().length > 1) {
+              <button type="button" class="link-btn approve-all" (click)="approve()" [disabled]="!!pending()">
+                @if (pending() === 'approve' && pendingKey() === '__all') {
+                  <ion-spinner name="crescent"></ion-spinner>
+                }
+                Approve all {{ pendingUnits().length }} articles
+              </button>
+            }
+          </div>
+        } @else {
+          <div class="appr-head">
+            <h2 id="appr-title">Your approvals</h2>
+          </div>
+        }
+
+        @for (u of o.units; track u.id) {
+          @if (u.approval; as ap) {
+            @switch (ap.status) {
+              @case ('pending') {
+                <article class="card approval-card" [id]="'approval-' + u.id" [class.flash]="flashKey() === u.id" [attr.aria-label]="'Approval for ' + u.unit_title">
+                  <header class="ap-head">
+                    @if (u.product_image_url) {
+                      <img class="ap-thumb" [src]="u.product_image_url" alt="" loading="lazy" referrerpolicy="no-referrer" />
+                    } @else {
+                      <span class="unit-num" aria-hidden="true">{{ u.line_no }}</span>
+                    }
+                    <div class="ap-titles">
+                      <strong>{{ u.unit_title }}</strong>
+                      <span>Qty {{ u.quantity }}</span>
+                    </div>
+                    <span class="status-badge tone-amber">Needs approval</span>
+                  </header>
+
+                  @if (ap.photos?.length) {
+                    <div class="gallery">
+                      @for (ph of ap.photos; track ph.url; let i = $index) {
+                        <button type="button" class="g-item" (click)="viewer.set(ph.url)" [attr.aria-label]="'Open photo ' + (i + 1) + ' of ' + u.unit_title">
+                          <img [src]="ph.url" [alt]="ph.name || 'Photo ' + (i + 1)" loading="lazy" />
+                        </button>
+                      }
+                    </div>
+                  } @else {
+                    <p class="muted-note">No photos were attached.</p>
+                  }
+
+                  @if (changesFor() === u.id) {
+                    <div class="field">
+                      <label [for]="'changeNote-' + u.id">What should we change on {{ u.unit_title }}?</label>
+                      <textarea [id]="'changeNote-' + u.id" class="textarea" rows="3" placeholder="e.g. Please shorten the shirt by 1 inch"
+                        [ngModel]="changeNote()" (ngModelChange)="changeNote.set($event)"></textarea>
+                      <app-voice-note-field [value]="changeAudio()" (valueChange)="changeAudio.set($event)" (busy)="changeAudioBusy.set($event)" />
+                    </div>
+                    <div class="btn-row">
+                      <button type="button" class="btn btn-outline btn-sm" (click)="closeChanges()" [disabled]="pending() === 'changes'">Back</button>
+                      <button type="button" class="btn btn-primary btn-sm" (click)="requestChanges(u.id)" [disabled]="!!pending() || changeAudioBusy() || !canSendChanges()">
+                        @if (pending() === 'changes' && pendingKey() === u.id) {
+                          <ion-spinner name="crescent"></ion-spinner>
+                        }
+                        Send to tailor
+                      </button>
+                    </div>
+                  } @else {
+                    <div class="btn-row">
+                      <button type="button" class="btn btn-outline btn-sm" (click)="openChanges(u.id)" [disabled]="!!pending()">Request changes</button>
+                      <button type="button" class="btn btn-primary btn-sm" [id]="'approve-' + u.id" (click)="approve(u.id)" [disabled]="!!pending()">
+                        @if (pending() === 'approve' && pendingKey() === u.id) {
+                          <ion-spinner name="crescent"></ion-spinner>
+                        } @else {
+                          <ion-icon name="checkmark-outline" aria-hidden="true"></ion-icon>
+                        }
+                        Approve
+                      </button>
+                    </div>
+                  }
+                </article>
+              }
+              @case ('approved') {
+                <article class="card approved-card" [id]="'approval-' + u.id" [attr.aria-label]="'Approved: ' + u.unit_title">
+                  <header class="ap-head">
+                    <span class="ap-check" aria-hidden="true"><ion-icon name="checkmark-outline"></ion-icon></span>
+                    <div class="ap-titles">
+                      <strong>{{ u.unit_title }}</strong>
+                      <span>Qty {{ u.quantity }}</span>
+                    </div>
+                    <span class="status-badge tone-green">Approved</span>
+                  </header>
+                  @if (ap.photos?.length) {
+                    <button type="button" class="link-btn" (click)="togglePhotos(u.id)" [attr.aria-expanded]="photosOpen().has(u.id)" [attr.aria-controls]="'ap-photos-' + u.id">
+                      {{ photosOpen().has(u.id) ? 'Hide photos' : 'View photos' }}
+                    </button>
+                    @if (photosOpen().has(u.id)) {
+                      <div class="gallery" [id]="'ap-photos-' + u.id">
+                        @for (ph of ap.photos; track ph.url; let i = $index) {
+                          <button type="button" class="g-item" (click)="viewer.set(ph.url)" [attr.aria-label]="'Open photo ' + (i + 1) + ' of ' + u.unit_title">
+                            <img [src]="ph.url" [alt]="ph.name || 'Photo ' + (i + 1)" loading="lazy" />
+                          </button>
+                        }
+                      </div>
+                    }
+                  }
+                </article>
+              }
+              @case ('changes_requested') {
+                <article class="card changes-card" [id]="'approval-' + u.id" [attr.aria-label]="'Changes requested: ' + u.unit_title">
+                  <header class="ap-head">
+                    <span class="ap-flag" aria-hidden="true"><ion-icon name="create-outline"></ion-icon></span>
+                    <div class="ap-titles">
+                      <strong>{{ u.unit_title }}</strong>
+                      <span>Qty {{ u.quantity }}</span>
+                    </div>
+                    <span class="status-badge tone-amber">Changes requested</span>
+                  </header>
+                  <p class="muted-note">Changes requested, our tailor is on it.</p>
+                  @if (ap.change_request) {
+                    <p class="quote">“{{ ap.change_request }}”</p>
+                  }
+                  @if (ap.change_request_audio?.url; as src) {
+                    <app-voice-player [src]="src" [duration]="ap.change_request_audio!.duration" [mime]="ap.change_request_audio!.mime" (loadFailed)="onAudioFailed()" />
+                  }
+                </article>
+              }
+            }
+          }
+        }
+
+        @if (legacyApproval()) {
+          <article class="card approval-card" id="approval-__order" [class.flash]="flashKey() === '__order'" aria-label="Approval for your order">
+            <p class="muted-note">Our quality team photographed your stitched articles. Approve them so we can pack, or tell us what to change.</p>
+            @if (o.approval_photos?.length) {
+              <div class="gallery">
+                @for (ph of o.approval_photos; track ph.url; let i = $index) {
+                  <button type="button" class="g-item" (click)="viewer.set(ph.url)" [attr.aria-label]="'Open photo ' + (i + 1)">
+                    <img [src]="ph.url" [alt]="ph.name || 'Approval photo ' + (i + 1)" loading="lazy" />
+                  </button>
+                }
+              </div>
+            } @else {
+              <p class="muted-note">No photos were attached.</p>
+            }
+            @if (changesFor() === '__order') {
+              <div class="field">
+                <label for="changeNote-__order">What should we change?</label>
+                <textarea id="changeNote-__order" class="textarea" rows="3" placeholder="e.g. Please shorten the shirt by 1 inch"
+                  [ngModel]="changeNote()" (ngModelChange)="changeNote.set($event)"></textarea>
+                <app-voice-note-field [value]="changeAudio()" (valueChange)="changeAudio.set($event)" (busy)="changeAudioBusy.set($event)" />
+              </div>
+              <div class="btn-row">
+                <button type="button" class="btn btn-outline btn-sm" (click)="closeChanges()" [disabled]="pending() === 'changes'">Back</button>
+                <button type="button" class="btn btn-primary btn-sm" (click)="requestChanges('__order')" [disabled]="!!pending() || changeAudioBusy() || !canSendChanges()">
+                  @if (pending() === 'changes') {
+                    <ion-spinner name="crescent"></ion-spinner>
+                  }
+                  Send to tailor
+                </button>
+              </div>
+            } @else {
+              <div class="btn-row">
+                <button type="button" class="btn btn-outline btn-sm" (click)="openChanges('__order')" [disabled]="!!pending()">Request changes</button>
+                <button type="button" class="btn btn-primary btn-sm" id="approve-__order" (click)="approve('__order')" [disabled]="!!pending()">
+                  @if (pending() === 'approve') {
+                    <ion-spinner name="crescent"></ion-spinner>
+                  } @else {
+                    <ion-icon name="checkmark-outline" aria-hidden="true"></ion-icon>
+                  }
+                  Approve
+                </button>
+              </div>
+            }
+          </article>
+        }
+      </section>
+    }
+
+    @if ((o.change_request || o.change_request_audio) && !approvalUnits().length && o.status !== 'customer_approval' && o.status !== 'delivered' && o.status !== 'cancelled') {
+      <section class="card tinted flat">
+        <span class="eyebrow">Your change request</span>
+        @if (o.change_request) {
+          <p class="quote">“{{ o.change_request }}”</p>
+        }
+        @if (o.change_request_audio?.url; as src) {
+          <app-voice-player [src]="src" [duration]="o.change_request_audio!.duration" [mime]="o.change_request_audio!.mime" (loadFailed)="onAudioFailed()" />
+        }
+      </section>
+    }
+
+    @if (isAwaitingPayment() && o.invoice; as inv) {
+      <section class="card invoice-card" aria-labelledby="inv-title">
+        <div class="inv-head">
+          <div>
+            <span class="eyebrow">Invoice</span>
+            <h3 id="inv-title">{{ inv.number }}</h3>
+          </div>
+          @if (inv.issued_at) {
+            <span class="inv-date">Issued {{ inv.issued_at | date: 'd MMM y' }}</span>
+          }
+        </div>
+
+        <div class="amount-due">
+          <span class="ad-k">Amount due</span>
+          <strong class="ad-v tabular">{{ payAmount() }}</strong>
+          @if (isForeign()) {
+            <span class="ad-sub tabular">PKR {{ inv.total_pkr | number: '1.0-0' }} · 1 {{ inv.currency }} = PKR {{ inv.fx_rate | number: '1.0-2' }}</span>
+          }
+        </div>
+
+        <details class="breakdown">
+          <summary>
+            <span>Price breakdown <em>(PKR)</em></span>
+            <ion-icon name="chevron-down-outline" aria-hidden="true"></ion-icon>
+          </summary>
+          <div class="lines">
+            @for (l of inv.lines; track l.id) {
+              <div class="line" [class.discount]="l.kind === 'discount'">
+                <div class="l-text">
+                  <strong>{{ l.label }}@if (l.quantity && l.quantity > 1) { <em>× {{ l.quantity }}</em> }</strong>
+                  @if (l.description) {
+                    <span>{{ l.description }}</span>
+                  }
+                </div>
+                <span class="l-amt tabular">{{ lineAmount(l) | number: '1.0-0' }}</span>
+              </div>
+            }
+          </div>
+          <div class="totals">
+            <div class="kv"><span class="k">Subtotal</span><span class="v tabular">PKR {{ inv.subtotal_pkr | number: '1.0-0' }}</span></div>
+            @if (inv.discount_pkr > 0) {
+              <div class="kv"><span class="k">Discount</span><span class="v tabular">− PKR {{ inv.discount_pkr | number: '1.0-0' }}</span></div>
+            }
+            <div class="kv total"><span class="k">Total</span><span class="v tabular">PKR {{ inv.total_pkr | number: '1.0-0' }}</span></div>
+          </div>
+        </details>
+
+        @if (inv.notes) {
+          <p class="muted-note notes">{{ inv.notes }}</p>
+        }
+        <p class="test-note"><ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon> Pay securely by card. Payments are processed by Stripe; we never see your card number.</p>
+      </section>
+    }
+
+    @if (paidInvoice(); as inv) {
+      <section class="card receipt-card">
+        <div class="receipt-head">
+          <span class="status-badge tone-green">Paid</span>
+          <span class="inv-date">{{ inv.number }}@if (inv.paid_at) { · {{ inv.paid_at | date: 'd MMM y' }} }</span>
+        </div>
+        <div class="paid-amount">
+          <strong class="tabular">
+            @if (inv.currency && inv.currency !== 'PKR') {
+              {{ inv.currency }} {{ inv.total_foreign | number: '1.2-2' }}
+            } @else {
+              PKR {{ inv.total_pkr | number: '1.0-0' }}
+            }
+          </strong>
+          @if (inv.currency && inv.currency !== 'PKR') {
+            <span class="tabular">PKR {{ inv.total_pkr | number: '1.0-0' }}</span>
+          }
+        </div>
+        @for (p of o.payments ?? []; track p.id) {
+          <div class="kv"><span class="k">{{ p.method === 'card' ? 'Card' : eventLabel(p.method) }} · {{ p.created_at | date: 'd MMM y' }}</span><span class="v mono">{{ p.provider_ref || '—' }}</span></div>
+        }
+      </section>
+    }
+
+    @if (o.shipment; as s) {
+      @if (s.courier || s.tracking_number || o.status === 'shipped' || o.status === 'delivered') {
+        <section class="card ship-card" [class.delivered]="o.status === 'delivered'">
+          <span class="eyebrow">{{ o.status === 'delivered' ? 'Delivered' : 'On its way' }}</span>
+          <h3 class="card-title"><ion-icon name="airplane-outline" aria-hidden="true"></ion-icon> Shipment</h3>
+          <div class="kv"><span class="k">Courier</span><span class="v">{{ s.courier || 'Being arranged' }}</span></div>
+          <div class="kv"><span class="k">Tracking number</span><span class="v mono">{{ s.tracking_number || '—' }}</span></div>
+          @if (s.handed_at) {
+            <div class="kv"><span class="k">Shipped</span><span class="v">{{ s.handed_at | date: 'd MMM y' }}</span></div>
+          }
+          @if (s.delivered_at) {
+            <div class="kv"><span class="k">Delivered</span><span class="v">{{ s.delivered_at | date: 'd MMM y' }}</span></div>
+          }
+        </section>
+      }
+    }
+
+    <!-- Order info -->
+    <section class="card">
+      <h3 class="card-title">Order details</h3>
+      <div class="kv"><span class="k">Reference</span><span class="v mono">{{ o.reference }}</span></div>
+      <div class="kv"><span class="k">Brand</span><span class="v">{{ o.brand_ref?.name || o.brand }}</span></div>
+      <div class="kv"><span class="k">Brand order no.</span><span class="v">{{ o.brand_order_number || '—' }}</span></div>
+      <div class="kv"><span class="k">Courier</span><span class="v">{{ o.courier?.name || '—' }}</span></div>
+      <div class="kv"><span class="k">Tracking number</span><span class="v">{{ o.tracking_number || '—' }}</span></div>
+      <div class="kv"><span class="k">Shipping</span><span class="v">{{ shippingText(o) }}</span></div>
+      @if (o.due_date && o.status !== 'cancelled' && o.status !== 'delivered') {
+        <div class="kv"><span class="k">Estimated ready</span><span class="v">{{ o.due_date | date: 'd MMM y' }}</span></div>
+      }
+      <div class="kv"><span class="k">Deliver to</span>
+        <span class="v">{{ destination(o) }}</span>
+      </div>
+      <div class="kv"><span class="k">Created</span><span class="v">{{ o.created_at | date: 'd MMM y, HH:mm' }}</span></div>
+      @if (o.customer_notes) {
+        <p class="quote">“{{ o.customer_notes }}”</p>
+      }
+    </section>
+
+    <!-- Articles -->
+    <section class="stack" aria-labelledby="articles-title">
+      <div class="section-head">
+        <h2 id="articles-title">Articles</h2>
+        <span class="count">{{ o.units.length }} article{{ o.units.length === 1 ? '' : 's' }} · {{ totalPieces() }} pc</span>
+      </div>
+      @for (u of o.units; track u.id) {
+        <article class="card unit">
+          <div class="unit-head">
+            @if (u.product_image_url) {
+              <button type="button" class="unit-img" (click)="viewer.set(u.product_image_url!)" [attr.aria-label]="'Open picture of ' + u.unit_title">
+                <img [src]="u.product_image_url" alt="" loading="lazy" referrerpolicy="no-referrer" />
+              </button>
+            } @else {
+              <span class="unit-num" aria-hidden="true">{{ u.line_no }}</span>
+            }
+            <div class="unit-titles">
+              <strong>{{ u.unit_title }}</strong>
+              <span>@if (u.stitching_type) {{{ u.stitching_type }} · }Qty {{ u.quantity }}</span>
+            </div>
+            <span class="status-badge" [class]="'status-badge ' + unitTone(u.status)">{{ unitLabel(u.status) }}</span>
+          </div>
+
+          <div class="unit-body">
+            @if (u.size_chart) {
+              <div class="u-row">
+                <ion-icon name="options-outline" aria-hidden="true"></ion-icon>
+                <app-size-summary [chart]="u.size_chart" />
+              </div>
+            } @else {
+              <div class="u-row muted"><ion-icon name="options-outline" aria-hidden="true"></ion-icon><div><span>No size chart selected</span></div></div>
+            }
+            @if (u.selected_articles?.length) {
+              <div class="u-row">
+                <ion-icon name="shirt-outline" aria-hidden="true"></ion-icon>
+                <div class="opt-chips">
+                  @for (s of u.selected_articles; track s.article_id) {
+                    <span class="opt-chip">
+                      @if (s.image_url) {
+                        <img class="opt-img" [src]="s.image_url" alt="" loading="lazy" />
+                      }
+                      <span class="opt-t">{{ s.type_name }}</span>
+                      <span class="opt-v">{{ s.name }}</span>
+                    </span>
+                  }
+                </div>
+              </div>
+            } @else if (designText(u)) {
+              <div class="u-row"><ion-icon name="shirt-outline" aria-hidden="true"></ion-icon><div><span>{{ designText(u) }}</span></div></div>
+            }
+            @if (u.product_link) {
+              <div class="u-row"><ion-icon name="link-outline" aria-hidden="true"></ion-icon><div><a [href]="u.product_link" target="_blank" rel="noopener">View product on {{ hostOf(u.product_link) }}<span class="sr-only"> (opens in a new tab)</span></a></div></div>
+            }
+            @if (u.notes) {
+              <p class="quote">“{{ u.notes }}”</p>
+            }
+            @if (u.notes_audio?.url; as src) {
+              <app-voice-player [src]="src" [duration]="u.notes_audio!.duration" [mime]="u.notes_audio!.mime" (loadFailed)="onAudioFailed()" />
+            }
+            @if (u.reference_images?.length) {
+              <div class="thumbs">
+                @for (img of u.reference_images; track img.url; let i = $index) {
+                  <button type="button" class="thumb" (click)="viewer.set(img.url)" [attr.aria-label]="'Open reference photo ' + (i + 1)"><img [src]="img.url" alt="" loading="lazy" /></button>
+                }
+              </div>
+            }
+
+            <!-- This article's own timeline -->
+            @if (latestStep(u); as last) {
+              <div class="u-timeline">
+                <button type="button" class="tl-toggle" (click)="toggleUnitTimeline(u)" [attr.aria-expanded]="timelineOpenFor(u)" [attr.aria-controls]="'tl-' + u.id">
+                  <span class="tl-title">Timeline</span>
+                  @if (!timelineOpenFor(u)) {
+                    <span class="tl-last">{{ last.label }} · {{ last.at | date: 'd MMM' }}</span>
+                  }
+                  <ion-icon [name]="timelineOpenFor(u) ? 'chevron-up-outline' : 'chevron-down-outline'" aria-hidden="true"></ion-icon>
+                </button>
+                @if (timelineOpenFor(u)) {
+                  <ol class="tl" [id]="'tl-' + u.id">
+                    @for (st of stepsNewestFirst(u); track $index; let first = $first) {
+                      <li [class]="'tl-step tone-' + stepTone(st.status)" [class.latest]="first">
+                        <span class="tl-dot" aria-hidden="true"></span>
+                        <div class="tl-body">
+                          <div class="tl-top">
+                            <strong>{{ st.label }}</strong>
+                            <time [attr.datetime]="st.at">{{ st.at | date: 'd MMM, HH:mm' }}</time>
+                          </div>
+                          @if (st.note) {
+                            <p>{{ st.note }}</p>
+                          }
+                        </div>
+                      </li>
+                    }
+                  </ol>
+                }
+              </div>
+            }
+
+            <button type="button" class="btn btn-outline btn-sm chat-unit-btn" (click)="openChat(u.id)">
+              <ion-icon name="chatbubbles-outline" aria-hidden="true"></ion-icon>
+              Chat about this article
+              @if (scopeUnread(u.id) > 0) {
+                <span class="unit-badge" [attr.aria-label]="scopeUnread(u.id) + ' unread'">{{ scopeUnread(u.id) }}</span>
+              }
+            </button>
+          </div>
+        </article>
+      }
+    </section>
+
+    @if (o.status === 'submitted') {
+      <section class="card">
+        <h3 class="card-title">Need to cancel?</h3>
+        <p class="muted-note">You can edit or cancel this order until your parcel arrives at our atelier.</p>
+        @if (confirmCancel()) {
+          <div class="confirm-panel" role="alertdialog" aria-label="Confirm cancellation">
+            <p>Cancel order <b>{{ o.reference }}</b>? This can't be undone. If the brand already shipped, please tell us so we can return the parcel.</p>
+            <div class="btn-row">
+              <button type="button" class="btn btn-outline btn-sm" (click)="confirmCancel.set(false)" [disabled]="pending() === 'cancel'">Keep order</button>
+              <button type="button" class="btn btn-danger btn-sm" (click)="cancelOrder()" [disabled]="pending() === 'cancel'">
+                @if (pending() === 'cancel') {
+                  <ion-spinner name="crescent"></ion-spinner>
+                }
+                Cancel order
+              </button>
+            </div>
+          </div>
+        } @else {
+          <button type="button" class="btn btn-danger-outline btn-sm" (click)="confirmCancel.set(true)">Cancel order</button>
+        }
+      </section>
+    }
+
+    <!-- Order timeline (everything that happened to the whole order; collapsible) -->
+    @if (timeline().length) {
+      <section class="card order-tl">
+        <button type="button" class="tl-toggle big" (click)="orderTimelineOpen.set(!orderTimelineOpen())" [attr.aria-expanded]="orderTimelineOpen()" aria-controls="order-timeline">
+          <span class="tl-title">Order timeline</span>
+          @if (!orderTimelineOpen()) {
+            <span class="tl-last">{{ eventLabel(timeline()[0].status) }} · {{ timeline()[0].created_at | date: 'd MMM' }}</span>
+          }
+          <ion-icon [name]="orderTimelineOpen() ? 'chevron-up-outline' : 'chevron-down-outline'" aria-hidden="true"></ion-icon>
+        </button>
+        @if (orderTimelineOpen()) {
+          <ol class="timeline" id="order-timeline">
+            @for (ev of timeline(); track ev.id; let first = $first) {
+              <li [class.latest]="first">
+                <span class="dot" aria-hidden="true"></span>
+                <div class="ev">
+                  <div class="ev-top">
+                    <strong>{{ eventLabel(ev.status) }}</strong>
+                    <time [attr.datetime]="ev.created_at">{{ ev.created_at | date: 'd MMM, HH:mm' }}</time>
+                  </div>
+                  @if (ev.note) {
+                    <p>{{ ev.note }}</p>
+                  }
+                </div>
+              </li>
+            }
+          </ol>
+        }
+      </section>
+    }
+
+    <!-- ───────── Sticky primary action for the current status (above the tab bar) ───────── -->
+    @if (isAwaitingPayment() && o.invoice; as inv) {
+      <div class="action-bar" role="region" aria-label="Payment">
+        <div class="ab-text">
+          <span class="ab-k">Invoice {{ inv.number }}</span>
+          <span class="ab-sub tabular">
+            @if (isForeign()) {
+              ≈ PKR {{ inv.total_pkr | number: '1.0-0' }}
+            } @else {
+              Secure card payment
+            }
+          </span>
+        </div>
+        <button type="button" class="btn btn-primary" (click)="pay()" [disabled]="!!pending()">
+          <ion-icon name="card-outline" aria-hidden="true"></ion-icon> Pay {{ payAmount() }}
+        </button>
+      </div>
+    } @else if (o.status === 'submitted' && !confirmCancel()) {
+      <div class="action-bar" role="region" aria-label="Order actions">
+        <div class="ab-text">
+          <span class="ab-k">Parcel not arrived yet</span>
+          <span class="ab-sub">You can still edit it</span>
+        </div>
+        <a class="btn btn-primary" [routerLink]="['/app/orders', o.id, 'edit']"><ion-icon name="create-outline" aria-hidden="true"></ion-icon> Edit order</a>
+      </div>
+    }
+  }
+</div>
+
+@if (viewer(); as src) {
+  <div class="viewer" (click)="closeViewer()" role="dialog" aria-modal="true" aria-label="Photo">
+    <button type="button" class="viewer-close" aria-label="Close photo"><ion-icon name="close-outline" aria-hidden="true"></ion-icon></button>
+    <img [src]="src" alt="Enlarged photo" (click)="$event.stopPropagation()" />
+  </div>
+}
+
+@if (order(); as o) {
+  <app-payment-sheet
+    [open]="payOpen()"
+    [orderId]="o.id"
+    [amountLabel]="payAmount()"
+    [invoiceNumber]="o.invoice?.number ?? ''"
+    (paid)="onPaid()"
+    (closed)="payOpen.set(false)"
+  />
+}

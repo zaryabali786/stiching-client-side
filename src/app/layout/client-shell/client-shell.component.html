@@ -1,0 +1,66 @@
+<header class="shell-header">
+  <a class="brand" routerLink="/app/overview" [attr.aria-label]="(config.brandName() || 'Home') + ' — home'">
+    <span class="monogram" aria-hidden="true">{{ (config.brandName() || '·').charAt(0) }}</span>
+    <span class="brand-title">{{ config.brandName() }}</span>
+  </a>
+
+  <div class="header-actions">
+    @if (auth.user()?.customer_code; as code) {
+      <button
+        type="button"
+        class="code-pill"
+        (click)="copyCode(code)"
+        [attr.aria-label]="'Your customer code ' + code + '. Tap to copy.'"
+        title="Your customer code — write it on every parcel. Tap to copy."
+      >
+        <span class="code-k" aria-hidden="true">Code</span>
+        <span class="mono">{{ code }}</span>
+        <ion-icon [name]="copied() ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon>
+      </button>
+    }
+    <button
+      type="button"
+      class="bell"
+      [class.has-unread]="notif.unreadCount() > 0"
+      (click)="notif.openModal()"
+      [attr.aria-label]="notif.unreadCount() > 0 ? 'Notifications, ' + notif.unreadCount() + ' unread' : 'Notifications'"
+    >
+      <ion-icon name="notifications-outline" aria-hidden="true"></ion-icon>
+      @if (notif.unreadCount() > 0) {
+        <span class="badge" aria-hidden="true">{{ badge() }}</span>
+      }
+    </button>
+  </div>
+</header>
+
+<main #scroller class="shell-main stx-routed" [class.focus]="focusMode()" id="main">
+  <router-outlet />
+</main>
+
+@if (!focusMode()) {
+<nav class="tabbar" aria-label="Main">
+  <a class="tab" routerLink="/app/overview" [class.active]="activeTab() === 'home'" [attr.aria-current]="activeTab() === 'home' ? 'page' : null">
+    <span class="ind"><ion-icon [name]="activeTab() === 'home' ? 'home' : 'home-outline'" aria-hidden="true"></ion-icon></span>
+    <span class="lbl">Home</span>
+  </a>
+  <a class="tab" routerLink="/app/orders" [class.active]="activeTab() === 'orders'" [attr.aria-current]="activeTab() === 'orders' ? 'page' : null">
+    <span class="ind"><ion-icon [name]="activeTab() === 'orders' ? 'cube' : 'cube-outline'" aria-hidden="true"></ion-icon></span>
+    <span class="lbl">Orders</span>
+  </a>
+  <a class="tab tab-new" routerLink="/app/orders/new" [class.active]="activeTab() === 'new'" [attr.aria-current]="activeTab() === 'new' ? 'page' : null">
+    <span class="plus"><ion-icon name="add-outline" aria-hidden="true"></ion-icon></span>
+    <span class="lbl">New order</span>
+  </a>
+  <a class="tab" routerLink="/app/sizes" [class.active]="activeTab() === 'sizes'" [attr.aria-current]="activeTab() === 'sizes' ? 'page' : null">
+    <span class="ind"><ion-icon [name]="activeTab() === 'sizes' ? 'options' : 'options-outline'" aria-hidden="true"></ion-icon></span>
+    <span class="lbl">Sizes</span>
+  </a>
+  <a class="tab" routerLink="/app/profile" [class.active]="activeTab() === 'profile'" [attr.aria-current]="activeTab() === 'profile' ? 'page' : null">
+    <span class="ind"><ion-icon [name]="activeTab() === 'profile' ? 'person' : 'person-outline'" aria-hidden="true"></ion-icon></span>
+    <span class="lbl">Profile</span>
+  </a>
+</nav>
+}
+
+<app-notification-modal />
+<app-chat-dock [layoutKey]="dockLayout()" />

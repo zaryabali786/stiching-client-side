@@ -1,0 +1,98 @@
+<div class="page">
+  <header class="title-row">
+    <div>
+      <span class="eyebrow">Your orders</span>
+      <h1 class="page-title">Orders</h1>
+    </div>
+    <a routerLink="/app/orders/new" class="btn btn-primary btn-sm new-btn">
+      <ion-icon name="add-outline" aria-hidden="true"></ion-icon> New
+    </a>
+  </header>
+
+  <div class="search">
+    <div class="input-affix leading">
+      <ion-icon class="affix-icon" name="search-outline" aria-hidden="true"></ion-icon>
+      <input
+        class="input"
+        type="search"
+        placeholder="Reference, brand or tracking no."
+        [value]="searchText()"
+        (input)="onSearch($any($event.target).value)"
+        aria-label="Search orders"
+      />
+      @if (searchText()) {
+        <button type="button" class="affix-btn" (click)="clearSearch()" aria-label="Clear search">
+          <ion-icon name="close-circle" aria-hidden="true"></ion-icon>
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="chips scroll" role="group" aria-label="Filter orders">
+    @for (f of filters; track f.key) {
+      <button type="button" class="chip" [class.active]="status() === f.key" [attr.aria-pressed]="status() === f.key" (click)="setStatus(f.key)">
+        {{ f.label }}
+        @if (status() === f.key && total() !== null && !loading()) {
+          <span class="count" [attr.aria-label]="total() + ' orders'">{{ total() }}</span>
+        }
+      </button>
+    }
+  </div>
+
+  @if (loading() && items().length === 0) {
+    <app-skeleton variant="tiles" [count]="5" />
+  } @else if (error()) {
+    <app-error-state [message]="error()!" (retry)="reload()" />
+  } @else if (items().length === 0) {
+    @if (isFiltered()) {
+      <app-empty-state icon="search-outline" title="No matching orders" message="Nothing matches that search and filter. Try a different reference or brand.">
+        <button type="button" class="btn btn-outline btn-sm" (click)="clearFilters()">Clear filters</button>
+      </app-empty-state>
+    } @else {
+      <app-empty-state
+        icon="shirt-outline"
+        title="No orders yet"
+        message="Tell us what you bought and how you'd like it stitched — we'll track it from parcel to doorstep."
+      >
+        <a routerLink="/app/orders/new" class="btn btn-primary btn-sm"><ion-icon name="add-outline" aria-hidden="true"></ion-icon> Create order</a>
+      </app-empty-state>
+    }
+  } @else {
+    <div class="list" [class.refreshing]="loading()" [attr.aria-busy]="loading()">
+      @for (o of items(); track o.id) {
+        <a class="order-tile" [routerLink]="['/app/orders', o.id]">
+          <span [class]="'brand-swatch ' + swatch(o.brand).cls" aria-hidden="true">{{ swatch(o.brand).initial }}</span>
+          <div class="tile-body">
+            <div class="tile-top">
+              <span class="tile-title">{{ o.brand }}</span>
+              <span class="tile-date">{{ o.created_at | date: 'd MMM y' }}</span>
+            </div>
+            <span class="tile-meta">
+              <app-status-badge [status]="o.status" [label]="o.status_label" />
+              <span class="mono">{{ o.reference }}</span>
+              <span aria-hidden="true">·</span>
+              <span>{{ o.units_count }} article{{ o.units_count === 1 ? '' : 's' }}</span>
+              @if (o.has_issue) {
+                <span class="issue-flag"><ion-icon name="alert-circle-outline" aria-hidden="true"></ion-icon>Issue</span>
+              }
+            </span>
+          </div>
+          <ion-icon name="chevron-forward-outline" class="tile-arrow" aria-hidden="true"></ion-icon>
+        </a>
+      }
+    </div>
+
+    @if (loadingMore()) {
+      <div class="load-more-row"><ion-spinner name="crescent"></ion-spinner> Loading more…</div>
+    } @else if (moreError()) {
+      <div class="load-more-row">
+        <span>{{ moreError() }}</span>
+        <button type="button" class="btn btn-ghost btn-sm" (click)="loadMore()">Retry</button>
+      </div>
+    } @else if (hasMore() && !loading()) {
+      <div class="sentinel" appInfiniteScroll (reached)="loadMore()"></div>
+    } @else if (!hasMore() && items().length > 3) {
+      <div class="load-more-row end">That's all your orders</div>
+    }
+  }
+</div>

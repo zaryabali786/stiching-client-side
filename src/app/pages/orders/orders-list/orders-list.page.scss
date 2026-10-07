@@ -1,0 +1,38 @@
+.title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.new-btn {
+  flex: none;
+}
+
+.search .input {
+  -webkit-appearance: none;
+
+  &::-webkit-search-cancel-button {
+    display: none;
+  }
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: opacity 0.2s ease;
+
+  &.refreshing {
+    opacity: 0.55;
+  }
+}
+
+.sentinel {
+  height: 1px;
+}
+
+.end {
+  font-size: var(--fs-sm);
+  color: var(--c-faint);
+}

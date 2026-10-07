@@ -1,0 +1,189 @@
+:host {
+  display: contents;
+}
+
+.scf-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.opt {
+  margin-left: 4px;
+  font-size: var(--fs-2xs);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--c-faint);
+}
+
+.person-fixed {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: var(--radius-field);
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-line);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+
+.chips .chip {
+  min-height: 44px;
+}
+
+.size-chips {
+  gap: 8px;
+
+  .chip {
+    min-width: 52px;
+    justify-content: center;
+    padding: 0 14px;
+    border-radius: 12px;
+    font-weight: 600;
+  }
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  font-size: var(--fs-md);
+  color: var(--c-ink-2);
+  cursor: pointer;
+
+  input {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    accent-color: var(--c-brand);
+  }
+}
+
+.grp-title {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--c-ink);
+  margin: 0 0 12px;
+}
+
+/* Drawing across the top of its section; it stays in view (sticky) while the fields scroll underneath */
+.fig {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  margin: 0 -2px 10px;
+  padding: 4px 2px 8px;
+  background: var(--c-bg);
+}
+
+.fig-card {
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  box-shadow: 0 6px 12px -8px rgba(28, 27, 25, 0.25);
+
+  app-size-diagram {
+    height: min(38vh, 440px);
+    margin: 0 auto;
+  }
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Keyboard open / short screen */
+.short .fig {
+  position: static;
+}
+
+.short .fig-card app-size-diagram {
+  height: 300px;
+}
+
+.mf {
+  scroll-margin-top: calc(min(38vh, 440px) + 40px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  label {
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--c-ink-2);
+  }
+}
+
+.mi {
+  position: relative;
+
+  input {
+    width: 100%;
+    min-height: 48px;
+    padding: 0 38px 0 12px;
+    border-radius: var(--radius-field);
+    border: 1px solid var(--c-line-strong);
+    background: var(--c-surface);
+    color: var(--c-ink);
+    font-size: 16px;
+    outline: none;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+
+    &::placeholder {
+      color: var(--c-placeholder);
+      font-size: var(--fs-md);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    &:focus {
+      border-color: var(--c-gold-dark);
+      box-shadow: 0 0 0 3px rgba(133, 96, 31, 0.22);
+    }
+  }
+
+  input[type='number'] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input:placeholder-shown + em {
+    display: none;
+  }
+
+  em {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-style: normal;
+    font-size: var(--fs-sm);
+    color: var(--c-muted);
+    pointer-events: none;
+  }
+}
+
+.mf.invalid .mi input {
+  border-color: var(--t-red-fg);
+  background: #fffbfa;
+}
+
+
+.short .mf {
+  scroll-margin-top: 12px;
+}

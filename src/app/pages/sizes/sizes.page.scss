@@ -1,0 +1,162 @@
+.title-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Person tabs: underline for the active one, scroll sideways when there are many */
+.tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 -16px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--c-line);
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.tab {
+  position: relative;
+  flex: none;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  background: none;
+  color: var(--c-muted);
+  font-size: var(--fs-lg);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: -1px;
+    height: 3px;
+    border-radius: 3px 3px 0 0;
+    background: transparent;
+  }
+
+  &:hover {
+    color: var(--c-ink);
+  }
+
+  &.active {
+    color: var(--c-ink);
+    font-weight: 700;
+
+    &::after {
+      background: var(--c-ink);
+    }
+  }
+
+  &:focus-visible {
+    outline-offset: -3px;
+    border-radius: 8px;
+  }
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.chip {
+  min-height: 44px;
+
+  &.add-chip {
+    border-style: dashed;
+    color: var(--c-brand);
+    font-weight: 600;
+
+    ion-icon {
+      font-size: 17px;
+    }
+  }
+}
+
+.chart {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.chart-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.chart-titles {
+  min-width: 0;
+
+  h2 {
+    font-family: var(--font-serif);
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.15;
+  }
+
+  .updated {
+    font-size: var(--fs-sm);
+    color: var(--c-muted);
+  }
+}
+
+.note {
+  p {
+    margin: 0;
+    font-size: var(--fs-md);
+    font-style: italic;
+    line-height: 1.5;
+    color: var(--c-ink-2);
+  }
+}
+
+.tips {
+  summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 44px;
+    font-family: var(--font-serif);
+    font-size: 19px;
+    font-weight: 700;
+    cursor: pointer;
+    list-style: none;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    ion-icon {
+      font-size: 17px;
+      color: var(--c-muted);
+      transition: transform 0.2s ease;
+    }
+  }
+
+  &[open] summary ion-icon {
+    transform: rotate(180deg);
+  }
+
+  ul {
+    margin: 4px 0 0;
+    padding-left: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: var(--fs-md);
+    line-height: 1.5;
+    color: var(--c-ink-2);
+  }
+}

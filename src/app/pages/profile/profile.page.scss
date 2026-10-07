@@ -1,0 +1,143 @@
+.profile-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 24px 16px 20px;
+  background: linear-gradient(180deg, #ffffff 0%, #fffaf1 100%);
+
+  .avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--green);
+    color: #e5c07b;
+    font-family: var(--font-serif);
+    font-size: 34px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 0 4px #ffffff, 0 0 0 5px #ead9b8;
+    margin-bottom: 12px;
+  }
+
+  h2 {
+    font-family: var(--font-serif);
+    font-size: 25px;
+    font-weight: 700;
+  }
+
+  .code {
+    margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    border-radius: 999px;
+    border: 1px solid #ead9b8;
+    background: var(--gold-tint);
+    color: var(--green);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+
+    ion-icon {
+      font-size: 15px;
+      color: var(--gold-dark);
+    }
+  }
+
+  .member {
+    margin: 8px 0 0;
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+}
+
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+
+  .card-title {
+    margin: 0;
+  }
+}
+
+.detail {
+  display: flex;
+  gap: 12px;
+  padding: 9px 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+  border-bottom: 1px solid var(--line-soft);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+
+  ion-icon {
+    flex: none;
+    font-size: 17px;
+    color: var(--gold-dark);
+    margin-top: 1px;
+  }
+}
+
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.muted {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.strength {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .bars {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+  }
+
+  .bar {
+    height: 4px;
+    border-radius: 4px;
+    background: #ece5d8;
+
+    &.on.s1 {
+      background: #d9534f;
+    }
+
+    &.on.s2 {
+      background: #e0a43b;
+    }
+
+    &.on.s3 {
+      background: #6aa56f;
+    }
+
+    &.on.s4 {
+      background: var(--green);
+    }
+  }
+
+  .label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    min-width: 46px;
+    text-align: right;
+  }
+}

@@ -1,0 +1,127 @@
+<div class="auth-wrap">
+  <section class="auth-hero">
+    <div class="monogram">{{ (config.brandName() || '·').charAt(0) }}</div>
+    <span class="eyebrow">{{ config.brandName() }} · Create your account</span>
+    <h1>Stitched in Lahore, delivered to you</h1>
+    <p>Order unstitched suits from any Pakistani brand, ship them to us, and we tailor and deliver them worldwide.</p>
+  </section>
+
+  <section class="auth-card">
+    <form (ngSubmit)="submit()" novalidate>
+      @if (error()) {
+        <div class="form-error" role="alert">
+          <ion-icon name="alert-circle-outline"></ion-icon>
+          <span>{{ error() }}</span>
+        </div>
+      }
+
+      <div class="field">
+        <label for="fullName">Full name</label>
+        <input id="fullName" class="input" name="fullName" autocomplete="name" placeholder="e.g. Sara Ahmed"
+          [class.invalid]="err('fullName')" [(ngModel)]="fullName" />
+        @if (err('fullName'); as m) { <span class="field-error">{{ m }}</span> }
+      </div>
+
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" class="input" type="email" name="email" autocomplete="email" inputmode="email"
+          placeholder="you@example.com" [class.invalid]="err('email')" [(ngModel)]="email" />
+        @if (err('email'); as m) { <span class="field-error">{{ m }}</span> }
+      </div>
+
+      <div class="field">
+        <label for="phone">Phone (with country code)</label>
+        <input id="phone" class="input" type="tel" name="phone" autocomplete="tel" inputmode="tel"
+          placeholder="+44 7700 900000" [class.invalid]="err('phone')" [(ngModel)]="phone" />
+        @if (err('phone'); as m) { <span class="field-error">{{ m }}</span> }
+      </div>
+
+      <h3 class="form-section-title">Delivery address</h3>
+
+      <div class="field">
+        <label for="country">Country</label>
+        <select id="country" class="select" name="country" autocomplete="country-name"
+          [class.invalid]="err('country')" [(ngModel)]="country">
+          <option value="" disabled>Choose your country</option>
+          @for (c of countries; track c) {
+            <option [value]="c">{{ c }}</option>
+          }
+        </select>
+        @if (country() === 'Other') {
+          <input class="input" name="otherCountry" placeholder="Type your country" [(ngModel)]="otherCountry" />
+        }
+        @if (err('country'); as m) { <span class="field-error">{{ m }}</span> }
+      </div>
+
+      <div class="field">
+        <label for="city">City</label>
+        <input id="city" class="input" name="city" autocomplete="address-level2" placeholder="e.g. London"
+          [class.invalid]="err('city')" [(ngModel)]="city" />
+        @if (err('city'); as m) { <span class="field-error">{{ m }}</span> }
+      </div>
+
+      <div class="field">
+        <label for="address">Street address &amp; postcode</label>
+        <textarea id="address" class="textarea" name="address" rows="3" autocomplete="street-address"
+          placeholder="House, street, area, postcode" [class.invalid]="err('address')" [(ngModel)]="address"></textarea>
+        @if (err('address'); as m) { <span class="field-error">{{ m }}</span> }
+      </div>
+
+      <h3 class="form-section-title">Password</h3>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <div class="input-affix">
+          <input id="password" class="input" [type]="showPassword() ? 'text' : 'password'" name="password"
+            autocomplete="new-password" placeholder="At least 8 characters" [class.invalid]="err('password')"
+            [(ngModel)]="password" />
+          <button type="button" class="affix-btn" (click)="showPassword.set(!showPassword())"
+            [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'">
+            <ion-icon [name]="showPassword() ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+          </button>
+        </div>
+        @if (password()) {
+          <div class="strength" aria-live="polite">
+            <div class="bars">
+              @for (i of [1, 2, 3, 4]; track i) {
+                <span [class]="'bar s' + strength().score + (strength().score >= i ? ' on' : '')"></span>
+              }
+            </div>
+            <span class="label">{{ strength().label }}</span>
+          </div>
+        }
+        @if (err('password'); as m) { <span class="field-error">{{ m }}</span> }
+      </div>
+
+      <div class="field">
+        <label for="confirm">Confirm password</label>
+        <input id="confirm" class="input" [type]="showPassword() ? 'text' : 'password'" name="confirm"
+          autocomplete="new-password" placeholder="Repeat your password" [class.invalid]="err('confirm')"
+          [(ngModel)]="confirm" />
+        @if (err('confirm'); as m) { <span class="field-error">{{ m }}</span> }
+      </div>
+
+      <label class="terms">
+        <input type="checkbox" name="terms" [(ngModel)]="terms" />
+        <span>I agree to the terms of service and privacy policy, and confirm my delivery details are correct.</span>
+      </label>
+      @if (err('terms'); as m) { <span class="field-error">{{ m }}</span> }
+
+      <button type="submit" class="btn btn-primary btn-block" [disabled]="submitting()">
+        @if (submitting()) {
+          <ion-spinner name="crescent"></ion-spinner> Creating account…
+        } @else {
+          Create account <ion-icon name="arrow-forward-outline"></ion-icon>
+        }
+      </button>
+    </form>
+
+    @if (config.config()?.google?.enabled) {
+      <app-google-button [disabled]="submitting()" (pressed)="startGoogle()" />
+    }
+  </section>
+
+  <p class="auth-switch">
+    Already have an account?<a routerLink="/login">Sign in</a>
+  </p>
+</div>

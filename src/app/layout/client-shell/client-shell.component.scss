@@ -1,0 +1,304 @@
+/*
+ * Shell layout
+ *  ┌ header (flex: none, safe-area top) ┐
+ *  │ main   (flex: 1, the ONLY scroller, padded for the tab bar + safe area) │
+ *  └ tabbar (position: fixed, bottom 0, same max-width as the shell, safe-area bottom) ┘
+ * The window/body never scroll (Ionic fixes the body), so nothing jumps during navigation.
+ */
+
+:host {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: var(--shell-max);
+  height: 100%;
+  margin: 0 auto;
+  background: var(--c-bg);
+  box-shadow: 0 0 0 1px rgba(28, 27, 25, 0.04), 0 0 48px rgba(28, 27, 25, 0.1);
+}
+
+/* ───────── Header ───────── */
+
+.shell-header {
+  flex: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  min-height: calc(var(--header-h) + env(safe-area-inset-top, 0px));
+  padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px 16px;
+  background: var(--c-bg);
+  border-bottom: 1px solid var(--c-line);
+  z-index: 10;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 44px;
+  text-decoration: none;
+  border-radius: 12px;
+
+  .monogram {
+    flex: none;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--c-brand);
+    color: var(--c-gold-light);
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 19px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .brand-title {
+    min-width: 0;
+    font-family: var(--font-serif);
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--c-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+
+.code-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 10px 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--c-gold-line);
+  background: var(--c-gold-tint);
+  color: var(--c-ink);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  /* extend the hit area to 44px without growing the pill */
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -4px 0;
+  }
+
+  .code-k {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--c-gold-dark);
+  }
+
+  .mono {
+    font-size: 12.5px;
+  }
+
+  ion-icon {
+    font-size: 15px;
+    color: var(--c-gold-dark);
+  }
+
+  &:hover {
+    border-color: var(--c-gold);
+  }
+}
+
+.bell {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--c-ink);
+  font-size: 23px;
+
+  &:hover {
+    background: var(--c-surface-3);
+  }
+
+  .badge {
+    position: absolute;
+    top: 5px;
+    right: 3px;
+    min-width: 19px;
+    height: 19px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--t-red-dot);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 0 2px var(--c-bg);
+  }
+}
+
+/* ───────── Scroll area ───────── */
+
+.shell-main {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--c-line-strong) transparent;
+  /* never let the last content hide behind the tab bar */
+  padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 20px);
+}
+
+/* Focus mode (order wizard): the tab bar is removed, so the content and its sticky step bar
+   use the full height. --tabbar-h is read by .shell-main padding and the global .action-bar. */
+.shell-main.focus {
+  --tabbar-h: 0px;
+  /* the step bar is sticky and in the page flow, so no extra room is needed below it */
+  padding-bottom: var(--safe-bottom);
+}
+
+/* ───────── Tab bar ───────── */
+
+.tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0 auto;
+  width: 100%;
+  max-width: var(--shell-max);
+  height: calc(var(--tabbar-h) + var(--safe-bottom));
+  padding: 0 4px var(--safe-bottom);
+  display: flex;
+  align-items: stretch;
+  background: var(--c-surface);
+  border-top: 1px solid var(--c-line);
+  box-shadow: 0 -4px 20px rgba(28, 27, 25, 0.05);
+  z-index: 50;
+}
+
+.tab {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  text-decoration: none;
+  color: var(--c-muted);
+  border-radius: 14px;
+
+  .ind {
+    width: 52px;
+    height: 30px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+
+    ion-icon {
+      font-size: 22px;
+    }
+  }
+
+  .lbl {
+    font-size: 11.5px;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  &:hover .ind {
+    background: var(--c-surface-3);
+  }
+
+  &.active {
+    color: var(--c-brand);
+
+    .ind {
+      background: var(--c-brand-soft);
+    }
+
+    .lbl {
+      font-weight: 700;
+    }
+  }
+
+  &:focus-visible {
+    outline-offset: -2px;
+  }
+}
+
+.tab-new {
+  .plus {
+    width: 40px;
+    height: 32px;
+    border-radius: 12px;
+    background: var(--c-brand);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 10px rgba(15, 57, 43, 0.28);
+    transition: background-color 0.2s ease, transform 0.15s ease;
+
+    ion-icon {
+      font-size: 22px;
+    }
+  }
+
+  .lbl {
+    color: var(--c-brand);
+    font-weight: 600;
+  }
+
+  &:hover .plus {
+    background: var(--c-brand-2);
+  }
+
+  &:active .plus {
+    transform: scale(0.94);
+  }
+
+  &.active .plus {
+    box-shadow: 0 0 0 3px var(--c-gold-line), 0 3px 10px rgba(15, 57, 43, 0.28);
+  }
+}
+
+@media (max-width: 359px) {
+  .code-pill .code-k {
+    display: none;
+  }
+
+  .brand .brand-title {
+    display: none;
+  }
+}

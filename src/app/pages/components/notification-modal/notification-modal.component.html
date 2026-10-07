@@ -1,0 +1,94 @@
+<app-sheet [open]="notif.isModalOpen()" title="Notifications" eyebrow="Alerts & updates" (closed)="close()">
+  <div class="toolbar">
+    <span class="count">
+      @if (notif.unreadCount() > 0) {
+        <b>{{ notif.unreadCount() }}</b> unread
+      } @else {
+        You're all caught up
+      }
+    </span>
+    @if (notif.unreadCount() > 0) {
+      <button type="button" class="btn btn-ghost btn-sm" (click)="markAll()" [disabled]="notif.markingAll()">
+        @if (notif.markingAll()) {
+          <ion-spinner name="crescent"></ion-spinner>
+        } @else {
+          <ion-icon name="checkmark-done-outline"></ion-icon>
+        }
+        Mark all read
+      </button>
+    }
+  </div>
+
+  @if (notif.loading() && notif.items().length === 0) {
+    <div class="feed">
+      @for (i of [1, 2, 3, 4]; track i) {
+        <div class="item sk">
+          <span class="skeleton" style="width: 38px; height: 38px; border-radius: 12px"></span>
+          <div class="sk-lines">
+            <span class="skeleton" style="width: 70%; height: 12px"></span>
+            <span class="skeleton" style="width: 95%; height: 10px"></span>
+          </div>
+        </div>
+      }
+    </div>
+  } @else if (notif.error() && notif.items().length === 0) {
+    <app-error-state [message]="notif.error()!" (retry)="notif.load()" />
+  } @else if (notif.items().length === 0) {
+    <app-empty-state
+      icon="notifications-outline"
+      title="No notifications yet"
+      message="Updates about your parcels, approvals, invoices and shipping will appear here."
+    />
+  } @else {
+    <div class="feed">
+      @for (item of notif.items(); track item.id) {
+        <div
+          class="item"
+          [class.unread]="!item.read_at"
+          [class.clickable]="!!item.link || !item.read_at"
+          role="button"
+          tabindex="0"
+          (click)="open(item)"
+          (keydown.enter)="open(item)"
+        >
+          <span class="type-icon" [class]="'type-icon t-' + item.type">
+            <ion-icon [name]="icon(item.type)"></ion-icon>
+          </span>
+          <div class="body">
+            <div class="title-row">
+              <strong>{{ item.title }}</strong>
+              @if (!item.read_at) {
+                <span class="dot" aria-label="Unread"></span>
+              }
+            </div>
+            @if (item.body) {
+              <p>{{ item.body }}</p>
+            }
+            <div class="meta-row">
+              <span class="time">{{ item.created_at | timeAgo }}</span>
+              @if (item.link && actionLabel(item.type); as label) {
+                <span class="action-chip" [class.invoice]="item.type === 'invoice'">{{ label }}</span>
+              }
+            </div>
+          </div>
+          <button type="button" class="dismiss" (click)="dismiss($event, item)" aria-label="Remove notification">
+            <ion-icon name="close-outline"></ion-icon>
+          </button>
+        </div>
+      }
+    </div>
+
+    @if (notif.hasMore()) {
+      <div class="more">
+        <button type="button" class="btn btn-outline btn-sm" (click)="notif.loadMore()" [disabled]="notif.loadingMore()">
+          @if (notif.loadingMore()) {
+            <ion-spinner name="crescent"></ion-spinner>
+          }
+          Load more
+        </button>
+      </div>
+    } @else if (notif.error()) {
+      <p class="inline-error">{{ notif.error() }}</p>
+    }
+  }
+</app-sheet>

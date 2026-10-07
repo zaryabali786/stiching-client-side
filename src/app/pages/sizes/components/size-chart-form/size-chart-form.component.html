@@ -1,0 +1,158 @@
+<app-sheet
+  [open]="open()"
+  [tall]="true"
+  [title]="isEdit() ? 'Edit size' : 'New size'"
+  eyebrow="Measurements in inches"
+  [locked]="saving()"
+  (closed)="close()"
+>
+  <form class="scf-form" [class.short]="short()" (ngSubmit)="save()" novalidate id="sizeChartForm">
+    @if (error()) {
+      <div class="form-error" role="alert">
+        <ion-icon name="alert-circle-outline" aria-hidden="true"></ion-icon>
+        <span>{{ error() }}</span>
+      </div>
+    }
+
+    <div class="field">
+      @if (personFixed()) {
+        <span class="field-label">Who is it for?</span>
+        <div class="person-fixed">{{ personName() }}</div>
+      } @else {
+        <label for="sc-person">Who is it for?</label>
+        <input
+          id="sc-person"
+          class="input"
+          name="person"
+          autocomplete="off"
+          placeholder="e.g. Me, Mother, Daughter"
+          [class.invalid]="submitted() && !personName().trim()"
+          [attr.aria-invalid]="submitted() && !personName().trim()"
+          [ngModel]="personName()"
+          (ngModelChange)="personName.set($event)"
+        />
+        @if (people().length) {
+          <div class="chips" role="group" aria-label="People you already saved sizes for">
+            @for (p of people(); track p) {
+              <button type="button" class="chip" [class.active]="personName() === p" [attr.aria-pressed]="personName() === p" (click)="personName.set(p)">{{ p }}</button>
+            }
+          </div>
+        }
+      }
+    </div>
+
+    <div class="field">
+      <label for="sc-variation">Variation name</label>
+      <input
+        id="sc-variation"
+        class="input"
+        name="variation"
+        autocomplete="off"
+        placeholder="e.g. Standard, Long kurta, Frock"
+        [ngModel]="variation()"
+        (ngModelChange)="variation.set($event)"
+      />
+      <span class="hint">Keep several versions per person, such as a fitted and a loose cut.</span>
+    </div>
+
+    @if (copyFrom() && !isEdit()) {
+      <label class="check-row">
+        <input type="checkbox" [checked]="startFromCopy()" (change)="toggleCopy($any($event.target).checked)" />
+        <span>Start from the current measurements ({{ copyFrom()!.variation || 'Standard' }})</span>
+      </label>
+    }
+
+    <div class="field">
+      <span class="field-label" id="scf-nearest">Choose your nearest size <span class="opt">optional</span></span>
+      <div class="chips size-chips" role="group" aria-labelledby="scf-nearest">
+        @for (n of nearestSizes; track n) {
+          <button type="button" class="chip" [class.active]="nearest() === n" [attr.aria-pressed]="nearest() === n" (click)="toggleNearest(n)">{{ n }}</button>
+        }
+      </div>
+    </div>
+
+    @for (g of groups; track g.id) {
+      <section class="grp" [attr.aria-labelledby]="'scf-' + g.id">
+        <h3 class="grp-title" [id]="'scf-' + g.id">{{ g.title }}</h3>
+        <div class="fig"><div class="fig-card"><app-size-diagram [type]="g.id" [active]="activeKey()" /></div></div>
+          <div class="fields">
+            @for (f of g.fields; track f.key) {
+              <div class="mf" [class.invalid]="invalid(f.key)" (mouseenter)="activeKey.set(f.key)" (mouseleave)="activeKey.set(null)">
+                <label [for]="'m-' + f.key">{{ f.label }}</label>
+                <div class="mi">
+                  <input
+                    [id]="'m-' + f.key"
+                    type="number"
+                    inputmode="decimal"
+                    enterkeyhint="next"
+                    min="0"
+                    max="120"
+                    step="0.25"
+                    placeholder="In inches"
+                    [attr.aria-invalid]="invalid(f.key)"
+                    [name]="'m_' + f.key"
+                    [ngModel]="values()[f.key]"
+                    (ngModelChange)="setValue(f.key, $event)"
+                    (focus)="activeKey.set(f.key)"
+                    (blur)="activeKey.set(null)"
+                    (keydown.enter)="nextField($event)"
+                  />
+                  <em aria-hidden="true">in</em>
+                </div>
+                @if (invalid(f.key)) {
+                  <span class="field-error">Enter 0 to 120.</span>
+                }
+              </div>
+            }
+          </div>
+      </section>
+    }
+
+    @if (legacyFields().length) {
+      <section class="grp" aria-labelledby="scf-other">
+        <h3 class="grp-title" id="scf-other">Other <span class="opt">older chart</span></h3>
+        <div class="fields wide">
+          @for (f of legacyFields(); track f.key) {
+            <div class="mf" [class.invalid]="invalid(f.key)">
+              <label [for]="'m-' + f.key">{{ f.label }}</label>
+              <div class="mi">
+                <input
+                  [id]="'m-' + f.key"
+                  type="number"
+                  inputmode="decimal"
+                  enterkeyhint="next"
+                  min="0"
+                  max="120"
+                  step="0.25"
+                  placeholder="In inches"
+                  [name]="'m_' + f.key"
+                  [ngModel]="values()[f.key]"
+                  (ngModelChange)="setValue(f.key, $event)"
+                  (keydown.enter)="nextField($event)"
+                />
+                <em aria-hidden="true">in</em>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <div class="field">
+      <label for="sc-notes">Note for the tailor <span class="opt">optional</span></label>
+      <textarea id="sc-notes" class="textarea" name="notes" rows="3" placeholder="Add any additional details, e.g. prefers a relaxed fit around the waist" [ngModel]="notes()" (ngModelChange)="notes.set($event)"></textarea>
+      <app-voice-note-field [value]="notesAudio()" (valueChange)="notesAudio.set($event)" (busy)="audioBusy.set($event)" />
+    </div>
+  </form>
+
+  <div sheet-footer class="btn-row">
+    <button type="button" class="btn btn-outline" (click)="close()" [disabled]="saving()">Cancel</button>
+    <button type="submit" form="sizeChartForm" class="btn btn-primary" [disabled]="saving() || audioBusy()">
+      @if (saving()) {
+        <ion-spinner name="crescent"></ion-spinner> Saving…
+      } @else {
+        Save size
+      }
+    </button>
+  </div>
+</app-sheet>

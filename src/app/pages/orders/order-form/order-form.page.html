@@ -1,0 +1,596 @@
+<div class="page">
+  <header class="title-row">
+    @if (isEdit()) {
+      <a class="icon-btn" [routerLink]="['/app/orders', id()]" aria-label="Back to order">
+        <ion-icon name="chevron-back-outline" aria-hidden="true"></ion-icon>
+      </a>
+    } @else {
+      <a class="icon-btn" routerLink="/app/orders" aria-label="Cancel and go back to orders">
+        <ion-icon name="close-outline" aria-hidden="true"></ion-icon>
+      </a>
+    }
+    <div>
+      <span class="eyebrow">{{ isEdit() ? 'Edit order' : 'New order' }} · Step {{ step() }} of 3</span>
+      <h1 class="page-title">{{ stepTitle() }}</h1>
+    </div>
+  </header>
+
+  @if (isEdit() && loadingOrder()) {
+    <app-skeleton variant="cards" [count]="2" />
+  } @else if (isEdit() && loadError()) {
+    <app-error-state [message]="loadError()!" (retry)="loadOrder(id()!)" />
+  } @else if (notEditable(); as o) {
+    <div class="empty-state">
+      <span class="state-icon" aria-hidden="true"><ion-icon name="lock-closed-outline"></ion-icon></span>
+      <h3 class="state-title">This order can't be edited</h3>
+      <p class="state-text">{{ o.reference }} is “{{ o.status_label }}”. Orders can only be changed before the parcel reaches us.</p>
+      <div class="state-actions">
+        <a class="btn btn-primary btn-sm" [routerLink]="['/app/orders', o.id]">View order</a>
+      </div>
+    </div>
+  } @else {
+    <!-- Stepper -->
+    <nav class="stepper" aria-label="Order steps">
+      <ol>
+        @for (label of stepLabels; track label; let i = $index) {
+          <li>
+            <button
+              type="button"
+              class="step"
+              [class.current]="step() === i + 1"
+              [class.done]="step() > i + 1"
+              [attr.aria-current]="step() === i + 1 ? 'step' : null"
+              (click)="goTo($any(i + 1))"
+            >
+              <span class="num" aria-hidden="true">
+                @if (step() > i + 1) {
+                  <ion-icon name="checkmark-outline"></ion-icon>
+                } @else {
+                  {{ i + 1 }}
+                }
+              </span>
+              <span class="lbl">{{ label }}</span>
+              @if (step() > i + 1) {
+                <span class="sr-only">(done)</span>
+              }
+            </button>
+          </li>
+        }
+      </ol>
+    </nav>
+
+    <!-- ───────── STEP 1 · Order details ───────── -->
+    @if (step() === 1) {
+      @if (draftRestored()) {
+        <div class="draft-note" role="status">
+          <ion-icon name="information-circle-outline" aria-hidden="true"></ion-icon>
+          <span>We restored your unfinished order.</span>
+          @if (!confirmStartOver()) {
+            <button type="button" class="link-btn" (click)="confirmStartOver.set(true)">Start over</button>
+          }
+        </div>
+        @if (confirmStartOver()) {
+          <div class="confirm-panel" role="alertdialog" aria-label="Confirm start over">
+            <p>Clear everything you entered and start a new order?</p>
+            <div class="btn-row">
+              <button type="button" class="btn btn-outline btn-sm" (click)="confirmStartOver.set(false)">Keep it</button>
+              <button type="button" class="btn btn-danger btn-sm" (click)="startOver()">Start over</button>
+            </div>
+          </div>
+        }
+      }
+
+      <section class="card stack-lg">
+        <app-search-select
+          #brandSel
+          label="Brand"
+          placeholder="Search or choose a brand"
+          searchPlaceholder="Type a brand name…"
+          createLabel="new brand"
+          busyText="Adding brand…"
+          [required]="true"
+          [allowCreate]="true"
+          [value]="brand()"
+          [fetch]="fetchBrands"
+          [itemLabel]="brandLabel"
+          [busy]="creatingBrand()"
+          [invalid]="showError('brand')"
+          [error]="step1Errors().brand ?? ''"
+          (selected)="brand.set($event); touch('brand')"
+          (cleared)="brand.set(null)"
+          (create)="onBrandCreate($event)"
+          (touched)="touch('brand')"
+        />
+
+        <div class="field">
+          <label for="bon">Brand order no. <span class="opt">optional</span></label>
+          <input id="bon" class="input" placeholder="e.g. SP-12345" autocomplete="off" [ngModel]="brandOrderNumber()" (ngModelChange)="brandOrderNumber.set($event)" />
+        </div>
+
+        <app-search-select
+          #courierSel
+          label="Courier"
+          placeholder="Search or choose a courier"
+          searchPlaceholder="Type a courier name…"
+          [required]="true"
+          [value]="courier()"
+          [fetch]="fetchCouriers"
+          [itemLabel]="courierLabel"
+          [itemSubtitle]="courierSub"
+          hint="The courier delivering your parcel from the brand to us."
+          [invalid]="showError('courier')"
+          [error]="step1Errors().courier ?? ''"
+          (selected)="courier.set($event); touch('courier')"
+          (cleared)="courier.set(null)"
+          (touched)="touch('courier')"
+        />
+
+        <div class="field">
+          <label for="trk">
+            Tracking number
+            @if (trackingRequired()) {
+              <span class="req">required</span>
+            } @else {
+              <span class="opt">optional</span>
+            }
+          </label>
+          <input
+            id="trk"
+            class="input"
+            placeholder="e.g. TCS 123456"
+            autocomplete="off"
+            [class.invalid]="showError('tracking')"
+            [attr.aria-invalid]="showError('tracking')"
+            [attr.aria-required]="trackingRequired()"
+            [attr.aria-describedby]="showError('tracking') ? 'trk-err' : 'trk-hint'"
+            [ngModel]="trackingNumber()"
+            (ngModelChange)="trackingNumber.set($event)"
+            (blur)="touch('tracking')"
+          />
+          @if (showError('tracking')) {
+            <span class="field-error" id="trk-err" role="alert">{{ step1Errors().tracking }}</span>
+          } @else {
+            <span class="hint" id="trk-hint">
+              {{
+                trackingRequired()
+                  ? 'Required for ' + courier()!.name + '. You will find it in the brand’s dispatch email or SMS.'
+                  : 'Optional. Add it if the courier gave you one; it helps us match your parcel.'
+              }}
+            </span>
+          }
+        </div>
+
+        <div class="field">
+          <span class="field-label" id="intl-label">International shipping <span class="req">required</span></span>
+          <div
+            class="segmented block"
+            [class.invalid]="showError('international')"
+            role="radiogroup"
+            aria-labelledby="intl-label"
+            [attr.aria-describedby]="showError('international') ? 'intl-err' : 'intl-hint'"
+            aria-required="true"
+          >
+            <button
+              id="intl-yes"
+              type="button"
+              role="radio"
+              [attr.aria-checked]="international() === true"
+              [attr.tabindex]="international() === false ? -1 : 0"
+              [class.active]="international() === true"
+              (click)="chooseInternational(true)"
+              (keydown)="onIntlKey($event)"
+            >
+              Yes
+            </button>
+            <button
+              id="intl-no"
+              type="button"
+              role="radio"
+              [attr.aria-checked]="international() === false"
+              [attr.tabindex]="international() === false ? 0 : -1"
+              [class.active]="international() === false"
+              (click)="chooseInternational(false)"
+              (keydown)="onIntlKey($event)"
+            >
+              No
+            </button>
+          </div>
+          @if (showError('international')) {
+            <span class="field-error" id="intl-err" role="alert">{{ step1Errors().international }}</span>
+          } @else {
+            <span class="hint" id="intl-hint">Choose Yes if we should ship your finished order outside Pakistan.</span>
+          }
+          @if (shippingType(); as t) {
+            <div class="ship-type" role="status">
+              <span class="tag"><ion-icon name="airplane-outline" aria-hidden="true"></ion-icon> {{ t === 'express' ? 'Express shipping' : 'Standard shipping' }}</span>
+              <span class="ship-type-text">
+                {{ t === 'express' ? 'Fast international courier for your finished order.' : 'Economical courier for delivery within Pakistan.' }}
+              </span>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- ───────── STEP 2 · Articles ───────── -->
+    @if (step() === 2) {
+      @for (a of articles(); track a.key; let i = $index) {
+        <article class="card article" [class.has-error]="showErrors() && hasErrors(i)">
+          <button type="button" class="article-head" (click)="toggleArticle(a)" [attr.aria-expanded]="a.open" [attr.aria-controls]="'art-body-' + a.key">
+            @if (a.product_image_url) {
+              <img class="article-thumb" [src]="a.product_image_url" alt="" loading="lazy" referrerpolicy="no-referrer" />
+            } @else {
+              <span class="article-num" aria-hidden="true">{{ i + 1 }}</span>
+            }
+            <div class="article-titles">
+              <strong [class.placeholder]="!a.unit_title">{{ a.unit_title || 'Article ' + (i + 1) + ' — add a name' }}</strong>
+              @if (showErrors() && hasErrors(i) && !a.open) {
+                <span class="meta err">Needs attention — tap to fix</span>
+              } @else {
+                <span class="meta">{{ a.size_chart_id ? chartLabel(a.size_chart_id) : 'No size chart' }} · Qty {{ a.quantity }}</span>
+              }
+              @if (chips(a).length) {
+                <div class="opt-chips">
+                  @for (c of chips(a); track c.typeId) {
+                    <span class="opt-chip">
+                      @if (c.article.image_url) {
+                        <img class="opt-img" [src]="c.article.image_url" alt="" loading="lazy" />
+                      }
+                      <span class="opt-t">{{ c.type }}</span>
+                      <span class="opt-v">{{ c.article.name }}</span>
+                    </span>
+                  }
+                </div>
+              }
+            </div>
+            <span class="chev" aria-hidden="true"><ion-icon [name]="a.open ? 'chevron-up-outline' : 'chevron-down-outline'"></ion-icon></span>
+          </button>
+
+          @if (a.open) {
+            <div class="article-body" [id]="'art-body-' + a.key">
+              <!-- Product -->
+              <div class="sub">
+                  <div class="field">
+                    <label [for]="'link' + a.key">Product link <span class="opt">optional</span></label>
+                    <div class="link-row">
+                      <div class="input-affix leading">
+                        <ion-icon class="affix-icon" name="link-outline" aria-hidden="true"></ion-icon>
+                        <input
+                          [id]="'link' + a.key"
+                          class="input"
+                          type="url"
+                          inputmode="url"
+                          autocomplete="off"
+                          placeholder="https://brand.com/product"
+                          [class.invalid]="showErrors() && articleErrors()[i]['link']"
+                          [attr.aria-invalid]="showErrors() && !!articleErrors()[i]['link']"
+                          [ngModel]="a.product_link"
+                          (ngModelChange)="setLink(a, $event)"
+                          (keydown.enter)="$event.preventDefault(); fetchPreview(a)"
+                        />
+                      </div>
+                      <button type="button" class="btn btn-outline btn-sm" (click)="fetchPreview(a)" [disabled]="!a.product_link.trim() || a.preview.state === 'loading'">
+                        @if (a.preview.state === 'loading') {
+                          <ion-spinner name="crescent"></ion-spinner> Fetching…
+                        } @else {
+                          Fetch details
+                        }
+                      </button>
+                    </div>
+                    @if (showErrors() && articleErrors()[i]['link']) {
+                      <span class="field-error">{{ articleErrors()[i]['link'] }}</span>
+                    }
+                    @if (a.preview.state === 'failed') {
+                      <p class="note warn" role="status">
+                        <ion-icon name="alert-circle-outline" aria-hidden="true"></ion-icon>
+                        <span>{{ a.preview.message }} You can type the product name below.</span>
+                      </p>
+                    } @else if (a.preview.state === 'ok') {
+                      <p class="note ok" role="status">
+                        <ion-icon name="checkmark-circle-outline" aria-hidden="true"></ion-icon>
+                        <span>Found it. Check the name below.</span>
+                      </p>
+                    }
+                  </div>
+
+                <div class="product-row">
+                  @if (a.product_image_url) {
+                    <div class="product-img">
+                      <img [src]="a.product_image_url" alt="Product picture" referrerpolicy="no-referrer" />
+                      <button type="button" (click)="clearImage(a)" aria-label="Remove product picture"><ion-icon name="close-outline" aria-hidden="true"></ion-icon></button>
+                    </div>
+                  }
+                  <div class="field grow">
+                    <label [for]="'title' + a.key">Product name <span class="req">required</span></label>
+                    <input
+                      [id]="'title' + a.key"
+                      class="input"
+                      placeholder="e.g. Embroidered lawn 3-pc"
+                      [class.invalid]="showErrors() && articleErrors()[i]['title']"
+                      [attr.aria-invalid]="showErrors() && !!articleErrors()[i]['title']"
+                      [attr.aria-describedby]="showErrors() && articleErrors()[i]['title'] ? 'title-err' + a.key : null"
+                      [ngModel]="a.unit_title"
+                      (ngModelChange)="patchArticle(a.key, { unit_title: $event, titleFromLink: false })"
+                    />
+                    @if (showErrors() && articleErrors()[i]['title']) {
+                      <span class="field-error" [id]="'title-err' + a.key">{{ articleErrors()[i]['title'] }}</span>
+                    }
+                  </div>
+                </div>
+              </div>
+
+              <div class="field">
+                <label [for]="'chart' + a.key">Size chart</label>
+                @if (chartsLoading()) {
+                  <span class="skeleton" style="height: 46px; border-radius: 12px"></span>
+                } @else {
+                  <select #chartSel [id]="'chart' + a.key" class="select" [ngModel]="a.size_chart_id" (ngModelChange)="onChartSelect(a, $event, chartSel)">
+                    <option value="">No size chart — I'll share sizes later</option>
+                    @for (c of charts(); track c.id) {
+                      <option [value]="c.id">{{ c.name || c.person_name + ' · ' + c.variation }}</option>
+                    }
+                    <option value="__new__">+ Add new size chart…</option>
+                  </select>
+                }
+                @if (chartOf(a.size_chart_id); as chart) {
+                  <app-size-summary [chart]="chart" />
+                }
+                @if (chartsError()) {
+                  <span class="field-error">{{ chartsError() }} <button type="button" class="link-btn" (click)="loadCharts()">Retry</button></span>
+                } @else if (!chartsLoading() && charts().length === 0) {
+                  <button type="button" class="link-btn" (click)="sizeFormFor.set(a.key)">
+                    <ion-icon name="add-outline" aria-hidden="true"></ion-icon> Add your first size chart
+                  </button>
+                }
+              </div>
+
+              <!-- Customisation: one dropdown per article type the partner offers -->
+              <div class="sub">
+                <span class="sub-title">Customisation <span class="opt">optional</span></span>
+                @if (typesLoading()) {
+                  <div class="types-skeleton" aria-busy="true" aria-label="Loading customisation options">
+                    <span class="skeleton" style="width: 30%; height: 12px"></span>
+                    <span class="skeleton" style="height: 48px; border-radius: 12px"></span>
+                    <span class="skeleton" style="width: 36%; height: 12px"></span>
+                    <span class="skeleton" style="height: 48px; border-radius: 12px"></span>
+                  </div>
+                } @else if (typesError() && !types().length) {
+                  <div class="field-error" role="alert">
+                    <span>{{ typesError() }} <button type="button" class="link-btn" (click)="retryTypes()">Retry</button></span>
+                  </div>
+                } @else if (!types().length) {
+                  <app-empty-state icon="shirt-outline" title="No customisation options yet" message="You can continue without. Add notes for the tailor below if you need something specific." />
+                } @else {
+                  @for (t of types(); track t.id) {
+                    <app-search-select
+                      [label]="t.name"
+                      [placeholder]="'Choose ' + t.name.toLowerCase()"
+                      [searchPlaceholder]="'Search ' + t.name.toLowerCase() + '…'"
+                      [value]="a.picks[t.id] ?? null"
+                      [fetch]="articleFetch(t.id)"
+                      [itemLabel]="articleLabel"
+                      [itemImage]="articleImage"
+                      (selected)="pick(a, t.id, $event)"
+                      (cleared)="unpick(a, t.id)"
+                    />
+                  }
+                  @if (typesError()) {
+                    <div class="field-error" role="alert">
+                      <span>{{ typesError() }} <button type="button" class="link-btn" (click)="retryTypes()">Retry</button></span>
+                    </div>
+                  }
+                  @if (typesHasMore()) {
+                    <button type="button" class="btn btn-outline btn-sm load-types" (click)="loadTypes(true)" [disabled]="typesLoadingMore()">
+                      @if (typesLoadingMore()) {
+                        <ion-spinner name="crescent"></ion-spinner> Loading…
+                      } @else {
+                        Load more options
+                      }
+                    </button>
+                  }
+                }
+                @for (c of orphanChips(a); track c.typeId) {
+                  <div class="orphan">
+                    <span>{{ c.type }}: <strong>{{ c.article.name }}</strong> is no longer offered</span>
+                    <button type="button" class="link-btn" (click)="unpick(a, c.typeId)" [attr.aria-label]="'Remove ' + c.type + ' ' + c.article.name">Remove</button>
+                  </div>
+                }
+              </div>
+
+              <div class="field">
+                <label [for]="'anotes' + a.key">Notes for the tailor <span class="opt">optional</span></label>
+                <textarea [id]="'anotes' + a.key" class="textarea" rows="2" placeholder="e.g. Add lining, keep embroidery centred" [ngModel]="a.notes" (ngModelChange)="patchArticle(a.key, { notes: $event })"></textarea>
+                <app-voice-note-field [value]="a.notes_audio" (valueChange)="patchArticle(a.key, { notes_audio: $event })" (busy)="setAudioBusy(a.key, $event)" />
+              </div>
+
+              <div class="field">
+                <span class="field-label">Reference photos <span class="opt">optional · up to {{ maxPhotos }}</span></span>
+                <div class="photos">
+                  @for (img of a.existingImages; track img.url; let ei = $index) {
+                    <div class="photo">
+                      <img [src]="img.url" alt="Saved reference photo" />
+                      <button type="button" (click)="removeExisting(a, ei)" aria-label="Remove photo"><ion-icon name="close-outline" aria-hidden="true"></ion-icon></button>
+                    </div>
+                  }
+                  @for (p of a.photos; track $index; let pi = $index) {
+                    <div class="photo">
+                      <img [src]="p.dataUrl" [alt]="p.name" />
+                      <button type="button" (click)="removePhoto(a, pi)" aria-label="Remove photo"><ion-icon name="close-outline" aria-hidden="true"></ion-icon></button>
+                    </div>
+                  }
+                  @if (a.processing) {
+                    <div class="photo add"><ion-spinner name="crescent"></ion-spinner></div>
+                  } @else if (a.photos.length + a.existingImages.length < maxPhotos) {
+                    <label class="photo add">
+                      <ion-icon name="camera-outline" aria-hidden="true"></ion-icon>
+                      <span>Add photo</span>
+                      <input type="file" accept="image/*" multiple (change)="onPhotos(a, $event)" aria-label="Add reference photos" />
+                    </label>
+                  }
+                </div>
+                <span class="hint">Lace, neckline or design ideas. Large photos are resized automatically.</span>
+              </div>
+
+              <div class="qty-row">
+                <span class="field-label">Quantity</span>
+                <div class="stepper-qty">
+                  <button type="button" (click)="setQuantity(a, -1)" [disabled]="a.quantity <= 1" aria-label="Decrease quantity"><ion-icon name="remove-outline" aria-hidden="true"></ion-icon></button>
+                  <span aria-live="polite">{{ a.quantity }}</span>
+                  <button type="button" (click)="setQuantity(a, 1)" [disabled]="a.quantity >= 20" aria-label="Increase quantity"><ion-icon name="add-outline" aria-hidden="true"></ion-icon></button>
+                </div>
+              </div>
+
+              <div class="article-foot">
+                @if (articles().length > 1) {
+                  <button type="button" class="btn btn-danger-outline btn-sm" (click)="removeArticle(a)">
+                    <ion-icon name="trash-outline" aria-hidden="true"></ion-icon> Remove
+                  </button>
+                }
+                <button type="button" class="btn btn-ghost btn-sm done-btn" (click)="toggleArticle(a)">
+                  <ion-icon name="chevron-up-outline" aria-hidden="true"></ion-icon> Collapse
+                </button>
+              </div>
+            </div>
+          }
+        </article>
+      }
+
+      <button type="button" class="add-article" (click)="addArticle()">
+        <ion-icon name="add-outline" aria-hidden="true"></ion-icon> Add another article
+      </button>
+    }
+
+    <!-- ───────── STEP 3 · Notes & review ───────── -->
+    @if (step() === 3) {
+      <section class="card stack-lg">
+        <div class="field">
+          <label for="note">Message for the partner <span class="opt">optional</span></label>
+          <textarea id="note" class="textarea" rows="3" maxlength="2000" placeholder="Anything we should know about this order" [ngModel]="note()" (ngModelChange)="note.set($event)"></textarea>
+          <span class="hint">We'll show this at the top of your conversation with the team.</span>
+        </div>
+
+        <div class="field">
+          <span class="field-label" id="voice-label">Voice note <span class="opt">optional</span></span>
+          <app-voice-note-field mode="hold" [held]="voice()" (recorded)="onVoice($event)" (removed)="deleteVoice()" (recordingChange)="recordingVoice.set($event)" />
+          @if (!voice() && !recordingVoice()) {
+            <span class="hint">Prefer to talk? Record up to 5 minutes. It is sent with your order.</span>
+          }
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="review-head">
+          <h3 class="card-title">Order</h3>
+          <button type="button" class="link-btn" (click)="goTo(1)" aria-label="Edit order details">Edit</button>
+        </div>
+        <div class="kv"><span class="k">Brand</span><span class="v">{{ brand()?.name }}</span></div>
+        <div class="kv"><span class="k">Brand order no.</span><span class="v">{{ brandOrderNumber() || '—' }}</span></div>
+        <div class="kv"><span class="k">Courier</span><span class="v">{{ courier()?.name }}</span></div>
+        <div class="kv"><span class="k">Tracking no.</span><span class="v">{{ trackingNumber() || '—' }}</span></div>
+        <div class="kv"><span class="k">International shipping</span><span class="v">{{ international() ? 'Yes' : 'No' }}</span></div>
+        <div class="kv"><span class="k">Shipping type</span><span class="v">{{ shippingType() === 'express' ? 'Express shipping' : 'Standard shipping' }}</span></div>
+      </section>
+
+      <section class="card">
+        <div class="review-head">
+          <h3 class="card-title">{{ articles().length }} article{{ articles().length === 1 ? '' : 's' }} · {{ totalPieces() }} piece{{ totalPieces() === 1 ? '' : 's' }}</h3>
+          <button type="button" class="link-btn" (click)="goTo(2)" aria-label="Edit articles">Edit</button>
+        </div>
+        <div class="review-list">
+          @for (a of articles(); track a.key; let i = $index) {
+            <div class="review-item">
+              @if (a.product_image_url) {
+                <img class="article-thumb" [src]="a.product_image_url" alt="" loading="lazy" referrerpolicy="no-referrer" />
+              } @else {
+                <span class="article-num" aria-hidden="true">{{ i + 1 }}</span>
+              }
+              <div>
+                <strong>{{ a.unit_title }}</strong>
+                @if (a.product_link.trim()) {
+                  <span>{{ hostOf(a.product_link) }}</span>
+                }
+                <span>Qty {{ a.quantity }}</span>
+                @if (chartOf(a.size_chart_id); as chart) {
+                  <app-size-summary [chart]="chart" />
+                } @else {
+                  <span>No size chart</span>
+                }
+                @if (chips(a).length) {
+                  <div class="opt-chips">
+                    @for (c of chips(a); track c.typeId) {
+                      <span class="opt-chip">
+                        @if (c.article.image_url) {
+                          <img class="opt-img" [src]="c.article.image_url" alt="" loading="lazy" />
+                        }
+                        <span class="opt-t">{{ c.type }}</span>
+                        <span class="opt-v">{{ c.article.name }}</span>
+                      </span>
+                    }
+                  </div>
+                }
+                @if (a.notes.trim()) {
+                  <span class="note-line">“{{ a.notes.trim() }}”</span>
+                }
+                @if (a.notes_audio; as na) {
+                  @if (na.url) {
+                    <app-voice-player class="review-voice" [src]="na.url" [duration]="na.duration" [mime]="na.mime" />
+                  } @else {
+                    <span>Voice note saved</span>
+                  }
+                }
+                @if (a.photos.length + a.existingImages.length) {
+                  <span>{{ a.photos.length + a.existingImages.length }} reference photo{{ a.photos.length + a.existingImages.length === 1 ? '' : 's' }}</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+
+      @if (!isEdit()) {
+        <app-ship-to-card eyebrow="Next step" heading="Then ship your parcel to us" [compact]="true" />
+      }
+
+      @if (submitError()) {
+        <div class="form-error" role="alert">
+          <ion-icon name="alert-circle-outline" aria-hidden="true"></ion-icon>
+          <span>{{ submitError() }}</span>
+        </div>
+      }
+    }
+
+    <!-- Sticky step footer (above the tab bar): one primary action per step -->
+    <div class="action-bar wizard-actions" role="region" aria-label="Step actions">
+      @if (step() > 1) {
+        <button type="button" class="icon-btn back" (click)="back()" [disabled]="submitting()" aria-label="Back to previous step">
+          <ion-icon name="chevron-back-outline" aria-hidden="true"></ion-icon>
+        </button>
+      }
+      <span class="ab-text">
+        <span class="ab-k">Step {{ step() }} of 3</span>
+        <span class="ab-sub">{{ footerHint() }}</span>
+      </span>
+      @if (step() < 3) {
+        <button type="button" class="btn btn-primary" (click)="next()" [disabled]="anyUploading()">
+          Next <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon>
+        </button>
+      } @else {
+        <button type="button" class="btn btn-primary" (click)="submit()" [disabled]="submitting() || anyUploading()">
+          @if (submitting()) {
+            <ion-spinner name="crescent"></ion-spinner> {{ isEdit() ? 'Saving…' : 'Sending…' }}
+          } @else {
+            {{ isEdit() ? 'Save' : 'Submit' }} <ion-icon name="checkmark-outline" aria-hidden="true"></ion-icon>
+          }
+        </button>
+      }
+    </div>
+  }
+</div>
+
+<app-size-chart-form
+  [open]="sizeFormFor() !== null"
+  [people]="people()"
+  [defaultPerson]="defaultPerson()"
+  (saved)="onChartCreated($event)"
+  (closed)="sizeFormFor.set(null)"
+/>
