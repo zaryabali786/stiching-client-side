@@ -1,3 +1,4 @@
+import type { ClientTheme } from '../services/theme.service';
 /**
  * Types mirroring backend/API.md (snake_case DB columns; camelCase only for computed summaries).
  */
@@ -101,6 +102,8 @@ export interface PlatformConfig {
   payments?: { stripe: { enabled: boolean; publishableKey: string | null } };
   /** Google sign-in: the OAuth client id is public by design; the client secret stays on the server. */
   google?: { enabled: boolean; clientId: string | null };
+  /** Colours and fonts chosen by the admin. */
+  theme?: ClientTheme;
 }
 
 /** POST /client/orders/:id/payment-intent */
@@ -342,8 +345,33 @@ export interface Order {
   updated_at: string | null;
 }
 
+/** A stitching partner the customer can choose, with the address the parcel is sent to. */
+export interface ClientPartner {
+  id: string;
+  name: string;
+  short_code: string | null;
+  city: string | null;
+  tagline: string | null;
+  turnaround_days: number | null;
+  recommended: boolean;
+  receiving: { name: string; address: string; city: string; phone: string };
+}
+
+/** The partner an order belongs to, as the order detail returns it. */
+export interface OrderPartner {
+  id: string;
+  name: string;
+  short_code: string | null;
+  city: string | null;
+  receiving_name: string | null;
+  receiving_address: string | null;
+  receiving_city: string | null;
+  receiving_phone: string | null;
+}
+
 export interface OrderDetail extends Order {
   status_label: string;
+  partner?: OrderPartner | null;
   units: OrderUnit[];
   events: OrderEvent[];
   invoice: Invoice | null;
@@ -373,6 +401,8 @@ export interface UnitInput {
 }
 
 export interface OrderInput {
+  /** The stitching partner chosen for this order (omitted when the order is already submitted). */
+  partner_id?: string | null;
   brand_id: string;
   courier_id: string;
   tracking_number: string | null;

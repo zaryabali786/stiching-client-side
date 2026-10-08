@@ -38,6 +38,11 @@ export class OrderService {
     });
   }
 
+  /** Order totals per tab (all / draft / active / completed). */
+  counts(): Observable<Record<'all' | 'draft' | 'active' | 'completed', number>> {
+    return this.api.get('/client/orders/counts');
+  }
+
   get(id: string): Observable<OrderDetail> {
     return this.api.get<OrderDetail>(`/client/orders/${encodeURIComponent(id)}`);
   }

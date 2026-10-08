@@ -1,217 +1,57 @@
-<div class="page">
+<div class="page atelier-home">
+  <!-- Welcome Code for new users -->
   @if (auth.welcomeCode(); as code) {
     <section class="welcome-card" role="status">
       <button type="button" class="close" (click)="dismissWelcome()" aria-label="Dismiss welcome message">
         <ion-icon name="close-outline" aria-hidden="true"></ion-icon>
       </button>
-      <span class="eyebrow">Welcome aboard</span>
+      <span class="eyebrow">Atelier Welcome</span>
       <h2>Your customer code is <span class="mono">{{ code }}</span></h2>
-      <p>Write it on every parcel you send us. It is also displayed in the top bar — tap it anytime to copy.</p>
+      <p>Write it on every parcel you send us. It is also displayed in the top bar — tap anytime to copy.</p>
       @if (auth.user()?.mailbox_address; as mail) {
-        <p>
-          Your shopping email is <strong class="mono">{{ mail }}</strong>. Use it at any shop's checkout and the order email
-          lands in your <a routerLink="/app/inbox">Inbox</a>.
+        <p class="mail-tip">
+          Your shopping email is <strong class="mono">{{ mail }}</strong>. Use it at checkout to auto-sync orders.
         </p>
       }
     </section>
   }
 
-  <!-- Clean, elegant hero -->
-  <section class="hero-clean">
-    <span class="eyebrow">Customer Atelier</span>
-    <h1 class="page-title">{{ greeting() }}, {{ firstName() }}</h1>
-    <p class="page-subtitle">{{ heroLine() }}</p>
+  <!-- 1 · Atelier Hero Header -->
+  <section class="hero-atelier">
+    <div class="hero-meta">
+      <div class="brand-eyebrow">
+        <ion-icon name="sparkles-outline" class="sparkle-icon" aria-hidden="true"></ion-icon>
+        <span>Bespoke Stitching Atelier</span>
+      </div>
+      <h1 class="page-title">{{ greeting() }}, {{ firstName() }}</h1>
+      <p class="page-subtitle">
+        @if (actionNeeded().length) {
+          <span>{{ actionNeeded().length }} item{{ actionNeeded().length === 1 ? '' : 's' }} awaiting your review</span>
+        } @else if (inProgressCount() > 0) {
+          <span>{{ inProgressCount() }} bespoke garment{{ inProgressCount() === 1 ? '' : 's' }} currently in crafting</span>
+        } @else {
+          <span>Your bespoke wardrobe & tailoring hub</span>
+        }
+      </p>
+    </div>
+
   </section>
 
-  <!-- 1 · Action needed (only when customer action is required) -->
-  @if (overview()?.actionNeeded?.length) {
-    <section class="action-card" aria-labelledby="action-title">
-      <div class="action-head">
-        <span class="ah-icon" aria-hidden="true"><ion-icon name="alert-circle-outline"></ion-icon></span>
-        <div>
-          <h2 id="action-title">Action needed</h2>
-          <span>{{ overview()!.actionNeeded.length }} order{{ overview()!.actionNeeded.length === 1 ? ' is' : 's are' }} waiting for you</span>
-        </div>
-      </div>
-      <div class="action-list">
-        @for (a of overview()!.actionNeeded; track a.id) {
-          <a class="action-item" [routerLink]="['/app/orders', a.id]">
-            <div class="ai-body">
-              <strong>{{ a.brand }}</strong>
-              <span class="ai-meta"><span class="mono">{{ a.reference }}</span> · {{ a.status_label }}</span>
-            </div>
-            <span class="ai-btn">{{ actionVerb(a.status) }} <ion-icon name="chevron-forward-outline" aria-hidden="true"></ion-icon></span>
-          </a>
+  <!-- Sections the admin arranged in Setup > Home layout -->
+  @if (sectionsLoading()) {
+    <div class="home-skeleton" aria-busy="true" aria-label="Loading">
+      <span class="skeleton sk-banner"></span>
+      <div class="sk-row">
+        @for (i of [1, 2, 3]; track i) {
+          <div class="sk-art">
+            <span class="skeleton sk-art-img"></span>
+            <span class="skeleton" style="width: 70%; height: 12px"></span>
+            <span class="skeleton" style="width: 45%; height: 10px"></span>
+          </div>
         }
       </div>
-    </section>
+    </div>
+  } @else {
+    <app-home-sections [sections]="sections()" />
   }
-
-  <!-- 2 · Where to send parcels -->
-  <app-ship-to-card />
-
-  <!-- 3 · Recent orders -->
-  <section class="stack" aria-labelledby="recent-title">
-    <div class="section-head">
-      <div>
-        <span class="eyebrow">Latest</span>
-        <h2 id="recent-title">Recent orders</h2>
-      </div>
-      @if (recentTotal() > 0) {
-        <a routerLink="/app/orders" class="link">View all {{ recentTotal() }}</a>
-      }
-    </div>
-
-    @if (recentLoading()) {
-      <app-skeleton variant="tiles" [count]="3" />
-    } @else if (recentError()) {
-      <app-error-state [message]="recentError()!" (retry)="loadRecent()" />
-    } @else if (recent().length === 0) {
-      <app-empty-state
-        icon="shirt-outline"
-        title="No orders yet"
-        message="Tell us what you bought and how you'd like it stitched — it takes two minutes."
-      >
-        <a routerLink="/app/orders/new" class="btn btn-primary btn-sm"><ion-icon name="add-outline" aria-hidden="true"></ion-icon> Create order</a>
-      </app-empty-state>
-    } @else {
-      <div class="stack">
-        @for (o of recent(); track o.id) {
-          <a class="order-tile" [routerLink]="['/app/orders', o.id]">
-            <span [class]="'brand-swatch ' + swatch(o.brand).cls" aria-hidden="true">{{ swatch(o.brand).initial }}</span>
-            <div class="tile-body">
-              <div class="tile-top">
-                <span class="tile-title">{{ o.brand }}</span>
-                <span class="tile-date">{{ o.created_at | date: 'd MMM' }}</span>
-              </div>
-              <span class="tile-meta">
-                <app-status-badge [status]="o.status" [label]="o.status_label" />
-                <span class="mono">{{ o.reference }}</span>
-                <span aria-hidden="true">·</span>
-                <span>{{ o.units_count }} article{{ o.units_count === 1 ? '' : 's' }}</span>
-                @if (o.has_issue) {
-                  <span class="issue-flag"><ion-icon name="alert-circle-outline" aria-hidden="true"></ion-icon>Issue</span>
-                }
-              </span>
-            </div>
-            <ion-icon name="chevron-forward-outline" class="tile-arrow" aria-hidden="true"></ion-icon>
-          </a>
-        }
-      </div>
-    }
-  </section>
-
-  <!-- 4 · Stats -->
-  <section class="stack" aria-labelledby="stats-title">
-    <div class="section-head">
-      <div>
-        <span class="eyebrow">Your stitching</span>
-        <h2 id="stats-title">At a glance</h2>
-      </div>
-      <div class="segmented" role="group" aria-label="Period">
-        <button type="button" [class.active]="period() === 'year'" [attr.aria-pressed]="period() === 'year'" (click)="setPeriod('year')">{{ year }}</button>
-        <button type="button" [class.active]="period() === 'all'" [attr.aria-pressed]="period() === 'all'" (click)="setPeriod('all')">All time</button>
-      </div>
-    </div>
-
-    @if (overviewLoading() && !overview()) {
-      <app-skeleton variant="metrics" [count]="4" />
-    } @else if (overviewError() && !overview()) {
-      <app-error-state [message]="overviewError()!" (retry)="loadOverview()" />
-    } @else if (overview(); as o) {
-      <div class="metrics" [class.dim]="overviewLoading()">
-        <div class="metric">
-          <span class="m-label">Orders</span>
-          <span class="m-val">{{ o.ordersCount }}</span>
-        </div>
-        <div class="metric">
-          <span class="m-label">Articles stitched</span>
-          <span class="m-val">{{ o.articlesStitched }}</span>
-        </div>
-        <div class="metric">
-          <span class="m-label">In progress</span>
-          <span class="m-val">{{ o.articlesInProgress }} <small>articles</small></span>
-        </div>
-        <div class="metric">
-          <span class="m-label">Avg. turnaround</span>
-          @if (o.avgTurnaroundDays !== null) {
-            <span class="m-val">{{ o.avgTurnaroundDays }} <small>days</small></span>
-          } @else {
-            <span class="m-val muted">—</span>
-          }
-        </div>
-      </div>
-
-      <!-- Clean Professional Bar Chart -->
-      <div class="card chart-card" [class.dim]="overviewLoading()">
-        <div class="chart-head">
-          <div>
-            <h3>Articles stitched by month</h3>
-            <span class="chart-range-text">{{ chartRange() }}</span>
-          </div>
-          @if (hasChartData()) {
-            <span class="chart-total-tag">{{ monthlyTotal() }} stitched</span>
-          }
-        </div>
-
-        @if (hasChartData()) {
-          <div class="chart-canvas">
-            <div class="chart-lines" aria-hidden="true">
-              <div class="cl-line"></div>
-              <div class="cl-line"></div>
-              <div class="cl-line"></div>
-            </div>
-
-            <div class="bars" role="list">
-              @for (m of o.monthly; track m.key) {
-                <div
-                  class="bar-col"
-                  role="listitem"
-                  [class.is-current]="m.key === currentMonthKey()"
-                  [class.has-count]="m.count > 0"
-                  [attr.aria-label]="m.month + ': ' + m.count + ' articles'"
-                >
-                  <span class="bar-val" aria-hidden="true">{{ m.count ? m.count : '' }}</span>
-                  <div class="bar-track" aria-hidden="true">
-                    <div
-                      class="bar-fill"
-                      [style.height.%]="m.count ? (m.pct < 12 ? 12 : m.pct) : 0"
-                    ></div>
-                  </div>
-                  <span class="bar-label" aria-hidden="true">{{ m.month }}</span>
-                  @if (m.key === currentMonthKey()) {
-                    <span class="current-dot" title="Current Month"></span>
-                  }
-                </div>
-              }
-            </div>
-          </div>
-        } @else {
-          <p class="chart-empty">Finished articles will appear here month by month once your first order is packed.</p>
-        }
-      </div>
-
-      <!-- Who you stitch for Card -->
-      <div class="card" [class.dim]="overviewLoading()">
-        <h3 class="card-title">Who you stitch for</h3>
-        @if (o.whoYouStitchFor.length) {
-          <div class="people">
-            @for (p of o.whoYouStitchFor; track p.name) {
-              <div class="person">
-                <div class="person-labels">
-                  <span class="p-name">{{ p.name }}</span>
-                  <span class="p-count">{{ p.count }} article{{ p.count === 1 ? '' : 's' }}</span>
-                </div>
-                <div class="track" aria-hidden="true">
-                  <div class="fill" [style.width.%]="p.pct"></div>
-                </div>
-              </div>
-            }
-          </div>
-        } @else {
-          <p class="chart-empty">Pick a size chart for each article and we'll show who you stitch for most.</p>
-        }
-      </div>
-    }
-  </section>
 </div>

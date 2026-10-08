@@ -179,7 +179,7 @@ form {
     }
 
     &.on.s4 {
-      background: var(--green);
+      background: var(--c-brand-fill, var(--green));
     }
   }
 

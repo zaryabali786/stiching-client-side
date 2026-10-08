@@ -239,7 +239,7 @@ function dayLabel(iso: string): string {
     .composer.recording app-voice-recorder { flex: 1; align-self: center; margin-bottom: 0; }
     .send {
       flex: none; width: 48px; height: 48px; border-radius: 50%; border: 0; cursor: pointer;
-      background: var(--c-brand); color: #fff; font-size: 20px; display: flex; align-items: center; justify-content: center;
+      background: var(--c-brand-fill, var(--c-brand)); color: var(--c-on-brand, #fff); font-size: 20px; display: flex; align-items: center; justify-content: center;
       box-shadow: 0 4px 14px rgba(15, 57, 43, 0.22);
     }
     .send:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }

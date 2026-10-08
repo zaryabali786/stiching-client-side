@@ -8,10 +8,11 @@ import { OrderService } from '../../../core/services/order.service';
 import { SizeService } from '../../../core/services/size.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { CatalogService } from '../../../core/services/catalog.service';
+import { PartnerChoiceService } from '../../../core/services/partner-choice.service';
 import { ChatService } from '../../../core/services/chat.service';
 import { MailboxService } from '../../../core/services/mailbox.service';
 import { errorMessage } from '../../../core/services/api.service';
-import { Article, ArticleType, Brand, Courier, OrderDetail, OrderInput, SizeChart, UnitInput, VoiceNote } from '../../../core/models/api.models';
+import { Article, ArticleType, Brand, ClientPartner, Courier, OrderDetail, OrderInput, SizeChart, UnitInput, VoiceNote } from '../../../core/models/api.models';
 import { isStoredVoice, voiceField } from '../../../core/utils/voice-note';
 import { ImageUpload, compressImage } from '../../../core/utils/image';
 import { PageFetch } from '../../../core/utils/search-pager';
@@ -30,7 +31,7 @@ const MAX_ARTICLES = 30;
 const DRAFT_KEY = 'stx_order_draft_v1';
 
 type Step = 1 | 2 | 3;
-type FieldKey = 'brand' | 'courier' | 'tracking' | 'international';
+type FieldKey = 'partner' | 'brand' | 'courier' | 'tracking' | 'international';
 
 interface ArticleDraft {
   key: number;
@@ -160,6 +161,11 @@ export class OrderFormPage {
   });
 
   // ───────── Step 1 ─────────
+  protected choice = inject(PartnerChoiceService);
+  /** The stitching partner this order goes to. Its address is where the parcel is sent and its articles are offered. */
+  partner = signal<ClientPartner | null>(null);
+  /** Once an order is submitted the customer has been told where to ship, so its partner can no longer change. */
+  partnerLocked = computed(() => this.isEdit() && !this.isDraft());
   brand = signal<Brand | null>(null);
   brandOrderNumber = signal('');
   courier = signal<Courier | null>(null);
@@ -177,6 +183,7 @@ export class OrderFormPage {
 
   step1Errors = computed(() => {
     const e: Partial<Record<FieldKey, string>> = {};
+    if (!this.partner() && !this.partnerLocked() && this.choice.partners().length) e.partner = 'Choose the stitching partner for this order.';
     if (!this.brand()) e.brand = 'Choose the brand you ordered from.';
     if (!this.courier()) e.courier = 'Choose the courier delivering your parcel.';
     else if (this.trackingRequired() && !this.trackingNumber().trim()) e.tracking = `Enter the tracking number for ${this.courier()!.name}.`;
@@ -265,6 +272,12 @@ export class OrderFormPage {
       });
     });
 
+    // The partners load once; a new order then starts with the customer's usual (or the recommended) one.
+    this.choice.load();
+    effect(() => {
+      if (this.choice.loaded() && !this.partnerLocked()) untracked(() => this.applyDefaultPartner());
+    });
+
     // Load article types the first time step 2 opens.
     effect(() => {
       if (this.step() === 2) untracked(() => this.loadTypes());
@@ -351,22 +364,8 @@ export class OrderFormPage {
 
   private initCreate(): void {
     this.resetForCreate();
-    const draft = this.readDraft();
-    if (draft && this.hasContent(draft)) {
-      this.brand.set(draft.brand);
-      this.brandOrderNumber.set(draft.brandOrderNumber);
-      this.courier.set(draft.courier);
-      this.trackingNumber.set(draft.tracking);
-      this.international.set(draft.international);
-      this.note.set(draft.note);
-      this.typeNames.set(draft.typeNames ?? {});
-      if (draft.articles.length) {
-        this.articles.set(draft.articles.map((a) => ({ ...this.newArticle(), ...a, existingImages: [], photos: [], processing: false, preview: { state: 'idle', message: null } })));
-        this.seq = Math.max(this.seq, ...draft.articles.map((a) => a.key));
-      }
-      this.step.set(draft.step ?? 1);
-      this.draftRestored.set(true);
-    }
+    // A new order always starts empty: drop any half-filled form kept from an earlier visit.
+    this.clearDraft();
     this.draftEnabled = true;
   }
 
@@ -471,7 +470,7 @@ export class OrderFormPage {
     (more ? this.typesLoadingMore : this.typesLoading).set(true);
     this.typesError.set(null);
     this.typesSub?.unsubscribe();
-    this.typesSub = this.catalog.articleTypes(page).subscribe({
+    this.typesSub = this.catalog.articleTypes(page, undefined, this.partner()?.id).subscribe({
       next: ({ items, meta }) => {
         const seen = new Set(this.types().map((t) => t.id));
         this.types.update((list) => [...list, ...items.filter((t) => !seen.has(t.id))]);
@@ -522,6 +521,7 @@ export class OrderFormPage {
 
   private resetForCreate(): void {
     this.step.set(1);
+    this.partner.set(null);
     this.brand.set(null);
     this.brandOrderNumber.set('');
     this.courier.set(null);
@@ -533,6 +533,10 @@ export class OrderFormPage {
   }
 
   private prefill(o: OrderDetail): void {
+    // an order that already has a partner keeps it; a draft without one starts from the customer's usual / recommended partner
+    const own = this.choice.fromOrder(o.partner);
+    this.partner.set(own);
+    if (!own && !this.partnerLocked()) this.applyDefaultPartner();
     this.brand.set(o.brand_ref ?? (o.brand_id ? { id: o.brand_id, name: o.brand } : null));
     this.brandOrderNumber.set(o.brand_order_number ?? '');
     this.courier.set(o.courier ?? null);
@@ -566,6 +570,32 @@ export class OrderFormPage {
     );
     this.typeNames.update((m) => ({ ...m, ...names }));
     if (this.articles().length === 0) this.articles.set([this.newArticle()]);
+  }
+
+  // ───────── stitching partner ─────────
+
+  /** Start a new order with the partner the customer used last, or the one the platform recommends. */
+  private applyDefaultPartner(): void {
+    if (this.partner()) return;
+    const fallback = this.choice.defaultPartner();
+    if (fallback) this.partner.set(fallback);
+  }
+
+  choosePartner(p: ClientPartner): void {
+    if (this.partnerLocked() || p.id === this.partner()?.id) return;
+    const hadPicks = this.articles().some((a) => Object.keys(a.picks).length > 0);
+    this.partner.set(p);
+    this.choice.remember(p.id);
+    // every partner offers its own articles: forget the loaded lists and the choices made from the previous partner
+    this.types.set([]);
+    this.typesLoaded = false;
+    this.typesPage = 0;
+    this.typesHasMore.set(false);
+    this.articleFetchers.clear();
+    if (hadPicks) {
+      this.articles.update((list) => list.map((a) => ({ ...a, picks: {} })));
+      this.toast.info(`Article choices were cleared: ${p.name} offers its own set.`);
+    }
   }
 
   // ───────── step 1 helpers ─────────
@@ -736,7 +766,8 @@ export class OrderFormPage {
   articleFetch(typeId: string): PageFetch<Article> {
     let fn = this.articleFetchers.get(typeId);
     if (!fn) {
-      fn = (page, search) => this.catalog.articles(typeId, page, search);
+      const partnerId = this.partner()?.id;
+      fn = (page, search) => this.catalog.articles(typeId, page, search, partnerId);
       this.articleFetchers.set(typeId, fn);
     }
     return fn;
@@ -903,6 +934,7 @@ export class OrderFormPage {
 
   private buildBody(): OrderInput {
     return {
+      ...(this.partnerLocked() ? {} : { partner_id: this.partner()?.id ?? null }),
       brand_id: this.brand()!.id,
       courier_id: this.courier()!.id,
       tracking_number: this.trackingNumber().trim() || null,

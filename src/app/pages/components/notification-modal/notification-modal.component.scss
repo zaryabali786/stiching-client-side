@@ -42,7 +42,7 @@
   }
 
   &.unread {
-    background: #fffaf0;
+    background: var(--notif-unread-bg, #fffaf0);
     border-color: #ead9b8;
 
     strong {

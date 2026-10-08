@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
-import { Article, ArticleType, ApiResult, Brand, Courier, Paged, ProductPreview } from '../models/api.models';
+import { Article, ArticleType, ApiResult, Brand, ClientPartner, Courier, Paged, ProductPreview } from '../models/api.models';
 
 export const CATALOG_PAGE_SIZE = 20;
 
@@ -23,13 +23,19 @@ export class CatalogService {
     return this.api.getPage<Courier>('/client/couriers', { page, limit: CATALOG_PAGE_SIZE, search: search.trim() });
   }
 
-  articleTypes(page: number, limit = CATALOG_PAGE_SIZE): Observable<Paged<ArticleType>> {
-    return this.api.getPage<ArticleType>('/client/article-types', { page, limit });
+  /** The stitching partners a customer can choose from, and the one the platform recommends right now. */
+  partners(): Observable<{ items: ClientPartner[]; recommendedId: string | null }> {
+    return this.api.get<{ items: ClientPartner[]; recommendedId: string | null }>('/client/partners');
   }
 
-  articles(typeId: string, page: number, search: string): Observable<Paged<Article>> {
+  articleTypes(page: number, limit = CATALOG_PAGE_SIZE, partnerId?: string | null): Observable<Paged<ArticleType>> {
+    return this.api.getPage<ArticleType>('/client/article-types', { page, limit, partner_id: partnerId ?? undefined });
+  }
+
+  articles(typeId: string, page: number, search: string, partnerId?: string | null): Observable<Paged<Article>> {
     return this.api.getPage<Article>('/client/articles', {
       type_id: typeId,
+      partner_id: partnerId ?? undefined,
       page,
       limit: CATALOG_PAGE_SIZE,
       search: search.trim(),

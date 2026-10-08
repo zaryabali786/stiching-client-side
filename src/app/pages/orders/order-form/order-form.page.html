@@ -80,6 +80,53 @@
         }
       }
 
+      <!-- Which stitching partner this order goes to: its articles are offered and its address is where the parcel is sent -->
+      @if (partnerLocked()) {
+        @if (partner(); as lp) {
+          <section class="card partner-card locked" aria-label="Stitching partner">
+            <span class="pc-ico" aria-hidden="true"><ion-icon name="cut-outline"></ion-icon></span>
+            <div class="pc-body"><span class="pc-k">Stitching partner</span><strong>{{ lp.name }}</strong><small>This order is with {{ lp.name }}, so it cannot change.</small></div>
+          </section>
+        }
+      } @else if (choice.partners().length) {
+        <section class="card partner-pick" aria-labelledby="pp-title">
+          <div class="pp-head">
+            <h3 id="pp-title" class="card-title">Who will stitch it?</h3>
+            <p class="hint">Choose a stitching partner. You will see their articles, and the address to send your parcel to.</p>
+          </div>
+          <div class="pp-list" role="radiogroup" aria-label="Stitching partner" [class.invalid]="showError('partner')">
+            @for (p of choice.partners(); track p.id) {
+              <button type="button" class="pp-card" role="radio" [class.on]="partner()?.id === p.id" [attr.aria-checked]="partner()?.id === p.id" (click)="choosePartner(p); touch('partner')">
+                <span class="pp-avatar" aria-hidden="true">{{ p.name.charAt(0) }}</span>
+                <span class="pp-text">
+                  <span class="pp-name">{{ p.name }}
+                    @if (p.recommended) { <span class="pp-badge">Recommended</span> }
+                  </span>
+                  <span class="pp-meta">
+                    @if (p.city) { <span><ion-icon name="location-outline" aria-hidden="true"></ion-icon>{{ p.city }}</span> }
+                    @if (p.turnaround_days) { <span><ion-icon name="time-outline" aria-hidden="true"></ion-icon>about {{ p.turnaround_days }} days</span> }
+                  </span>
+                  @if (p.tagline) { <span class="pp-tag">{{ p.tagline }}</span> }
+                </span>
+                <span class="pp-radio" aria-hidden="true"></span>
+              </button>
+            }
+          </div>
+          @if (showError('partner')) { <p class="field-error" role="alert">{{ step1Errors().partner }}</p> }
+          @if (partner(); as sel) {
+            <div class="pp-ship">
+              <span class="pp-ship-ico" aria-hidden="true"><ion-icon name="location-outline"></ion-icon></span>
+              <div>
+                <span class="pp-ship-k">You will send your parcel to</span>
+                <strong>{{ sel.receiving.name }}</strong>
+                <span>{{ sel.receiving.address }}@if (sel.receiving.city) {, {{ sel.receiving.city }}}</span>
+                @if (sel.short_code) { <small>Write your customer code and <b class="mono">{{ sel.short_code }}</b> on the parcel label.</small> }
+              </div>
+            </div>
+          }
+        </section>
+      }
+
       <section class="card stack-lg">
         <app-search-select
           #brandSel
@@ -483,6 +530,7 @@
           <h3 class="card-title">Order</h3>
           <button type="button" class="link-btn" (click)="goTo(1)" aria-label="Edit order details">Edit</button>
         </div>
+        @if (partner(); as rp) { <div class="kv"><span class="k">Stitching partner</span><span class="v">{{ rp.name }}@if (rp.short_code) { <span class="mono"> · {{ rp.short_code }}</span> }</span></div> }
         <div class="kv"><span class="k">Brand</span><span class="v">{{ brand()?.name }}</span></div>
         <div class="kv"><span class="k">Brand order no.</span><span class="v">{{ brandOrderNumber() || '—' }}</span></div>
         <div class="kv"><span class="k">Courier</span><span class="v">{{ courier()?.name }}</span></div>
@@ -548,7 +596,7 @@
       </section>
 
       @if (!isEdit()) {
-        <app-ship-to-card eyebrow="Next step" heading="Then ship your parcel to us" [compact]="true" />
+        <app-ship-to-card eyebrow="Next step" heading="Then ship your parcel to us" [compact]="true" [partner]="partner()" />
       }
 
       @if (submitError()) {

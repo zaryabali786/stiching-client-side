@@ -32,8 +32,8 @@
     @for (f of filters; track f.key) {
       <button type="button" class="chip" [class.active]="status() === f.key" [attr.aria-pressed]="status() === f.key" (click)="setStatus(f.key)">
         {{ f.label }}
-        @if (status() === f.key && total() !== null && !loading()) {
-          <span class="count" [attr.aria-label]="total() + ' orders'">{{ total() }}</span>
+        @if (counts()[f.key]) {
+          <span class="count" [attr.aria-label]="counts()[f.key] + ' orders'">{{ counts()[f.key] }}</span>
         }
       </button>
     }
@@ -60,27 +60,50 @@
   } @else {
     <div class="list" [class.refreshing]="loading()" [attr.aria-busy]="loading()">
       @for (o of items(); track o.id) {
-        <a class="order-tile" [class.is-draft]="o.status === 'draft'" [routerLink]="['/app/orders', o.id]">
-          @if (o.status === 'draft') {
-            <span class="draft-corner"><ion-icon name="mail-outline" aria-hidden="true"></ion-icon> Draft · from mail</span>
-          }
-          <span [class]="'brand-swatch ' + swatch(o.brand).cls" aria-hidden="true">{{ swatch(o.brand).initial }}</span>
-          <div class="tile-body">
-            <div class="tile-top">
-              <span class="tile-title">{{ o.brand }}</span>
-              <span class="tile-date">{{ o.created_at | date: 'd MMM y' }}</span>
-            </div>
-            <span class="tile-meta">
+        @let draft = o.status === 'draft';
+        @let prog = progress(o);
+        <a class="order-card" [class.is-draft]="draft" [class.is-done]="prog.done" [class.is-cancelled]="o.status === 'cancelled'" [routerLink]="['/app/orders', o.id]">
+          <div class="oc-head">
+            <span class="oc-kicker">{{ kicker(o) }}</span>
+            @if (draft) {
+              <span class="oc-pill draft"><ion-icon name="bookmark-outline" aria-hidden="true"></ion-icon> Draft Saved</span>
+            } @else {
               <app-status-badge [status]="o.status" [label]="o.status_label" />
-              <span class="mono">{{ o.reference }}</span>
-              <span aria-hidden="true">·</span>
-              <span>{{ o.units_count }} article{{ o.units_count === 1 ? '' : 's' }}</span>
-              @if (o.has_issue) {
-                <span class="issue-flag"><ion-icon name="alert-circle-outline" aria-hidden="true"></ion-icon>Issue</span>
-              }
-            </span>
+            }
           </div>
-          <ion-icon name="chevron-forward-outline" class="tile-arrow" aria-hidden="true"></ion-icon>
+
+          <div class="oc-main">
+            <span [class]="'brand-swatch ' + swatch(o.brand).cls" aria-hidden="true">{{ swatch(o.brand).initial }}</span>
+            <div class="oc-text">
+              <h3 class="oc-title">{{ o.brand }}</h3>
+              <span class="oc-sub">
+                @if (draft && o.import_source === 'email') {
+                  <ion-icon name="mail-outline" aria-hidden="true"></ion-icon> Created from your email
+                } @else {
+                  {{ o.created_at | date: 'd MMM y' }}
+                }
+              </span>
+            </div>
+            @if (o.has_issue) {
+              <span class="issue-flag"><ion-icon name="alert-circle-outline" aria-hidden="true"></ion-icon>Needs attention</span>
+            }
+          </div>
+
+          @if (draft) {
+            <div class="oc-foot">
+              <span class="oc-hint">Add courier &amp; sizes to submit</span>
+              <span class="oc-cta">Continue Setup <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon></span>
+            </div>
+          } @else if (o.status !== 'cancelled') {
+            <div class="oc-progress" role="img" [attr.aria-label]="prog.label">
+              @for (step of steps; track step; let i = $index) {
+                <span class="oc-step" [class.done]="i < prog.step || prog.done" [class.current]="i === prog.step && !prog.done">
+                  <span class="dot"></span>
+                  <span class="lbl">{{ step }}</span>
+                </span>
+              }
+            </div>
+          }
         </a>
       }
     </div>

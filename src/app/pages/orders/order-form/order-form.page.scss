@@ -74,7 +74,7 @@
     color: var(--c-ink-2);
 
     &::before {
-      background: var(--c-brand);
+      background: var(--c-brand-fill, var(--c-brand));
     }
   }
 
@@ -618,3 +618,31 @@
 .note-line {
   font-style: italic;
 }
+
+/* Choosing the stitching partner */
+.partner-pick { display: flex; flex-direction: column; gap: 12px; }
+.pp-head .hint { margin: 2px 0 0; font-size: var(--fs-sm); color: var(--c-muted); }
+.pp-list { display: grid; gap: 10px; &.invalid { outline: 2px solid var(--t-red-dot); outline-offset: 4px; border-radius: 16px; } }
+.pp-card {
+  position: relative; display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; text-align: left;
+  border: 1.5px solid var(--c-line); border-radius: 16px; background: var(--c-surface); color: inherit; font: inherit; cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  &:active { transform: scale(0.99); }
+  &.on { border-color: var(--c-accent); background: var(--c-accent-faded); box-shadow: 0 0 0 3px var(--c-accent-faded); }
+}
+.pp-avatar { flex: none; width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: var(--c-accent-faded); color: var(--c-accent); font-family: var(--font-serif); font-size: 21px; font-weight: 700; }
+.pp-card.on .pp-avatar { background: var(--c-accent-fill); color: var(--c-on-accent); }
+.pp-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.pp-name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 700; font-size: var(--fs-body); color: var(--c-ink); }
+.pp-badge { padding: 2px 8px; border-radius: 999px; background: var(--c-accent-faded); color: var(--c-accent); font-size: var(--fs-2xs); font-weight: 700; }
+.pp-card.on .pp-badge { background: var(--c-surface); }
+.pp-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: var(--fs-xs); color: var(--c-muted); span { display: inline-flex; align-items: center; gap: 4px; } ion-icon { font-size: 14px; } }
+.pp-tag { font-size: var(--fs-sm); color: var(--c-ink-2); line-height: 1.35; }
+.pp-radio { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--c-line-strong); position: relative; }
+.pp-card.on .pp-radio { border-color: var(--c-accent); &::after { content: ''; position: absolute; inset: 4px; border-radius: 50%; background: var(--c-accent); } }
+.pp-ship { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 14px; background: var(--c-accent-faded); strong { display: block; font-size: var(--fs-body); } span, small { display: block; font-size: var(--fs-sm); color: var(--c-ink-2); } small { margin-top: 4px; color: var(--c-muted); } }
+.pp-ship-ico { flex: none; width: 34px; height: 34px; border-radius: 11px; display: flex; align-items: center; justify-content: center; background: var(--c-surface); color: var(--c-accent); font-size: 18px; }
+.pp-ship-k { font-size: var(--fs-xs) !important; font-weight: 600; letter-spacing: 0.04em; color: var(--c-accent) !important; }
+.partner-card { display: flex; align-items: center; gap: 12px; &.locked { background: var(--c-accent-faded); border-color: transparent; } }
+.pc-ico { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: var(--c-surface); color: var(--c-accent); font-size: 20px; }
+.pc-body { display: flex; flex-direction: column; .pc-k { font-size: var(--fs-xs); color: var(--c-muted); } small { font-size: var(--fs-xs); color: var(--c-muted); } }

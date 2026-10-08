@@ -48,8 +48,8 @@
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--c-brand) 0%, var(--c-brand-2) 100%);
-    color: #ffffff;
+    background: var(--c-brand-fill, linear-gradient(135deg, var(--c-brand) 0%, var(--c-brand-2) 100%));
+    color: var(--c-on-brand, #ffffff);
     border: 1px solid rgba(0, 0, 0, 0.08);
     box-shadow: 0 2px 6px var(--c-brand-glow);
     font-family: var(--font-serif);
@@ -157,8 +157,8 @@
     height: 19px;
     padding: 0 5px;
     border-radius: 999px;
-    background: var(--t-red-dot);
-    color: #ffffff;
+    background: var(--badge-fill, var(--t-red-dot));
+    color: var(--badge-text, #ffffff);
     font-size: 11px;
     font-weight: 700;
     line-height: 1;
@@ -178,10 +178,15 @@
   overflow-y: auto;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  scrollbar-color: var(--c-line-strong) transparent;
+  /* scrolling still works, the scrollbar is hidden */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   /* never let the last content hide behind the tab bar */
   padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 20px);
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* Focus mode (order wizard): the tab bar is removed, so the content and its sticky step bar
@@ -229,6 +234,7 @@
   transition: color 0.2s ease;
 
   .ind {
+    position: relative;
     width: 52px;
     height: 30px;
     border-radius: 999px;
@@ -240,6 +246,25 @@
     ion-icon {
       font-size: 22px;
     }
+  }
+
+  .tab-badge {
+    position: absolute;
+    top: -4px;
+    right: 3px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--badge-fill, var(--t-red-dot));
+    color: var(--badge-text, #ffffff);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 0 2px var(--c-surface, #fff);
   }
 
   .lbl {
@@ -278,8 +303,8 @@
     width: 44px;
     height: 34px;
     border-radius: 14px;
-    background: linear-gradient(135deg, var(--c-brand) 0%, var(--c-brand-2) 100%);
-    color: #ffffff;
+    background: var(--c-brand-fill, linear-gradient(135deg, var(--c-brand) 0%, var(--c-brand-2) 100%));
+    color: var(--c-on-brand, #ffffff);
     display: flex;
     align-items: center;
     justify-content: center;

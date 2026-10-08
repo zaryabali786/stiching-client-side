@@ -33,7 +33,7 @@ import { ToastService } from '../core/services/toast.service';
       pointer-events: auto; cursor: pointer;
       display: flex; align-items: flex-start; gap: 10px;
       padding: 12px 14px; border-radius: 14px;
-      background: #1c2b23; color: var(--c-on-dark); font-size: var(--fs-md); line-height: 1.4;
+      background: var(--notif-fill, #1c2b23); color: var(--notif-text, var(--c-on-dark)); font-size: var(--fs-md); line-height: 1.4;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
       animation: toast-in 0.22s ease both;
     }
@@ -45,7 +45,7 @@ import { ToastService } from '../core/services/toast.service';
     }
     .act:hover { background: rgba(255, 255, 255, 0.24); }
     .t-success ion-icon { color: #9ad3b2; }
-    .t-error { background: #5a1f17; }
+    .t-error { background: #5a1f17; color: #fff; }
     .t-error ion-icon { color: #ffb4a6; }
     .t-info ion-icon { color: #e6cf9f; }
   `,

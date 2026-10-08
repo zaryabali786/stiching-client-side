@@ -1,5 +1,10 @@
 import { addIcons } from 'ionicons';
 import {
+  keyOutline,
+  storefrontOutline,
+  calendarOutline,
+  barcodeOutline,
+  chatboxEllipsesOutline,
   addOutline,
   airplaneOutline,
   alertCircleOutline,
@@ -62,11 +67,17 @@ import {
   send,
   chatbubblesOutline,
   chatbubbles,
+  statsChartOutline,
 } from 'ionicons/icons';
 
 /** Register every ionicon the app uses once, at bootstrap. */
 export function registerIcons(): void {
   addIcons({
+    keyOutline,
+    storefrontOutline,
+    calendarOutline,
+    barcodeOutline,
+    chatboxEllipsesOutline,
     addOutline,
     airplaneOutline,
     alertCircleOutline,
@@ -129,5 +140,6 @@ export function registerIcons(): void {
     send,
     chatbubblesOutline,
     chatbubbles,
+    statsChartOutline,
   });
 }

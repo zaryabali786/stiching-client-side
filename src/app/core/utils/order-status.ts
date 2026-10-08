@@ -5,10 +5,10 @@ import { OrderStatus } from '../models/api.models';
  *  neutral = waiting on someone else · blue = in progress · amber = needs YOUR action
  *  green = done / paid · purple = in transit · red = problem
  */
-export type StatusTone = 'neutral' | 'blue' | 'amber' | 'green' | 'purple' | 'red';
+export type StatusTone = 'neutral' | 'blue' | 'amber' | 'green' | 'purple' | 'red' | 'brand';
 
 const TONES: Record<OrderStatus, StatusTone> = {
-  draft: 'amber',
+  draft: 'brand',
   submitted: 'neutral',
   received: 'blue',
   assigned: 'blue',

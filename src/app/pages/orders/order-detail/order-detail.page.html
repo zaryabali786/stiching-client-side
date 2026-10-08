@@ -101,7 +101,7 @@
     <!-- ───────── Status-specific panels (primary actions live in the sticky bar below) ───────── -->
 
     @if (o.status === 'submitted') {
-      <app-ship-to-card [compact]="!showCreated()" />
+      <app-ship-to-card [compact]="!showCreated()" [partner]="partners.fromOrder(o.partner)" />
     }
 
     <!-- ───────── Approval, one card per article ───────── -->
@@ -393,23 +393,72 @@
     }
 
     <!-- Order info -->
-    <section class="card">
-      <h3 class="card-title">Order details</h3>
-      <div class="kv"><span class="k">Reference</span><span class="v mono">{{ o.reference }}</span></div>
-      <div class="kv"><span class="k">Brand</span><span class="v">{{ o.brand_ref?.name || o.brand }}</span></div>
-      <div class="kv"><span class="k">Brand order no.</span><span class="v">{{ o.brand_order_number || '—' }}</span></div>
-      <div class="kv"><span class="k">Courier</span><span class="v">{{ o.courier?.name || '—' }}</span></div>
-      <div class="kv"><span class="k">Tracking number</span><span class="v">{{ o.tracking_number || '—' }}</span></div>
-      <div class="kv"><span class="k">Shipping</span><span class="v">{{ shippingText(o) }}</span></div>
-      @if (o.due_date && o.status !== 'cancelled' && o.status !== 'delivered') {
-        <div class="kv"><span class="k">Estimated ready</span><span class="v">{{ o.due_date | date: 'd MMM y' }}</span></div>
-      }
-      <div class="kv"><span class="k">Deliver to</span>
-        <span class="v">{{ destination(o) }}</span>
+    <section class="card od-card" aria-labelledby="od-title">
+      <header class="od-head">
+        <h3 id="od-title" class="card-title">Order details</h3>
+        <span class="od-ref mono">{{ o.reference }}</span>
+      </header>
+
+      <div class="od-group">
+        <span class="od-group-label">Order</span>
+        <dl class="od-list">
+          @if (o.partner; as op) {
+            <div class="od-row">
+              <span class="od-ico" aria-hidden="true"><ion-icon name="cut-outline"></ion-icon></span>
+              <dt>Stitching partner</dt><dd>{{ op.name }}@if (op.short_code) { <span class="mono"> · {{ op.short_code }}</span> }</dd>
+            </div>
+          }
+          <div class="od-row">
+            <span class="od-ico" aria-hidden="true"><ion-icon name="storefront-outline"></ion-icon></span>
+            <dt>Brand</dt><dd>{{ o.brand_ref?.name || o.brand }}</dd>
+          </div>
+          <div class="od-row">
+            <span class="od-ico" aria-hidden="true"><ion-icon name="receipt-outline"></ion-icon></span>
+            <dt>Brand order no.</dt>
+            <dd [class.od-empty]="!o.brand_order_number">{{ o.brand_order_number || 'Not added' }}</dd>
+          </div>
+          <div class="od-row">
+            <span class="od-ico" aria-hidden="true"><ion-icon name="calendar-outline"></ion-icon></span>
+            <dt>Created</dt><dd>{{ o.created_at | date: 'd MMM y, HH:mm' }}</dd>
+          </div>
+          @if (o.due_date && o.status !== 'cancelled' && o.status !== 'delivered') {
+            <div class="od-row">
+              <span class="od-ico" aria-hidden="true"><ion-icon name="time-outline"></ion-icon></span>
+              <dt>Estimated ready</dt><dd class="od-accent">{{ o.due_date | date: 'd MMM y' }}</dd>
+            </div>
+          }
+        </dl>
       </div>
-      <div class="kv"><span class="k">Created</span><span class="v">{{ o.created_at | date: 'd MMM y, HH:mm' }}</span></div>
+
+      <div class="od-group">
+        <span class="od-group-label">Delivery</span>
+        <dl class="od-list">
+          <div class="od-row">
+            <span class="od-ico" aria-hidden="true"><ion-icon name="cube-outline"></ion-icon></span>
+            <dt>Courier</dt>
+            <dd [class.od-empty]="!o.courier?.name">{{ o.courier?.name || 'Not chosen yet' }}</dd>
+          </div>
+          <div class="od-row">
+            <span class="od-ico" aria-hidden="true"><ion-icon name="barcode-outline"></ion-icon></span>
+            <dt>Tracking number</dt>
+            <dd [class.od-empty]="!o.tracking_number" [class.mono]="!!o.tracking_number">{{ o.tracking_number || 'Not added' }}</dd>
+          </div>
+          <div class="od-row">
+            <span class="od-ico" aria-hidden="true"><ion-icon name="airplane-outline"></ion-icon></span>
+            <dt>Shipping</dt><dd>{{ shippingText(o) }}</dd>
+          </div>
+        </dl>
+        <div class="od-address">
+          <span class="od-ico" aria-hidden="true"><ion-icon name="location-outline"></ion-icon></span>
+          <div>
+            <span class="od-address-label">Deliver to</span>
+            <p>{{ destination(o) }}</p>
+          </div>
+        </div>
+      </div>
+
       @if (o.customer_notes) {
-        <p class="quote">“{{ o.customer_notes }}”</p>
+        <p class="od-note"><ion-icon name="chatbox-ellipses-outline" aria-hidden="true"></ion-icon>{{ o.customer_notes }}</p>
       }
     </section>
 

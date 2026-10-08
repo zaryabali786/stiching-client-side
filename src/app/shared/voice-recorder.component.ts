@@ -119,7 +119,7 @@ function readAsDataUrl(blob: Blob): Promise<string> {
     }
     .vr-cancel { background: none; color: var(--t-red-fg); }
     .vr-cancel:hover { background: var(--t-red-bg); }
-    .vr-send { background: var(--c-brand); color: #fff; box-shadow: 0 4px 14px rgba(15, 57, 43, 0.22); }
+    .vr-send { background: var(--c-brand-fill, var(--c-brand)); color: var(--c-on-brand, #fff); box-shadow: 0 4px 14px rgba(15, 57, 43, 0.22); }
     .vr-send:hover { background: var(--c-brand-2); }
     .vr-cancel:focus-visible, .vr-send:focus-visible { outline: 2px solid var(--c-focus); outline-offset: 2px; }
     .vr-main { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 1px; }
@@ -129,7 +129,7 @@ function readAsDataUrl(blob: Blob): Promise<string> {
     .vr-time { flex: none; min-width: 34px; font-weight: 600; font-size: var(--fs-body); color: var(--c-ink); white-space: nowrap; }
     .vr-time.near-end { color: var(--t-red-fg); }
     .vr-wave { flex: 1; min-width: 0; height: 28px; display: flex; align-items: center; justify-content: flex-end; gap: 2px; overflow: hidden; }
-    .vr-wave i { flex: none; width: 3px; min-height: 3px; border-radius: 2px; background: var(--c-brand); opacity: 0.8; transition: height 0.08s linear; }
+    .vr-wave i { flex: none; width: 3px; min-height: 3px; border-radius: 2px; background: var(--c-brand-fill, var(--c-brand)); opacity: 0.8; transition: height 0.08s linear; }
     .vr-warn { font-size: var(--fs-xs); line-height: 1.25; color: var(--t-amber-fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .vr-error { margin-top: 6px; }
     .vr-again { margin-top: 8px; }

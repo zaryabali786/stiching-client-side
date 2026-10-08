@@ -50,11 +50,16 @@
 @if (!focusMode()) {
 <nav class="tabbar" aria-label="Main">
   <a class="tab" routerLink="/app/overview" [class.active]="activeTab() === 'home'" [attr.aria-current]="activeTab() === 'home' ? 'page' : null">
-    <span class="ind"><ion-icon [name]="activeTab() === 'home' ? 'home' : 'home-outline'" aria-hidden="true"></ion-icon></span>
+    <span class="ind"><ion-icon [name]="tabIcon('home', activeTab() === 'home')" aria-hidden="true"></ion-icon></span>
     <span class="lbl">Home</span>
   </a>
   <a class="tab" routerLink="/app/orders" [class.active]="activeTab() === 'orders'" [attr.aria-current]="activeTab() === 'orders' ? 'page' : null">
-    <span class="ind"><ion-icon [name]="activeTab() === 'orders' ? 'cube' : 'cube-outline'" aria-hidden="true"></ion-icon></span>
+    <span class="ind">
+      <ion-icon [name]="tabIcon('cube', activeTab() === 'orders')" aria-hidden="true"></ion-icon>
+      @if (draftCount() > 0) {
+        <span class="tab-badge" [attr.aria-label]="draftCount() + ' draft orders'">{{ draftBadge() }}</span>
+      }
+    </span>
     <span class="lbl">Orders</span>
   </a>
   <a class="tab tab-new" routerLink="/app/orders/new" [class.active]="activeTab() === 'new'" [attr.aria-current]="activeTab() === 'new' ? 'page' : null">
@@ -62,11 +67,11 @@
     <span class="lbl">New order</span>
   </a>
   <a class="tab" routerLink="/app/sizes" [class.active]="activeTab() === 'sizes'" [attr.aria-current]="activeTab() === 'sizes' ? 'page' : null">
-    <span class="ind"><ion-icon [name]="activeTab() === 'sizes' ? 'options' : 'options-outline'" aria-hidden="true"></ion-icon></span>
+    <span class="ind"><ion-icon [name]="tabIcon('options', activeTab() === 'sizes')" aria-hidden="true"></ion-icon></span>
     <span class="lbl">Sizes</span>
   </a>
   <a class="tab" routerLink="/app/profile" [class.active]="activeTab() === 'profile'" [attr.aria-current]="activeTab() === 'profile' ? 'page' : null">
-    <span class="ind"><ion-icon [name]="activeTab() === 'profile' ? 'person' : 'person-outline'" aria-hidden="true"></ion-icon></span>
+    <span class="ind"><ion-icon [name]="tabIcon('person', activeTab() === 'profile')" aria-hidden="true"></ion-icon></span>
     <span class="lbl">Profile</span>
   </a>
 </nav>

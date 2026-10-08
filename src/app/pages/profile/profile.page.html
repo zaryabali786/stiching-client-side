@@ -8,17 +8,18 @@
     <section class="card profile-card">
       <div class="avatar">{{ initial() }}</div>
       <h2>{{ u.full_name || u.email }}</h2>
-      <button type="button" class="code" (click)="copyCode()" title="Copy your customer code">
-        <span class="mono">{{ u.customer_code }}</span>
-        <ion-icon name="copy-outline"></ion-icon>
-      </button>
       <p class="member">Member since {{ u.created_at | date: 'MMMM y' }}</p>
+      <button type="button" class="code" (click)="copyCode()" title="Copy your customer code">
+        <span class="code-k">Customer code</span>
+        <span class="mono">{{ u.customer_code }}</span>
+        <ion-icon name="copy-outline" aria-hidden="true"></ion-icon>
+      </button>
     </section>
 
     <!-- Shopping email: use it at any shop's checkout -->
     <section class="card shopping-mail">
       <div class="card-head">
-        <h3 class="card-title">Your shopping email</h3>
+        <h3 class="card-title"><span class="head-ico" aria-hidden="true"><ion-icon name="mail-outline"></ion-icon></span>Your shopping email</h3>
         <a class="btn btn-ghost btn-sm" routerLink="/app/inbox">
           <ion-icon name="mail-outline" aria-hidden="true"></ion-icon> Inbox
           @if (mailbox.unread() > 0) {
@@ -40,18 +41,21 @@
     <!-- Details / edit -->
     <section class="card">
       <div class="card-head">
-        <h3 class="card-title">Contact &amp; delivery</h3>
+        <h3 class="card-title"><span class="head-ico" aria-hidden="true"><ion-icon name="person-outline"></ion-icon></span>Contact &amp; delivery</h3>
         @if (!editing()) {
           <button type="button" class="btn btn-ghost btn-sm" (click)="startEdit()"><ion-icon name="create-outline"></ion-icon> Edit</button>
         }
       </div>
 
       @if (!editing()) {
-        <div class="detail"><ion-icon name="mail-outline"></ion-icon><span>{{ u.email }}</span></div>
-        <div class="detail"><ion-icon name="call-outline"></ion-icon><span>{{ u.phone || 'Add a phone number' }}</span></div>
+        <div class="detail"><span class="d-ico" aria-hidden="true"><ion-icon name="mail-outline"></ion-icon></span>
+          <div class="d-text"><span class="d-k">Email</span><span class="d-v">{{ u.email }}</span></div></div>
+        <div class="detail"><span class="d-ico" aria-hidden="true"><ion-icon name="call-outline"></ion-icon></span>
+          <div class="d-text"><span class="d-k">Phone</span><span class="d-v" [class.d-empty]="!u.phone">{{ u.phone || 'Add a phone number' }}</span></div></div>
         <div class="detail">
-          <ion-icon name="location-outline"></ion-icon>
-          <span>
+          <span class="d-ico" aria-hidden="true"><ion-icon name="location-outline"></ion-icon></span>
+          <div class="d-text"><span class="d-k">Delivery address</span>
+          <span class="d-v" [class.d-empty]="!(u.address || u.city || u.country)">
             @if (u.address || u.city || u.country) {
               {{ u.address }}@if (u.address) {<br />}
               {{ u.city }}{{ u.city && u.postal_code ? ' ' : '' }}{{ u.postal_code }}@if (u.city || u.postal_code) {<br />}
@@ -59,7 +63,7 @@
             } @else {
               Add your delivery address
             }
-          </span>
+          </span></div>
         </div>
       } @else {
         <form class="edit-form" (ngSubmit)="saveProfile()" novalidate>
@@ -118,12 +122,12 @@
       }
     </section>
 
-    <app-ship-to-card />
+    <app-ship-to-card [chooser]="true" />
 
     <!-- Password -->
     <section class="card">
       <div class="card-head">
-        <h3 class="card-title">Password</h3>
+        <h3 class="card-title"><span class="head-ico" aria-hidden="true"><ion-icon name="lock-closed-outline"></ion-icon></span>Password</h3>
         @if (!pwOpen()) {
           <button type="button" class="btn btn-ghost btn-sm" (click)="pwOpen.set(true)"><ion-icon name="lock-closed-outline"></ion-icon> Change</button>
         }

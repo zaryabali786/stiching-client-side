@@ -5,7 +5,7 @@ const SIZE = 56;
 const EDGE = 8;
 const DRAG_THRESHOLD = 6;
 const STEP = 16;
-const STORAGE_KEY = 'stx_chat_fab_v1';
+const STORAGE_KEY = 'stx_chat_fab_v2';
 
 interface Saved {
   side: 'left' | 'right';
@@ -52,7 +52,7 @@ interface Saved {
       position: fixed; left: 0; top: 0; z-index: 800;
       width: 56px; height: 56px; padding: 0; border: 0; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      background: var(--c-brand); color: #fff; font-size: 26px; cursor: grab;
+      background: var(--c-brand-fill, var(--c-brand)); color: var(--c-on-brand, #fff); font-size: 26px; cursor: grab;
       box-shadow: var(--shadow-float);
       touch-action: none; user-select: none; -webkit-user-select: none;
       transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s ease;
@@ -193,7 +193,9 @@ export class ChatFabComponent {
     }
     this.side = saved?.side ?? 'right';
     this.x.set(this.sideX(this.side, b));
-    this.y.set(this.clampY(saved?.y ?? b.bottom - SIZE - 16, b));
+    const defaultY = b.bottom - SIZE - 16;
+    const initialY = saved?.y != null && saved.y > b.top + (b.bottom - b.top) * 0.45 ? saved.y : defaultY;
+    this.y.set(this.clampY(initialY, b));
     this.placed.set(true);
   }
 

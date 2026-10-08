@@ -81,7 +81,7 @@ export function formatClock(seconds: number): string {
     .vp { display: flex; align-items: center; gap: 6px; min-width: 200px; }
     .vp-play {
       flex: none; width: 44px; height: 44px; border-radius: 50%; border: 0; cursor: pointer;
-      background: var(--c-brand); color: #fff; font-size: 18px; display: flex; align-items: center; justify-content: center;
+      background: var(--c-brand-fill, var(--c-brand)); color: var(--c-on-brand, #fff); font-size: 18px; display: flex; align-items: center; justify-content: center;
     }
     .vp-play:disabled { opacity: 0.5; cursor: not-allowed; }
     .vp-play ion-spinner { width: 20px; height: 20px; color: #fff; }
@@ -99,12 +99,12 @@ export function formatClock(seconds: number): string {
       background: linear-gradient(to right, var(--c-brand) var(--p, 0%), var(--c-line-strong) var(--p, 0%));
     }
     .vp-range::-moz-range-track { height: 4px; border-radius: 4px; background: var(--c-line-strong); }
-    .vp-range::-moz-range-progress { height: 4px; border-radius: 4px; background: var(--c-brand); }
+    .vp-range::-moz-range-progress { height: 4px; border-radius: 4px; background: var(--c-brand-fill, var(--c-brand)); }
     .vp-range::-webkit-slider-thumb {
       -webkit-appearance: none; width: 16px; height: 16px; margin-top: -6px; border-radius: 50%;
-      background: var(--c-brand); border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+      background: var(--c-brand-fill, var(--c-brand)); border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
     }
-    .vp-range::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--c-brand); border: 2px solid #fff; }
+    .vp-range::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--c-brand-fill, var(--c-brand)); border: 2px solid #fff; }
     .vp-range:focus-visible { outline: 2px solid var(--c-focus); outline-offset: 2px; border-radius: 4px; }
     .vp-range:disabled { cursor: default; }
   `,

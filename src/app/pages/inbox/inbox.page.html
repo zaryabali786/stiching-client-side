@@ -8,15 +8,21 @@
     <!-- The address to use at any shop's checkout -->
     <section class="card address-card">
       @if (address(); as a) {
-        <p class="lead">Use this email when you check out at any online shop. Their order emails arrive here.</p>
+        <div class="ac-head">
+          <span class="ac-ico" aria-hidden="true"><ion-icon name="mail-outline"></ion-icon></span>
+          <div>
+            <h2 class="ac-title">Your shopping email</h2>
+            <p class="lead">Use it at checkout in any online shop. Their order emails arrive here.</p>
+          </div>
+        </div>
         <button type="button" class="address" (click)="copyAddress()" aria-label="Copy your shopping email address">
           <span class="mono">{{ a }}</span>
-          <ion-icon [name]="copied() ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon>
+          <span class="copy-pill"><ion-icon [name]="copied() ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon>{{ copied() ? 'Copied' : 'Copy' }}</span>
         </button>
-        <p class="hint">
-          When an order confirmation arrives we read the products from it, so you can create your order here in one tap.
-          Verification codes and tracking emails show up too.
-        </p>
+        <ul class="ac-points">
+          <li><ion-icon name="receipt-outline" aria-hidden="true"></ion-icon>Order confirmations become a draft order in one tap</li>
+          <li><ion-icon name="key-outline" aria-hidden="true"></ion-icon>Verification codes and tracking emails show up here too</li>
+        </ul>
       } @else if (box() && !box()!.enabled) {
         <p class="lead">Your shopping email isn't switched on yet. Please contact us.</p>
       } @else {
@@ -54,7 +60,7 @@
         @for (r of rows(); track r.id) {
           <li>
             <a class="mail-row" [class.unread]="!r.is_read" [routerLink]="['/app/inbox', r.id]">
-              <span class="dot" aria-hidden="true"></span>
+              <span class="avatar" aria-hidden="true">{{ senderName(r.from).charAt(0).toUpperCase() }}<i class="dot"></i></span>
               <div class="body">
                 <div class="top">
                   <strong class="from">{{ senderName(r.from) }}</strong>
@@ -74,7 +80,7 @@
                       </span>
                     }
                     @case ('used') {
-                      <span class="tag"><ion-icon name="checkmark-circle-outline" aria-hidden="true"></ion-icon> Order created from this email</span>
+                      <span class="tag tag-brand"><ion-icon name="checkmark-circle-outline" aria-hidden="true"></ion-icon> Order created from this email</span>
                     }
                   }
                 }

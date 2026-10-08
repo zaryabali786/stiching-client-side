@@ -1,0 +1,124 @@
+<ng-template #artBlock let-s>
+  @if (s.articles?.length) {
+    <section class="block">
+      @if (s.settings['title']) { <h2 class="block-title">{{ s.settings['title'] }}</h2> }
+      <div class="arts-wrap">
+        <div class="arts" [class]="'layout-' + s.settings['layout']" [style.--cols]="s.settings['columns']" [appAutoScroll]="s.settings['layout'] === 'slider' && s.settings['autoplay']">
+          @for (a of s.articles; track a.id) {
+            <ng-container *ngTemplateOutlet="articleCard; context: { $implicit: a }" />
+          }
+        </div>
+      </div>
+    </section>
+  }
+</ng-template>
+
+<ng-template #articleCard let-a>
+  <article class="art">
+    <div class="art-img">
+      @if (a.image_url) {
+        <img [src]="a.image_url" [alt]="a.name" loading="lazy" />
+      } @else {
+        <span class="art-ph" aria-hidden="true">{{ initial(a.name) }}</span>
+      }
+    </div>
+    <div class="art-body">
+      <h3>{{ a.name }}</h3>
+      @if (a.type_name) { <span class="art-type">{{ a.type_name }}</span> }
+    </div>
+  </article>
+</ng-template>
+
+@for (s of sections(); track s.id) {
+  @switch (s.type) {
+    @case ('announcement') {
+      @if ((s.settings['text'] || s.settings['image_url']) && !isDismissed(s.id)) {
+        <div class="announce" [class.medium]="s.settings['size'] === 'medium'" [style.background]="s.settings['bg']" [style.color]="s.settings['color']" [style.text-align]="s.settings['align']" role="status">
+          @if (s.settings['link']) {
+            <a class="a-in" [href]="href(s.settings['link'])" [attr.target]="external(s.settings['link']) ? '_blank' : null" rel="noopener noreferrer" (click)="go($event, s.settings['link'])">
+              @if (s.settings['image_url']) { <img class="a-img" [src]="s.settings['image_url']" alt="" /> }{{ s.settings['text'] }}
+            </a>
+          } @else {
+            <span class="a-in">
+              @if (s.settings['image_url']) { <img class="a-img" [src]="s.settings['image_url']" alt="" /> }{{ s.settings['text'] }}
+            </span>
+          }
+          @if (s.settings['dismissible']) {
+            <button type="button" class="x" aria-label="Dismiss" (click)="dismiss(s.id)"><ion-icon name="close-outline" aria-hidden="true"></ion-icon></button>
+          }
+        </div>
+      }
+    }
+
+    @case ('marquee') {
+      @if (s.settings['text'] || s.settings['image_url']) {
+        <div class="marquee" [style.background]="s.settings['bg']" [style.color]="s.settings['color']" role="marquee">
+          <div class="marquee-track" [class.reverse]="s.settings['direction'] === 'right'" [style.animation-duration.s]="marqueeSeconds(s.settings['speed'])">
+            @for (n of [1, 2, 3, 4, 5, 6, 7, 8]; track n) {
+              <span class="marquee-item" [attr.aria-hidden]="n > 1 ? 'true' : null">
+                @if (s.settings['image_url']) { <img class="mq-img" [class]="'mq-' + s.settings['image_size']" [src]="s.settings['image_url']" alt="" /> }{{ s.settings['text'] }}
+              </span>
+            }
+          </div>
+        </div>
+      }
+    }
+
+    @case ('banners') {
+      <app-home-banners [autoplay]="s.settings['autoplay'] !== false" />
+    }
+
+    @case ('hero') {
+      @if (s.settings['image_url'] || s.settings['heading']) {
+        <section class="hero" [class.h-small]="s.settings['height'] === 'small'" [class.h-large]="s.settings['height'] === 'large'" [class.center]="s.settings['align'] === 'center'">
+          @if (s.settings['image_url']) {
+            <img class="hero-img" [src]="s.settings['image_url']" alt="" loading="lazy" />
+          }
+          <div class="hero-shade" [style.opacity]="s.settings['overlay'] / 100"></div>
+          <div class="hero-copy">
+            @if (s.settings['heading']) { <h2>{{ s.settings['heading'] }}</h2> }
+            @if (s.settings['subheading']) { <p>{{ s.settings['subheading'] }}</p> }
+            @if (s.settings['button_label'] && s.settings['button_link']) {
+              <a class="cta" [href]="href(s.settings['button_link'])" [attr.target]="external(s.settings['button_link']) ? '_blank' : null" rel="noopener noreferrer" (click)="go($event, s.settings['button_link'])">{{ s.settings['button_label'] }}</a>
+            }
+          </div>
+        </section>
+      }
+    }
+
+    @case ('image_text') {
+      <section class="imgtext" [class.rev]="s.settings['layout'] === 'image-right'" [style.background]="s.settings['bg']" [style.color]="s.settings['color']">
+        @if (s.settings['image_url']) {
+          <img [src]="s.settings['image_url']" [alt]="s.settings['heading']" loading="lazy" />
+        }
+        <div class="imgtext-copy">
+          @if (s.settings['heading']) { <h2>{{ s.settings['heading'] }}</h2> }
+          @if (s.settings['body']) { <p>{{ s.settings['body'] }}</p> }
+          @if (s.settings['button_label'] && s.settings['button_link']) {
+            <a class="cta dark" [href]="href(s.settings['button_link'])" [attr.target]="external(s.settings['button_link']) ? '_blank' : null" rel="noopener noreferrer" (click)="go($event, s.settings['button_link'])">{{ s.settings['button_label'] }}</a>
+          }
+        </div>
+      </section>
+    }
+
+    @case ('articles') {
+      <ng-container *ngTemplateOutlet="artBlock; context: { $implicit: s }" />
+    }
+
+    @case ('collection') {
+      <ng-container *ngTemplateOutlet="artBlock; context: { $implicit: s }" />
+    }
+
+    @case ('custom') {
+      @if (s.settings['heading'] || s.settings['body']) {
+        <section class="custom" [style.background]="s.settings['bg']" [style.color]="s.settings['color']" [style.text-align]="s.settings['align']">
+          @if (s.settings['heading']) { <h2>{{ s.settings['heading'] }}</h2> }
+          @if (s.settings['body']) { <p>{{ s.settings['body'] }}</p> }
+          @if (s.settings['button_label'] && s.settings['button_link']) {
+            <a class="cta dark" [href]="href(s.settings['button_link'])" [attr.target]="external(s.settings['button_link']) ? '_blank' : null" rel="noopener noreferrer" (click)="go($event, s.settings['button_link'])">{{ s.settings['button_label'] }}</a>
+          }
+        </section>
+      }
+    }
+  }
+}

@@ -14,6 +14,7 @@ import { ApiResult, InvoiceLine, OrderDetail, OrderUnit } from '../../../core/mo
 import { PROGRESS_STEPS, humanizeStatus, progressIndex, statusHint } from '../../../core/utils/order-status';
 import { StatusBadgeComponent } from '../../../shared/status-badge.component';
 import { ShipToCardComponent } from '../../../shared/ship-to-card.component';
+import { PartnerChoiceService } from '../../../core/services/partner-choice.service';
 import { ErrorStateComponent, SkeletonComponent } from '../../../shared/ui-states';
 import { ChatService } from '../../../core/services/chat.service';
 import { ChatSocketService } from '../../../core/services/chat-socket.service';
@@ -54,6 +55,7 @@ export const LEGACY_KEY = '__order';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class OrderDetailPage {
+  protected partners = inject(PartnerChoiceService);
   private orders = inject(OrderService);
   private toast = inject(ToastService);
   private notif = inject(NotificationService);

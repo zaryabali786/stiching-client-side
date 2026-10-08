@@ -12,6 +12,13 @@
 @import "@ionic/angular/css/display.css";
 
 :root {
+  /* soft-surface accent (set from the admin theme) */
+  --c-accent: #7C5CBF;
+  --c-accent-faded: rgba(124, 92, 191, 0.12);
+  --c-accent-ring: rgba(124, 92, 191, 0.45);
+  --c-accent-glow: rgba(124, 92, 191, 0.18);
+  --c-accent-fill: linear-gradient(135deg, #7C5CBF 0%, #9D84D0 100%);
+  --c-on-accent: #ffffff;
   /* ── Surfaces (Crisp, clean, professional luxury) ── */
   --c-backdrop: #F0F2F5;      /* desktop area around the 480px column */
   --c-bg: #F8F9FA;            /* app background (crisp soft porcelain) */
@@ -210,7 +217,7 @@ h4 {
 
 .page-title {
   font-family: var(--font-serif);
-  font-size: 32px;
+  font-size: calc(32px * var(--heading-scale, 1));
   font-weight: 700;
   line-height: 1.08;
   color: var(--c-ink);
@@ -231,7 +238,7 @@ h4 {
 
   h2 {
     font-family: var(--font-serif);
-    font-size: 23px;
+    font-size: calc(23px * var(--heading-scale, 1));
     font-weight: 700;
     line-height: 1.15;
     color: var(--c-ink);
@@ -273,7 +280,7 @@ h4 {
 
   .card-title {
     font-family: var(--font-serif);
-    font-size: 21px;
+    font-size: calc(21px * var(--heading-scale, 1));
     font-weight: 700;
     line-height: 1.2;
     color: var(--c-ink);
@@ -325,8 +332,8 @@ h4 {
 /* ───────────── Buttons ───────────── */
 
 .btn {
-  --btn-bg: var(--c-brand);
-  --btn-fg: #ffffff;
+  --btn-bg: var(--c-brand-fill, var(--c-brand));
+  --btn-fg: var(--c-on-brand, #ffffff);
   --btn-border: var(--c-brand);
   position: relative;
   display: inline-flex;
@@ -369,10 +376,10 @@ h4 {
   }
 
   &.btn-primary {
-    --btn-bg: #0F172A;
-    --btn-border: #0F172A;
-    background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
+    --btn-bg: var(--c-brand-fill, var(--c-brand));
+    --btn-border: var(--c-brand);
+    background: var(--c-brand-fill, linear-gradient(135deg, #1E293B 0%, #0F172A 100%));
+    box-shadow: 0 4px 14px var(--c-brand-glow);
 
     &:hover:not(:disabled) {
       background: #000000;
@@ -534,7 +541,7 @@ h4 {
   }
 
   &.active {
-    background: var(--c-brand);
+    background: var(--c-brand-fill, var(--c-brand));
     border-color: var(--c-brand);
     color: #ffffff;
   }
@@ -775,7 +782,7 @@ h4 {
   }
 
   &.on {
-    background: var(--c-brand);
+    background: var(--c-brand-fill, var(--c-brand));
 
     &::after {
       transform: translateX(20px);
@@ -846,6 +853,7 @@ h4 {
   &.tone-amber  { --tb: var(--t-amber-bg);  --tf: var(--t-amber-fg);  --td: var(--t-amber-dot); border: 1px solid var(--t-amber-line); }
   &.tone-green  { --tb: var(--t-green-bg);  --tf: var(--t-green-fg);  --td: var(--t-green-dot); border: 1px solid var(--t-green-line); }
   &.tone-purple { --tb: var(--t-purple-bg); --tf: var(--t-purple-fg); --td: var(--t-purple-dot); border: 1px solid var(--t-purple-line); }
+  &.tone-brand  { --tb: var(--c-accent-faded); --tf: var(--c-accent); --td: var(--c-accent); border: 1px solid transparent; }
   &.tone-red    { --tb: var(--t-red-bg);    --tf: var(--t-red-fg);    --td: var(--t-red-dot); border: 1px solid var(--t-red-line); }
 }
 
@@ -989,11 +997,11 @@ h4 {
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.16);
 
   /* Decorative brand avatars (identity, not status) */
-  &.b1 { background: linear-gradient(135deg, #1C3D68 0%, #356299 100%); box-shadow: 0 4px 12px rgba(28, 61, 104, 0.2); }
-  &.b2 { background: linear-gradient(135deg, #7C2D37 0%, #A84954 100%); box-shadow: 0 4px 12px rgba(124, 45, 55, 0.2); }
-  &.b3 { background: linear-gradient(135deg, #8A6218 0%, #C29848 100%); box-shadow: 0 4px 12px rgba(138, 98, 24, 0.2); }
-  &.b4 { background: linear-gradient(135deg, #3D3558 0%, #685E8E 100%); box-shadow: 0 4px 12px rgba(61, 53, 88, 0.2); }
-  &.b5 { background: linear-gradient(135deg, #78350F 0%, #B45309 100%); box-shadow: 0 4px 12px rgba(120, 53, 15, 0.2); }
+  &.b1 { background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%); box-shadow: 0 4px 12px rgba(30, 64, 175, 0.18); }
+  &.b2 { background: linear-gradient(135deg, #047857 0%, #10B981 100%); box-shadow: 0 4px 12px rgba(4, 120, 87, 0.18); }
+  &.b3 { background: linear-gradient(135deg, #4338CA 0%, #6366F1 100%); box-shadow: 0 4px 12px rgba(67, 56, 202, 0.18); }
+  &.b4 { background: linear-gradient(135deg, #0F766E 0%, #14B8A6 100%); box-shadow: 0 4px 12px rgba(15, 118, 110, 0.18); }
+  &.b5 { background: linear-gradient(135deg, #1E293B 0%, #475569 100%); box-shadow: 0 4px 12px rgba(30, 41, 59, 0.18); }
 }
 
 /* ───────────── Loading / empty / error ───────────── */
@@ -1255,5 +1263,74 @@ h4 {
 
   .stx-routed > router-outlet + * {
     animation: none;
+  }
+}
+
+/* ── Button style "Outline & Fade" (admin: Setup > Appearance). Main buttons become outlined with a faded tint. ── */
+html[data-button-style='outline'],
+html[data-button-style='fade'] {
+  .btn.btn-primary,
+  .chip.active,
+  .chip.on,
+  app-chat-fab .fab,
+  app-chat-panel .send,
+  app-voice-player .vp-play,
+  app-client-shell .plus {
+    background: var(--c-brand-faded);
+    color: var(--c-brand);
+    border-color: transparent;
+    outline: 1.5px solid var(--c-brand-ring);
+    outline-offset: -1.5px;
+    box-shadow: none;
+  }
+
+  .btn.btn-primary:hover:not(:disabled),
+  app-chat-fab .fab:hover {
+    background: var(--c-brand-faded-hover);
+    color: var(--c-brand);
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  /* keep the small count inside an active chip readable on the light fill */
+  .chip.active .count {
+    background: var(--c-brand-faded-hover);
+    color: var(--c-brand);
+  }
+}
+
+/* Outline & Fade: the selected bottom tab is a faded rounded tile with a soft ring and glow; the outlined icon stays dark */
+html[data-button-style='outline'] .tabbar .tab.active,
+html[data-button-style='fade'] .tabbar .tab.active {
+  .ind {
+    height: 34px;
+    border-radius: 14px;
+    background: var(--c-brand-faded);
+    outline: 1.5px solid var(--c-brand-ring);
+    outline-offset: -1.5px;
+    box-shadow: 0 4px 14px var(--c-brand-glow);
+    color: var(--c-ink);
+  }
+
+  .ind ion-icon {
+    color: var(--c-ink);
+  }
+}
+
+/* Fade only: same faded fill, no outline ring */
+html[data-button-style='fade'] {
+  .btn.btn-primary,
+  .chip.active,
+  .chip.on,
+  app-chat-fab .fab,
+  app-chat-panel .send,
+  app-voice-player .vp-play,
+  app-client-shell .plus {
+    outline: none;
+  }
+
+  .tabbar .tab.active .ind {
+    outline: none;
+    box-shadow: none;
   }
 }

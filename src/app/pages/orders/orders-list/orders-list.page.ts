@@ -11,7 +11,7 @@ import { StatusBadgeComponent, brandSwatch } from '../../../shared/status-badge.
 import { EmptyStateComponent, ErrorStateComponent, SkeletonComponent } from '../../../shared/ui-states';
 import { InfiniteScrollDirective } from '../../../shared/infinite-scroll.directive';
 
-type StatusFilter = 'all' | 'active' | 'completed';
+type StatusFilter = 'all' | 'draft' | 'active' | 'completed';
 
 interface ListRequest {
   page: number;
@@ -51,6 +51,7 @@ export class OrdersListPage {
 
   readonly filters: { key: StatusFilter; label: string }[] = [
     { key: 'all', label: 'All' },
+    { key: 'draft', label: 'Draft' },
     { key: 'active', label: 'Active' },
     { key: 'completed', label: 'Completed' },
   ];
@@ -61,6 +62,7 @@ export class OrdersListPage {
 
   items = signal<OrderListRow[]>([]);
   total = signal<number | null>(null);
+  counts = signal<Partial<Record<StatusFilter, number>>>({});
   hasMore = signal(false);
   page = signal(1);
   loading = signal(true);
@@ -113,9 +115,10 @@ export class OrdersListPage {
     this.reload();
 
     // A status change somewhere: quietly reload the first page.
-    this.events.updated$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() =>
-      this.requests$.next({ page: 1, search: this.search(), status: this.status() }),
-    );
+    this.events.updated$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.requests$.next({ page: 1, search: this.search(), status: this.status() });
+      this.loadCounts();
+    });
   }
 
   onSearch(value: string): void {
@@ -146,7 +149,15 @@ export class OrdersListPage {
     this.reload();
   }
 
+  private loadCounts(): void {
+    this.orders
+      .counts()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ next: (c) => this.counts.set(c), error: () => undefined });
+  }
+
   reload(): void {
+    this.loadCounts();
     this.loading.set(true);
     this.error.set(null);
     this.moreError.set(null);
@@ -162,6 +173,26 @@ export class OrdersListPage {
 
   isFiltered(): boolean {
     return !!this.search() || this.status() !== 'all';
+  }
+
+  readonly steps = ['Placed', 'Tailoring', 'Ready', 'On the way'];
+
+  kicker(o: OrderListRow): string {
+    if (o.status === 'draft') return 'Draft Order';
+    if (o.status === 'delivered') return 'Completed Order';
+    if (o.status === 'cancelled') return 'Cancelled Order';
+    return 'Active Order';
+  }
+
+  /** Which of the four journey steps the order is on (Placed, Tailoring, Ready, On the way). */
+  progress(o: OrderListRow): { step: number; done: boolean; label: string } {
+    const s = o.status;
+    if (s === 'delivered') return { step: 3, done: true, label: 'Delivered' };
+    let step = 0;
+    if (['assigned', 'cutting', 'stitching', 'qc_passed', 'customer_approval'].includes(s)) step = 1;
+    else if (['packed', 'invoice_issued', 'awaiting_payment', 'paid'].includes(s)) step = 2;
+    else if (['at_admin_warehouse', 'partner_dispatch', 'shipped'].includes(s)) step = 3;
+    return { step, done: false, label: 'Step ' + (step + 1) + ' of 4: ' + this.steps[step] };
   }
 
   swatch(brand: string) {

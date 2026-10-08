@@ -3,12 +3,14 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
 import { IonIcon } from '@ionic/angular';
+import { ThemeService } from '../../core/services/theme.service';
 import { AuthService } from '../../core/services/auth.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ConfigService } from '../../core/services/config.service';
 import { MailboxService } from '../../core/services/mailbox.service';
 import { ChatSocketService } from '../../core/services/chat-socket.service';
 import { OrderEventsService } from '../../core/services/order-events.service';
+import { OrderService } from '../../core/services/order.service';
 import { ToastService } from '../../core/services/toast.service';
 import { copyText } from '../../core/utils/image';
 import { ShellUiService } from '../../core/services/shell-ui.service';
@@ -38,7 +40,9 @@ export class ClientShellComponent {
   private orderEvents = inject(OrderEventsService);
   /** Instantiated here so the Inbox badge stays live on every page. */
   protected mailbox = inject(MailboxService);
+  private orders = inject(OrderService);
   private router = inject(Router);
+  private theme = inject(ThemeService);
   private shellUi = inject(ShellUiService);
   private toast = inject(ToastService);
   private destroyRef = inject(DestroyRef);
@@ -64,6 +68,11 @@ export class ClientShellComponent {
     return wizard || this.shellUi.hideTabbar();
   });
 
+  /** Tab icon: filled when selected, unless the Outline & Fade style keeps it outlined. */
+  protected tabIcon(name: string, active: boolean): string {
+    return active && !this.theme.outline() ? name : name + '-outline';
+  }
+
   protected activeTab = computed<TabKey>(() => {
     const path = this.url().split(/[?#]/)[0];
     if (path.startsWith('/app/orders/new') || /^\/app\/orders\/[^/]+\/edit/.test(path)) return 'new';
@@ -87,8 +96,31 @@ export class ClientShellComponent {
     return n > 99 ? '99+' : String(n);
   });
 
+  /** Draft orders waiting for the customer to complete and submit; shown on the Orders tab. */
+  protected draftCount = signal(0);
+  protected draftBadge = computed(() => {
+    const n = this.draftCount();
+    return n > 99 ? '99+' : String(n);
+  });
+
+  private refreshDrafts(): void {
+    this.orders
+      .list({ page: 1, limit: 1, status: 'draft' })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ next: ({ meta }) => this.draftCount.set(meta.total), error: () => undefined });
+  }
+
   constructor() {
     this.config.load();
+    // keep the draft count fresh: on every page change and whenever an order changes live
+    this.router.events
+      .pipe(
+        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => this.refreshDrafts());
+    this.orderEvents.updated$.pipe(takeUntilDestroyed()).subscribe(() => this.refreshDrafts());
+    this.refreshDrafts();
     // Scroll the content area (not the window – it never scrolls) to the top on every navigation.
     this.router.events
       .pipe(
