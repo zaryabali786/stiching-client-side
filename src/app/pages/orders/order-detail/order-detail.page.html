@@ -447,6 +447,20 @@
               <dd class="mono">{{ o.brand_order_number }}</dd>
             </div>
           }
+          @if (o.express_shipping) {
+            <div class="od-row">
+              <span class="od-ico" aria-hidden="true"><ion-icon name="airplane-outline"></ion-icon></span>
+              <dt>Express shipping</dt>
+              <dd>Yes@if (o.express_shipping_days) { · {{ o.express_shipping_days }} days }</dd>
+            </div>
+          }
+          @if (o.brand_payment_method || o.brand_payment_status) {
+            <div class="od-row">
+              <span class="od-ico" aria-hidden="true"><ion-icon name="card-outline"></ion-icon></span>
+              <dt>Payment to brand</dt>
+              <dd>{{ paymentText(o) }}</dd>
+            </div>
+          }
           <div class="od-row">
             <span class="od-ico" aria-hidden="true"><ion-icon name="calendar-outline"></ion-icon></span>
             <dt>Created</dt><dd>{{ o.created_at | date: 'd MMM y, HH:mm' }}</dd>
@@ -876,28 +890,28 @@
         <h3 class="card-title">Finish your order</h3>
         <p class="muted-note">
           We made this order from your email{{ o.brand_order_number ? ' (order ' + o.brand_order_number + ')' : '' }}. Nothing has been sent to us yet.
-          Choose Complete draft order to add the sizes and stitching details, or delete the draft.
+          Choose Create Order to add the sizes and stitching details, or Cancel Draft.
         </p>
         @if (confirmDiscard()) {
           <div class="confirm-panel" role="alertdialog" aria-label="Confirm discarding the draft">
-            <p>Delete this draft? The email stays in your Inbox, so you can create the order again later.</p>
+            <p>Cancel this draft? The email stays in your Inbox, so you can create the order again later.</p>
             <div class="btn-row">
               <button type="button" class="btn btn-outline btn-sm" (click)="confirmDiscard.set(false)" [disabled]="pending() === 'discard'">Keep draft</button>
               <button type="button" class="btn btn-danger btn-sm" (click)="discardDraft()" [disabled]="pending() === 'discard'">
                 @if (pending() === 'discard') {
                   <ion-spinner name="crescent"></ion-spinner>
                 }
-                Delete the draft
+                Cancel Draft
               </button>
             </div>
           </div>
         } @else {
           <div class="btn-row draft-actions">
             <button type="button" class="btn btn-danger-outline" (click)="confirmDiscard.set(true)">
-              <ion-icon name="trash-outline" aria-hidden="true"></ion-icon> Delete the draft
+              <ion-icon name="close-circle-outline" aria-hidden="true"></ion-icon> Cancel Draft
             </button>
             <a class="btn btn-primary" [routerLink]="['/app/orders', o.id, 'edit']">
-              <ion-icon name="create-outline" aria-hidden="true"></ion-icon> Complete draft order
+              <ion-icon name="create-outline" aria-hidden="true"></ion-icon> Create Order
             </a>
           </div>
         }

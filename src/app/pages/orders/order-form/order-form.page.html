@@ -147,55 +147,6 @@
           </span>
         </div>
 
-        <div class="field">
-          <span class="field-label" id="intl-label">International shipping <span class="req">required</span></span>
-          <div
-            class="segmented block"
-            [class.invalid]="showError('international')"
-            role="radiogroup"
-            aria-labelledby="intl-label"
-            [attr.aria-describedby]="showError('international') ? 'intl-err' : 'intl-hint'"
-            aria-required="true"
-          >
-            <button
-              id="intl-yes"
-              type="button"
-              role="radio"
-              [attr.aria-checked]="international() === true"
-              [attr.tabindex]="international() === false ? -1 : 0"
-              [class.active]="international() === true"
-              (click)="chooseInternational(true)"
-              (keydown)="onIntlKey($event)"
-            >
-              Yes
-            </button>
-            <button
-              id="intl-no"
-              type="button"
-              role="radio"
-              [attr.aria-checked]="international() === false"
-              [attr.tabindex]="international() === false ? 0 : -1"
-              [class.active]="international() === false"
-              (click)="chooseInternational(false)"
-              (keydown)="onIntlKey($event)"
-            >
-              No
-            </button>
-          </div>
-          @if (showError('international')) {
-            <span class="field-error" id="intl-err" role="alert">{{ step1Errors().international }}</span>
-          } @else {
-            <span class="hint" id="intl-hint">Choose Yes if we should ship your finished order outside Pakistan.</span>
-          }
-          @if (shippingType(); as t) {
-            <div class="ship-type" role="status">
-              <span class="tag"><ion-icon name="airplane-outline" aria-hidden="true"></ion-icon> {{ t === 'express' ? 'Express shipping' : 'Standard shipping' }}</span>
-              <span class="ship-type-text">
-                {{ t === 'express' ? 'Fast international courier for your finished order.' : 'Economical courier for delivery within Pakistan.' }}
-              </span>
-            </div>
-          }
-        </div>
       </section>
     }
 
@@ -391,11 +342,11 @@
                 }
               </div>
 
-              <!-- Customisation: one dropdown per article type the partner offers -->
+              <!-- Customization: one dropdown per article type the partner offers -->
               <div class="sub">
-                <span class="sub-title">Customisation <span class="opt">optional</span></span>
+                <span class="sub-title">Customization <span class="opt">optional</span></span>
                 @if (typesLoading()) {
-                  <div class="types-skeleton" aria-busy="true" aria-label="Loading customisation options">
+                  <div class="types-skeleton" aria-busy="true" aria-label="Loading customization options">
                     <span class="skeleton" style="width: 30%; height: 12px"></span>
                     <span class="skeleton" style="height: 48px; border-radius: 12px"></span>
                     <span class="skeleton" style="width: 36%; height: 12px"></span>
@@ -406,7 +357,7 @@
                     <span>{{ typesError() }} <button type="button" class="link-btn" (click)="retryTypes()">Retry</button></span>
                   </div>
                 } @else if (!types().length) {
-                  <app-empty-state icon="shirt-outline" title="No customisation options yet" message="You can continue without. Add notes for the specific product below if you need something specific." />
+                  <app-empty-state icon="shirt-outline" title="No customization options yet" message="You can continue without. Add notes for the specific product below if you need something specific." />
                 } @else {
                   @for (t of types(); track t.id) {
                     <app-search-select
@@ -418,6 +369,7 @@
                       [itemLabel]="articleLabel"
                       [itemImage]="articleImage"
                       [itemSubtitle]="articlePriceSub"
+                      [subtitleAtEnd]="true"
                       (selected)="pick(a, t.id, $event)"
                       (cleared)="unpick(a, t.id)"
                     />
@@ -553,8 +505,7 @@
         @if (courier()?.name) { <div class="kv"><span class="k">Courier</span><span class="v">{{ courier()?.name }}</span></div> }
         @if (trackingNumber().trim()) { <div class="kv"><span class="k">Tracking ID</span><span class="v mono">{{ trackingNumber() }}</span></div> }
         }
-        <div class="kv"><span class="k">International shipping</span><span class="v">{{ international() ? 'Yes' : 'No' }}</span></div>
-        <div class="kv"><span class="k">Shipping type</span><span class="v">{{ shippingType() === 'express' ? 'Express shipping' : 'Standard shipping' }}</span></div>
+        @if (shippingExpressInfo() && expressShipping()) { <div class="kv"><span class="k">Express shipping</span><span class="v">Yes · {{ shippingExpressInfo()!.days }} days</span></div> }
       </section>
 
       <section class="card">
@@ -617,60 +568,6 @@
         }
       </section>
 
-      @if (twoStep() && !intlKnown()) {
-        <section class="card stack-lg">
-        <div class="field">
-          <span class="field-label" id="intl-label">International shipping <span class="req">required</span></span>
-          <div
-            class="segmented block"
-            [class.invalid]="showError('international')"
-            role="radiogroup"
-            aria-labelledby="intl-label"
-            [attr.aria-describedby]="showError('international') ? 'intl-err' : 'intl-hint'"
-            aria-required="true"
-          >
-            <button
-              id="intl-yes"
-              type="button"
-              role="radio"
-              [attr.aria-checked]="international() === true"
-              [attr.tabindex]="international() === false ? -1 : 0"
-              [class.active]="international() === true"
-              (click)="chooseInternational(true)"
-              (keydown)="onIntlKey($event)"
-            >
-              Yes
-            </button>
-            <button
-              id="intl-no"
-              type="button"
-              role="radio"
-              [attr.aria-checked]="international() === false"
-              [attr.tabindex]="international() === false ? 0 : -1"
-              [class.active]="international() === false"
-              (click)="chooseInternational(false)"
-              (keydown)="onIntlKey($event)"
-            >
-              No
-            </button>
-          </div>
-          @if (showError('international')) {
-            <span class="field-error" id="intl-err" role="alert">{{ step1Errors().international }}</span>
-          } @else {
-            <span class="hint" id="intl-hint">Choose Yes if we should ship your finished order outside Pakistan.</span>
-          }
-          @if (shippingType(); as t) {
-            <div class="ship-type" role="status">
-              <span class="tag"><ion-icon name="airplane-outline" aria-hidden="true"></ion-icon> {{ t === 'express' ? 'Express shipping' : 'Standard shipping' }}</span>
-              <span class="ship-type-text">
-                {{ t === 'express' ? 'Fast international courier for your finished order.' : 'Economical courier for delivery within Pakistan.' }}
-              </span>
-            </div>
-          }
-        </div>
-        </section>
-      }
-
       @if (expressInfo(); as ex) {
       <section class="card stack-lg">
         <div class="field">
@@ -681,17 +578,48 @@
           </div>
           @if (expressStitching()) {
             <div class="ship-type" role="status">
-              <span class="tag"><ion-icon name="flash-outline" aria-hidden="true"></ion-icon> Express stitching · {{ ex.days }} day{{ ex.days === 1 ? '' : 's' }}</span>
+              <span class="tag"><ion-icon name="flash-outline" aria-hidden="true"></ion-icon> Express stitching · {{ ex.days }} day{{ ex.days === 1 ? '' : 's' }}@if (stitchingCharge()) { · +{{ money(stitchingCharge()) }} }</span>
               <span class="ship-type-text">Your order is stitched with priority and is ready in about {{ ex.days }} day{{ ex.days === 1 ? '' : 's' }} after you create it.</span>
             </div>
           } @else {
-            <span class="hint">Choose Yes to have your order stitched in {{ ex.days }} day{{ ex.days === 1 ? '' : 's' }} instead of the usual time.</span>
+            <span class="hint">Choose Yes to have your order stitched in {{ ex.days }} day{{ ex.days === 1 ? '' : 's' }} instead of the usual time.@if (ex.price_pkr) { Extra charge: <b>{{ money(ex.price_pkr) }}</b>. }</span>
           }
         </div>
       </section>
       }
 
-      <app-ship-to-card [eyebrow]="isEdit() ? 'Receiving address' : 'Next step'" [heading]="isEdit() ? 'Ship your parcel to us' : 'Then ship your parcel to us'" [compact]="true" [showEmail]="true" [partner]="shipPartner()" />
+      @if (shippingExpressInfo(); as sx) {
+      <section class="card stack-lg">
+        <div class="field">
+          <span class="field-label" id="express-ship-label">Express shipping <span class="opt">optional</span></span>
+          <div class="segmented block" role="radiogroup" aria-labelledby="express-ship-label">
+            <button type="button" role="radio" [attr.aria-checked]="expressShipping()" [class.active]="expressShipping()" (click)="expressShipping.set(true)">Yes</button>
+            <button type="button" role="radio" [attr.aria-checked]="!expressShipping()" [class.active]="!expressShipping()" (click)="expressShipping.set(false)">No</button>
+          </div>
+          @if (expressShipping()) {
+            <div class="ship-type" role="status">
+              <span class="tag"><ion-icon name="airplane-outline" aria-hidden="true"></ion-icon> Express shipping · {{ sx.days }} day{{ sx.days === 1 ? '' : 's' }}@if (shippingCharge()) { · +{{ money(shippingCharge()) }} }</span>
+              <span class="ship-type-text">Your finished order is sent by the fast courier and is delivered in about {{ sx.days }} day{{ sx.days === 1 ? '' : 's' }} after it is dispatched.</span>
+            </div>
+          } @else {
+            <span class="hint">Choose Yes to have your finished order delivered in {{ sx.days }} day{{ sx.days === 1 ? '' : 's' }} instead of the usual time.@if (sx.price_pkr) { Extra charge: <b>{{ money(sx.price_pkr) }}</b>. }</span>
+          }
+        </div>
+      </section>
+      }
+
+      <app-ship-to-card [eyebrow]="isEdit() ? 'Receiving address' : 'Next step'" [heading]="isEdit() ? 'Ship your parcel to us' : 'Then ship your parcel to us'" [compact]="true" [showEmail]="true" [partner]="null" />
+
+      @if (stitchingCharge() > 0 || shippingCharge() > 0) {
+      <section class="card price-summary" aria-label="Price breakdown">
+        <h3 class="card-title">Price breakdown</h3>
+        @if (hasPrices()) { <div class="price-row"><span>Articles &amp; customization</span><strong>{{ money(total()) }}</strong></div> }
+        @if (stitchingCharge() > 0) { <div class="price-row"><span>Express stitching</span><strong>+ {{ money(stitchingCharge()) }}</strong></div> }
+        @if (shippingCharge() > 0) { <div class="price-row"><span>Express shipping</span><strong>+ {{ money(shippingCharge()) }}</strong></div> }
+        <div class="price-row total" aria-live="polite"><span>Total payable</span><strong>{{ money(grandTotal()) }}</strong></div>
+        <span class="hint">Courier shipping is added when your invoice is issued.</span>
+      </section>
+      }
 
       @if (submitError()) {
         <div class="form-error" role="alert">

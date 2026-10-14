@@ -99,7 +99,9 @@ export interface PlatformConfig {
   shipToPhone: string;
   partnerName: string;
   /** Express stitching as the admin decided it: offered or not, and how many days it takes. */
-  expressStitching?: { enabled: boolean; days: number };
+  expressStitching?: { enabled: boolean; days: number; price_pkr?: number };
+  /** Express shipping as the admin decided it: offered or not, and how many days the delivery takes. */
+  expressShipping?: { enabled: boolean; days: number; price_pkr?: number };
   /** Card payments: the publishable key is public by design; the secret key never leaves the server. */
   payments?: { stripe: { enabled: boolean; publishableKey: string | null } };
   /** Google sign-in: the OAuth client id is public by design; the client secret stays on the server. */
@@ -284,6 +286,9 @@ export interface OrderGroup {
 }
 
 export interface OrderUnit {
+  /** The brand this article was bought from (a customer's own parcel). */
+  brand_id?: string | null;
+  brand?: string | null;
   id: string;
   group?: OrderGroup['group'];
   group_reference?: string;
@@ -422,11 +427,19 @@ export interface Order {
   return_summary?: { count: number; total: number; to: 'brand' | 'customer' | null; status: 'requested' | 'sent_back'; whole_parcel: boolean } | null;
   brand_id?: string | null;
   brand_order_number: string | null;
+  /** How the brand order was paid, read from its confirmation email (never guessed). */
+  brand_payment_method?: string | null;
+  brand_payment_status?: 'paid' | 'pending' | null;
   tracking_number: string | null;
   courier_id?: string | null;
   international_shipping?: boolean | null;
   express_stitching?: boolean;
   express_days?: number | null;
+  express_shipping?: boolean;
+  express_shipping_days?: number | null;
+  /** The prices saved on the order when express was chosen (PKR). */
+  express_stitching_price?: number | null;
+  express_shipping_price?: number | null;
   status: OrderStatus;
   has_issue: boolean;
   customer_notes: string | null;
@@ -523,8 +536,9 @@ export interface OrderInput {
   /** Optional: can be added later by the customer, the admin or a follow-up email. */
   courier_id?: string | null;
   tracking_number?: string | null;
-  international_shipping: boolean;
+  international_shipping?: boolean;
   express_stitching?: boolean;
+  express_shipping?: boolean;
   brand_order_number?: string | null;
   note: string | null;
   /** Where the finished order is delivered (defaults to the profile address). */
@@ -572,6 +586,8 @@ export interface SelectedArticle {
   article_id: string;
   name: string;
   image_url: string | null;
+  /** The article's customer price (null = price on request). */
+  customer_price?: number | null;
 }
 
 export interface ProductPreview {

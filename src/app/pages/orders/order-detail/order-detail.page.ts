@@ -438,6 +438,12 @@ export class OrderDetailPage {
     });
   }
 
+  /** "Visa ending 4242 · Paid": what the brand's confirmation email says, nothing more. */
+  paymentText(o: { brand_payment_method?: string | null; brand_payment_status?: 'paid' | 'pending' | null }): string {
+    const status = o.brand_payment_status === 'paid' ? 'Paid' : o.brand_payment_status === 'pending' ? 'Payment pending' : null;
+    return [o.brand_payment_method, status].filter(Boolean).join(' · ');
+  }
+
   /** Throw a draft made from an email away; the email's order stays available in the Inbox. */
   discardDraft(): void {
     if (this.pending()) return;

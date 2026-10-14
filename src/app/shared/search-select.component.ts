@@ -194,10 +194,13 @@ let nextId = 0;
                 }
                 <span class="ss-opt-text">
                   <span class="ss-name">{{ labelOf(item) }}</span>
-                  @if (subtitleOf(item); as sub) {
+                  @if (!subtitleAtEnd() && subtitleOf(item); as sub) {
                     <span class="ss-sub">{{ sub }}</span>
                   }
                 </span>
+                @if (subtitleAtEnd() && subtitleOf(item); as price) {
+                  <span class="ss-price">{{ price }}</span>
+                }
                 @if (isSelected(item)) {
                   <ion-icon name="checkmark-outline" class="ss-check" aria-hidden="true"></ion-icon>
                   <span class="sr-only">(selected)</span>
@@ -302,6 +305,7 @@ let nextId = 0;
       border-radius: 12px; cursor: pointer; color: var(--c-ink); font-size: var(--fs-body);
     }
     .ss-opt-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .ss-price { flex: none; margin-left: 12px; font-size: var(--fs-sm); font-weight: 600; color: var(--c-muted); white-space: nowrap; }
     .ss-opt.active { background: var(--c-brand-soft); box-shadow: inset 3px 0 0 var(--c-brand); }
     .ss-opt.selected { font-weight: 600; }
     .ss-opt.create { color: var(--c-gold-dark); font-weight: 600; border: 1px dashed var(--c-gold-line); margin-top: 4px; }
@@ -351,6 +355,8 @@ export class SearchSelectComponent<T extends { id: string }> implements OnDestro
   readonly itemLabel = input.required<(item: T) => string>();
   readonly itemImage = input<((item: T) => string | null | undefined) | null>(null);
   readonly itemSubtitle = input<((item: T) => string | null | undefined) | null>(null);
+  /** Show the subtitle (e.g. a price) at the right of the name in the open list instead of under it. */
+  readonly subtitleAtEnd = input(false);
   readonly allowCreate = input(false);
   /** When set, the list ends with this row (e.g. "Other"); choosing it emits `other`. */
   readonly otherLabel = input('');

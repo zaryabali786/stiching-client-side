@@ -19,7 +19,7 @@ import { ShipToCardComponent } from './ship-to-card.component';
   template: `
     <app-sheet
       [open]="ui.isOpen()"
-      [eyebrow]="ui.view() === 'website' ? 'Direct from website' : 'New order'"
+      [eyebrow]="ui.view() === 'website' ? 'Place Order on Any Brand Website' : 'New order'"
       [title]="ui.view() === 'website' ? 'Use these at checkout' : 'How are you ordering?'"
       (closed)="ui.close()"
     >
@@ -27,7 +27,7 @@ import { ShipToCardComponent } from './ship-to-card.component';
         <div class="choices">
           <button type="button" class="opt" (click)="ui.view.set('website')">
             <span class="ico" aria-hidden="true"><ion-icon name="globe-outline"></ion-icon></span>
-            <span class="txt"><strong>Direct from website</strong><small>Buy from a brand's website and have it sent to us.</small></span>
+            <span class="txt"><strong>Place Order on Any Brand Website</strong><small>Buy from a brand's website and have it sent to us.</small></span>
             <ion-icon name="chevron-forward-outline" aria-hidden="true"></ion-icon>
           </button>
           <button type="button" class="opt" (click)="direct()">
@@ -37,7 +37,7 @@ import { ShipToCardComponent } from './ship-to-card.component';
           </button>
         </div>
       } @else {
-        <p class="lead">When you checkout on any website, use this <b>email</b> and <b>shipping address</b>.</p>
+        <p class="lead">When you checkout on any website, use this <b>email</b> and <b>shipping address</b>. Pay online at the brand's checkout: <b>Cash on Delivery is not supported</b> for these orders.</p>
         <div class="mail">
           <span class="k">Your email</span>
           <div class="row">
@@ -50,6 +50,7 @@ import { ShipToCardComponent } from './ship-to-card.component';
           </div>
         </div>
         <app-ship-to-card eyebrow="Shipping address" heading="Deliver to" [compact]="true" />
+        <p class="after" role="note"><ion-icon name="information-circle-outline" aria-hidden="true"></ion-icon> After you place the order, <b>check your customer portal</b>. Your order arrives there as a draft, where you complete the sizes and customization details.</p>
       }
       @if (ui.view() === 'website') {
         <div sheet-footer class="foot">
@@ -80,6 +81,8 @@ import { ShipToCardComponent } from './ship-to-card.component';
     .k { font-size: var(--fs-2xs); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-muted); font-weight: 600; }
     .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
     .row strong { min-width: 0; overflow-wrap: anywhere; }
+    .after { display: flex; gap: 8px; align-items: flex-start; margin: 12px 0 0; padding: 12px 14px; border-radius: 14px; background: var(--c-surface-3); line-height: 1.45; }
+    .after ion-icon { flex: none; font-size: 20px; color: var(--c-brand); margin-top: 1px; }
     .foot { display: flex; gap: 10px; }
     .foot .btn { flex: 1; }
   `,

@@ -34,7 +34,7 @@ const MAX_ARTICLES = 30;
 const DRAFT_KEY = 'stx_order_draft_v1';
 
 type Step = 1 | 2 | 3;
-type FieldKey = 'brand' | 'international';
+type FieldKey = 'brand';
 
 interface ArticleDraft {
   key: number;
@@ -54,7 +54,7 @@ interface ArticleDraft {
   product_image_url: string;
   preview: { state: 'idle' | 'loading' | 'ok' | 'failed'; message: string | null };
   size_chart_id: string;
-  /** Chosen customisation per article type id (at most one each). */
+  /** Chosen customization per article type id (at most one each). */
   picks: Record<string, Article>;
   notes: string;
   /** Voice note next to the written note: undefined = none/unchanged, null = removed, with `path` = new upload. */
@@ -75,7 +75,6 @@ interface SavedDraft {
   brandOrderNumber: string;
   courier: Courier | null;
   tracking: string;
-  international: boolean | null;
   note: string;
   typeNames: Record<string, string>;
   articles: SavedArticle[];
@@ -136,7 +135,11 @@ export class OrderFormPage {
    * A new order made "direct from customer": no Order step. The brand is chosen per article, the shipping type is picked on
    * the last step. Editing an order and finishing an email draft keep the full three steps.
    */
-  simple = computed(() => !this.isEdit() && !this.emailOrder() && !this.importId());
+  simple = computed(() => (!this.isEdit() && !this.emailOrder() && !this.importId()) || (this.isEdit() && this.customerEdit()));
+  /** Editing an order the customer made "direct from customer": it uses the same form as creating one. */
+  customerEdit = signal(false);
+  /** The delivery contact saved on the order being edited (kept as it is; the profile never overwrites it). */
+  private savedAddress: { country: string; city: string; address: string; phone: string } | null = null;
   /** Articles + Notes & review only: new "direct from customer" orders and orders made from an email. */
   twoStep = computed(() => this.simple() || this.emailOrder());
   stepList = computed<{ n: Step; label: string }[]>(() =>
@@ -154,7 +157,7 @@ export class OrderFormPage {
   readonly courierLabel = courierLabel;
   readonly courierSub = courierSub;
   readonly articleLabel = articleLabel;
-  /** Price shown next to each customisation choice in its dropdown. */
+  /** Price shown next to each customization choice in its dropdown. */
   readonly articlePriceSub = (a: Article): string | null => (a.customer_price == null ? 'Price on request' : Number(a.customer_price) === 0 ? 'Included' : this.money(Number(a.customer_price)));
   readonly articleImage = articleImage;
   private articleFetchers = new Map<string, PageFetch<Article>>();
@@ -177,10 +180,10 @@ export class OrderFormPage {
         return 'Next: your articles';
       case 2: {
         const n = this.articles().length;
-        return `${n} article${n === 1 ? '' : 's'} · ${this.totalPieces()} pc${this.hasPrices() ? ' · ' + this.money(this.total()) : ''}`;
+        return `${n} article${n === 1 ? '' : 's'} · ${this.totalPieces()} pc${this.hasPrices() || this.grandTotal() > 0 ? ' · ' + this.money(this.grandTotal()) : ''}`;
       }
       default:
-        return this.isDraft() ? 'Submit it to send it on' : this.isEdit() ? 'Save your changes' : this.hasPrices() ? 'Total ' + this.money(this.total()) : 'Then ship your parcel';
+        return this.isDraft() ? 'Submit it to send it on' : this.isEdit() ? 'Save your changes' : this.hasPrices() || this.grandTotal() > 0 ? 'Total ' + this.money(this.grandTotal()) : 'Then ship your parcel';
     }
   });
 
@@ -195,21 +198,23 @@ export class OrderFormPage {
   shipPartner = computed(() => this.partnerChoice.fromOrder(this.partner()));
   /** Orders made from an email already know their products, so the product link field is hidden. */
   emailOrder = signal(false);
-  /** The shipping type came with the order (from the email): shown as text, not asked again. */
-  intlKnown = signal(false);
   /** Courier name an email gave that is not in the courier list. */
   emailCourierName = signal<string | null>(null);
   brand = signal<Brand | null>(null);
   brandOrderNumber = signal('');
   courier = signal<Courier | null>(null);
   trackingNumber = signal('');
-  /** null until the customer chooses (no default on purpose). */
-  international = signal<boolean | null>(null);
   /** Express stitching: the order is stitched faster. The admin decides how many days it takes. */
   expressStitching = signal(false);
   /** The admin's express stitching setting (null while loading or when it is switched off for customers). */
   expressInfo = computed(() => {
     const e = this.configService.config()?.expressStitching;
+    return e && e.enabled ? e : null;
+  });
+  /** Express shipping: the finished order is delivered faster. The admin decides how many days it takes. */
+  expressShipping = signal(false);
+  shippingExpressInfo = computed(() => {
+    const e = this.configService.config()?.expressShipping;
     return e && e.enabled ? e : null;
   });
   creatingBrand = signal(false);
@@ -218,12 +223,7 @@ export class OrderFormPage {
   step1Errors = computed(() => {
     const e: Partial<Record<FieldKey, string>> = {};
     if (!this.brand()) e.brand = 'Choose the brand you ordered from.';
-    if (this.international() === null) e.international = 'Choose Yes or No.';
     return e;
-  });
-  shippingType = computed(() => {
-    const v = this.international();
-    return v === null ? null : v ? ('express' as const) : ('standard' as const);
   });
   step1Valid = computed(() => Object.keys(this.step1Errors()).length === 0);
 
@@ -235,11 +235,18 @@ export class OrderFormPage {
   money(n: number): string {
     return 'PKR ' + Math.round(n).toLocaleString('en-US');
   }
-  /** What one article costs: its chosen customisation prices times the quantity. */
+  /** What one article costs: its chosen customization prices times the quantity. */
   priceOf(a: ArticleDraft): number {
     return Object.values(a.picks).reduce((sum, p) => sum + (Number(p.customer_price) || 0), 0) * (a.quantity || 1);
   }
   total = computed(() => this.articles().reduce((sum, a) => sum + this.priceOf(a), 0));
+  /** Prices an edited order already carries (its own, saved when express was chosen); a new choice uses the admin's current price. */
+  private savedStitchingPrice = signal<number | null>(null);
+  private savedShippingPrice = signal<number | null>(null);
+  stitchingCharge = computed(() => (this.expressStitching() ? Number(this.savedStitchingPrice() ?? this.expressInfo()?.price_pkr ?? 0) || 0 : 0));
+  shippingCharge = computed(() => (this.expressShipping() ? Number(this.savedShippingPrice() ?? this.shippingExpressInfo()?.price_pkr ?? 0) || 0 : 0));
+  /** Articles and customization plus the express charges that were chosen. */
+  grandTotal = computed(() => this.total() + this.stitchingCharge() + this.shippingCharge());
   hasPrices = computed(() => this.articles().some((a) => Object.values(a.picks).some((p) => p.customer_price != null)));
 
   /** The article whose "Other" brand name is being typed, and what was typed. */
@@ -294,12 +301,7 @@ export class OrderFormPage {
       this.goTo(3);
       return;
     }
-    if (this.international() === null) {
-      this.touch('international');
-      this.showErrors.set(true);
-      return;
-    }
-    const u = this.auth.user();
+    const u = this.savedAddress ?? this.auth.user();
     this.addrCountry.set(u?.country ?? '');
     this.addrCity.set(u?.city ?? '');
     this.addrAddress.set(u?.address ?? '');
@@ -385,7 +387,8 @@ export class OrderFormPage {
   private previewSubs = new Map<number, Subscription>();
 
   constructor() {
-    this.configService.load();
+    // the express prices are the admin's current ones: refresh the cached config instead of trusting an old copy
+    this.configService.load(true);
     this.loadCharts();
 
     effect(() => {
@@ -426,7 +429,6 @@ export class OrderFormPage {
     brandOrderNumber: this.brandOrderNumber(),
     courier: this.courier(),
     tracking: this.trackingNumber(),
-    international: this.international(),
     note: this.note(),
     typeNames: this.typeNames(),
     articles: this.articles().map(({ photos, processing, existingImages, preview, ...rest }) => {
@@ -479,7 +481,6 @@ export class OrderFormPage {
       d.tracking.trim() ||
       d.brandOrderNumber.trim() ||
       d.note.trim() ||
-      d.international !== null ||
       d.articles.some((a) => a.unit_title.trim() || a.product_link.trim() || Object.keys(a.picks).length || a.notes.trim())
     );
   }
@@ -652,13 +653,17 @@ export class OrderFormPage {
     this.step.set(this.importId() ? 1 : 2);
     this.partner.set(null);
     this.emailOrder.set(false);
+    this.customerEdit.set(false);
+    this.savedAddress = null;
     this.emailCourierName.set(null);
     this.brand.set(null);
     this.brandOrderNumber.set('');
     this.courier.set(null);
     this.trackingNumber.set('');
-    this.international.set(null);
     this.expressStitching.set(false);
+    this.expressShipping.set(false);
+    this.savedStitchingPrice.set(null);
+    this.savedShippingPrice.set(null);
     this.note.set('');
     this.voice.set(null);
     this.articles.set([this.newArticle()]);
@@ -670,20 +675,26 @@ export class OrderFormPage {
     // an order made from an email, or a website order being completed after its parcel was checked: its articles are the ones that arrived
     this.emailOrder.set(o.order_source === 'email' || o.import_source === 'email' || (o.order_source === 'website' && o.status === 'received' && !!o.details_pending));
     this.emailCourierName.set(o.courier_name ?? null);
+    // a customer's own parcel is edited with the same two-step form it was created with (brand per article, address on submit)
+    this.customerEdit.set(o.order_source === 'customer' && !this.emailOrder());
+    this.savedAddress = this.customerEdit()
+      ? { country: o.destination_country ?? '', city: o.destination_city ?? '', address: o.destination_address ?? '', phone: o.destination_phone ?? '' }
+      : null;
     this.brand.set(o.brand_ref ?? (o.brand_id ? { id: o.brand_id, name: o.brand } : null));
     this.brandOrderNumber.set(o.brand_order_number ?? '');
     this.courier.set(o.courier ?? null);
     this.trackingNumber.set(o.tracking_number ?? '');
-    this.international.set(o.international_shipping ?? (o.shipping_service === 'express' ? true : o.shipping_service === 'standard' ? false : null));
-    this.intlKnown.set(o.international_shipping != null);
     this.expressStitching.set(o.express_stitching === true);
+    this.expressShipping.set(o.express_shipping === true);
+    this.savedStitchingPrice.set(o.express_stitching === true && o.express_stitching_price != null ? Number(o.express_stitching_price) : null);
+    this.savedShippingPrice.set(o.express_shipping === true && o.express_shipping_price != null ? Number(o.express_shipping_price) : null);
     this.note.set(o.customer_notes ?? '');
     const names: Record<string, string> = {};
     this.articles.set(
       o.units.map((u, i) => {
         const picks: Record<string, Article> = {};
         for (const s of u.selected_articles ?? []) {
-          picks[s.article_type_id] = { id: s.article_id, article_type_id: s.article_type_id, name: s.name, image_url: s.image_url };
+          picks[s.article_type_id] = { id: s.article_id, article_type_id: s.article_type_id, name: s.name, image_url: s.image_url, customer_price: s.customer_price ?? null };
           names[s.article_type_id] = s.type_name;
         }
         return {
@@ -692,6 +703,7 @@ export class OrderFormPage {
           existingImages: u.reference_images ?? [],
           open: i === 0,
           locked: o.import_source === 'email' && !(u.status === 'received' && u.review_status === 'approved'),
+          brand: this.customerEdit() && u.brand_id ? ({ id: u.brand_id, name: u.brand ?? '' } as Brand) : null,
           product_link: u.product_link ?? '',
           unit_title: u.unit_title ?? '',
           product_image_url: u.product_image_url ?? '',
@@ -706,7 +718,7 @@ export class OrderFormPage {
     );
     this.typeNames.update((m) => ({ ...m, ...names }));
     // an order made from an email has its articles fixed: two steps, starting with the articles
-    if (this.emailOrder()) this.step.set(2);
+    if (this.emailOrder() || this.customerEdit()) this.step.set(2);
     if (this.articles().length === 0) this.articles.set([this.newArticle()]);
   }
 
@@ -735,21 +747,12 @@ export class OrderFormPage {
     });
   }
 
-  onIntlKey(e: KeyboardEvent): void {
-    this.radioKey(e, [true, false], this.international(), (v) => this.chooseInternational(v));
-  }
-
   hostOf(url: string): string {
     try {
       return new URL(url).hostname.replace(/^www\./, '');
     } catch {
       return url;
     }
-  }
-
-  chooseInternational(value: boolean): void {
-    this.international.set(value);
-    this.touch('international');
   }
 
   /** Radio-group keyboard support: arrows move the selection, as native radios do. */
@@ -768,7 +771,6 @@ export class OrderFormPage {
     const e = this.step1Errors();
     setTimeout(() => {
       if (e.brand) this.brandSel()?.focus();
-      else if (e.international) document.getElementById('intl-yes')?.focus();
     }, 50);
   }
 
@@ -804,7 +806,7 @@ export class OrderFormPage {
     }
     const prev = this.articles().at(-1);
     const next = this.newArticle();
-    // Handy defaults: same size chart and brand as the previous article. Customisation always starts empty.
+    // Handy defaults: same size chart and brand as the previous article. Customization always starts empty.
     if (prev) {
       next.size_chart_id = prev.size_chart_id;
       next.brand = prev.brand;
@@ -873,7 +875,7 @@ export class OrderFormPage {
     this.patchArticle(a.key, { product_image_url: '' });
   }
 
-  // Customisation
+  // Customization
 
   articleFetch(typeId: string): PageFetch<Article> {
     let fn = this.articleFetchers.get(typeId);
@@ -1055,8 +1057,8 @@ export class OrderFormPage {
       ...(simple
         ? { destination_country: this.addrCountry().trim() || null, destination_city: this.addrCity().trim() || null, destination_address: this.addrAddress().trim() || null, destination_phone: this.addrPhone().trim() || null }
         : { brand_id: this.brand()!.id, courier_id: this.courier()?.id ?? null, tracking_number: this.trackingNumber().trim() || null, brand_order_number: this.brandOrderNumber().trim() || null }),
-      international_shipping: this.international() === true,
       express_stitching: this.expressStitching(),
+      express_shipping: this.expressShipping(),
       note: this.note().trim() || null,
       ...(this.fromImport && !this.id() ? { import_id: this.fromImport } : {}),
       units: this.articles().map((a): UnitInput => {
@@ -1083,7 +1085,7 @@ export class OrderFormPage {
   }
 
   submit(): void {
-    if ((!this.twoStep() && !this.step1Valid()) || !this.step2Valid() || (this.twoStep() && this.international() === null) || (this.emailOrder() && !this.brand())) {
+    if ((!this.twoStep() && !this.step1Valid()) || !this.step2Valid() || (this.emailOrder() && !this.brand())) {
       this.showErrors.set(true);
       this.goTo(3);
       return;
