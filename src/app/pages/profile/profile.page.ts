@@ -128,6 +128,7 @@ export class ProfilePage {
   /** The personal shopping email shown on the profile (type it at any shop's checkout; the mail lands in the Inbox). */
   shoppingEmail = computed(() => this.user()?.mailbox_address ?? null);
   mailCopied = signal(false);
+  codeCopied = signal(false);
 
   async copyShoppingEmail(): Promise<void> {
     const a = this.shoppingEmail();
@@ -144,7 +145,13 @@ export class ProfilePage {
   async copyCode(): Promise<void> {
     const code = this.user()?.customer_code;
     if (!code) return;
-    if (await copyText(code)) this.toast.success('Customer code copied.');
+    if (await copyText(code)) {
+      this.toast.success('Customer code copied — write it on your parcel.');
+      this.codeCopied.set(true);
+      setTimeout(() => this.codeCopied.set(false), 2000);
+    } else {
+      this.toast.error('Could not copy — your code is ' + code + '.');
+    }
   }
 
   async logout(): Promise<void> {

@@ -5,17 +5,20 @@ import { Router, RouterLink } from '@angular/router';
 import { IonIcon, IonSpinner } from '@ionic/angular';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { OrderService } from '../../../core/services/order.service';
+import { ConfigService } from '../../../core/services/config.service';
+import { PartnerChoiceService } from '../../../core/services/partner-choice.service';
 import { SizeService } from '../../../core/services/size.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { CatalogService } from '../../../core/services/catalog.service';
-import { PartnerChoiceService } from '../../../core/services/partner-choice.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { ChatService } from '../../../core/services/chat.service';
 import { MailboxService } from '../../../core/services/mailbox.service';
 import { errorMessage } from '../../../core/services/api.service';
-import { Article, ArticleType, Brand, ClientPartner, Courier, OrderDetail, OrderInput, SizeChart, UnitInput, VoiceNote } from '../../../core/models/api.models';
+import { Article, ArticleType, Brand, Courier, OrderPartner, OrderDetail, OrderInput, SizeChart, UnitInput, VoiceNote } from '../../../core/models/api.models';
 import { isStoredVoice, voiceField } from '../../../core/utils/voice-note';
 import { ImageUpload, compressImage } from '../../../core/utils/image';
 import { PageFetch } from '../../../core/utils/search-pager';
+import { SheetComponent } from '../../../shared/sheet.component';
 import { ShipToCardComponent } from '../../../shared/ship-to-card.component';
 import { EmptyStateComponent, ErrorStateComponent, SkeletonComponent } from '../../../shared/ui-states';
 import { SearchSelectComponent } from '../../../shared/search-select.component';
@@ -31,7 +34,7 @@ const MAX_ARTICLES = 30;
 const DRAFT_KEY = 'stx_order_draft_v1';
 
 type Step = 1 | 2 | 3;
-type FieldKey = 'partner' | 'brand' | 'courier' | 'tracking' | 'international';
+type FieldKey = 'brand' | 'international';
 
 interface ArticleDraft {
   key: number;
@@ -40,6 +43,10 @@ interface ArticleDraft {
   /** Reference photos already saved on the server (kept unless removed). */
   existingImages: NonNullable<OrderDetail['units'][number]['reference_images']>;
   open: boolean;
+  /** An article of an email order that is not received and approved yet: it cannot be edited. */
+  locked: boolean;
+  /** The brand this article was bought from (direct-from-customer orders). */
+  brand: Brand | null;
   product_link: string;
   unit_title: string;
   /** True while the name came from "Fetch details" (so a new fetch may replace it). */
@@ -88,6 +95,7 @@ const courierSub = (c: Courier): string | null => (c.requires_tracking ? 'Tracki
     IonIcon,
     IonSpinner,
     ShipToCardComponent,
+    SheetComponent,
     SkeletonComponent,
     EmptyStateComponent,
     ErrorStateComponent,
@@ -124,6 +132,20 @@ export class OrderFormPage {
 
   readonly maxPhotos = MAX_PHOTOS;
   readonly stepLabels = ['Order', 'Articles', 'Notes & review'];
+  /**
+   * A new order made "direct from customer": no Order step. The brand is chosen per article, the shipping type is picked on
+   * the last step. Editing an order and finishing an email draft keep the full three steps.
+   */
+  simple = computed(() => !this.isEdit() && !this.emailOrder() && !this.importId());
+  /** Articles + Notes & review only: new "direct from customer" orders and orders made from an email. */
+  twoStep = computed(() => this.simple() || this.emailOrder());
+  stepList = computed<{ n: Step; label: string }[]>(() =>
+    this.twoStep()
+      ? [{ n: 2, label: 'Articles' }, { n: 3, label: 'Notes & review' }]
+      : this.stepLabels.map((label, i) => ({ n: (i + 1) as Step, label })),
+  );
+  stepNo = computed(() => (this.twoStep() ? this.step() - 1 : this.step()));
+  stepCount = computed(() => this.stepList().length);
 
   // Option helpers for <app-search-select>
   readonly fetchBrands: PageFetch<Brand> = (page, search) => this.catalog.brands(page, search);
@@ -132,6 +154,8 @@ export class OrderFormPage {
   readonly courierLabel = courierLabel;
   readonly courierSub = courierSub;
   readonly articleLabel = articleLabel;
+  /** Price shown next to each customisation choice in its dropdown. */
+  readonly articlePriceSub = (a: Article): string | null => (a.customer_price == null ? 'Price on request' : Number(a.customer_price) === 0 ? 'Included' : this.money(Number(a.customer_price)));
   readonly articleImage = articleImage;
   private articleFetchers = new Map<string, PageFetch<Article>>();
 
@@ -153,48 +177,151 @@ export class OrderFormPage {
         return 'Next: your articles';
       case 2: {
         const n = this.articles().length;
-        return `${n} article${n === 1 ? '' : 's'} · ${this.totalPieces()} pc`;
+        return `${n} article${n === 1 ? '' : 's'} · ${this.totalPieces()} pc${this.hasPrices() ? ' · ' + this.money(this.total()) : ''}`;
       }
       default:
-        return this.isDraft() ? 'Submit it to send it on' : this.isEdit() ? 'Save your changes' : 'Then ship your parcel';
+        return this.isDraft() ? 'Submit it to send it on' : this.isEdit() ? 'Save your changes' : this.hasPrices() ? 'Total ' + this.money(this.total()) : 'Then ship your parcel';
     }
   });
 
   // ───────── Step 1 ─────────
-  protected choice = inject(PartnerChoiceService);
-  /** The stitching partner this order goes to. Its address is where the parcel is sent and its articles are offered. */
-  partner = signal<ClientPartner | null>(null);
-  /** Once an order is submitted the customer has been told where to ship, so its partner can no longer change. */
-  partnerLocked = computed(() => this.isEdit() && !this.isDraft());
+  /**
+   * The stitching partner, only once the admin assigned the order to one (editing). A customer never picks it: every order
+   * starts at our central location. Its own articles are offered after that, the shared standard set before.
+   */
+  partner = signal<OrderPartner | null>(null);
+  private partnerChoice = inject(PartnerChoiceService);
+  /** The assigned partner's address for the "ship to" card; without one the card shows our central address. */
+  shipPartner = computed(() => this.partnerChoice.fromOrder(this.partner()));
+  /** Orders made from an email already know their products, so the product link field is hidden. */
+  emailOrder = signal(false);
+  /** The shipping type came with the order (from the email): shown as text, not asked again. */
+  intlKnown = signal(false);
+  /** Courier name an email gave that is not in the courier list. */
+  emailCourierName = signal<string | null>(null);
   brand = signal<Brand | null>(null);
   brandOrderNumber = signal('');
   courier = signal<Courier | null>(null);
   trackingNumber = signal('');
   /** null until the customer chooses (no default on purpose). */
   international = signal<boolean | null>(null);
+  /** Express stitching: the order is stitched faster. The admin decides how many days it takes. */
+  expressStitching = signal(false);
+  /** The admin's express stitching setting (null while loading or when it is switched off for customers). */
+  expressInfo = computed(() => {
+    const e = this.configService.config()?.expressStitching;
+    return e && e.enabled ? e : null;
+  });
   creatingBrand = signal(false);
   touched = signal<ReadonlySet<FieldKey>>(new Set());
 
-  trackingRequired = computed(() => !!this.courier()?.requires_tracking);
+  step1Errors = computed(() => {
+    const e: Partial<Record<FieldKey, string>> = {};
+    if (!this.brand()) e.brand = 'Choose the brand you ordered from.';
+    if (this.international() === null) e.international = 'Choose Yes or No.';
+    return e;
+  });
   shippingType = computed(() => {
     const v = this.international();
     return v === null ? null : v ? ('express' as const) : ('standard' as const);
-  });
-
-  step1Errors = computed(() => {
-    const e: Partial<Record<FieldKey, string>> = {};
-    if (!this.partner() && !this.partnerLocked() && this.choice.partners().length) e.partner = 'Choose the stitching partner for this order.';
-    if (!this.brand()) e.brand = 'Choose the brand you ordered from.';
-    if (!this.courier()) e.courier = 'Choose the courier delivering your parcel.';
-    else if (this.trackingRequired() && !this.trackingNumber().trim()) e.tracking = `Enter the tracking number for ${this.courier()!.name}.`;
-    if (this.international() === null) e.international = 'Choose Yes or No.';
-    return e;
   });
   step1Valid = computed(() => Object.keys(this.step1Errors()).length === 0);
 
   // ───────── Step 2 ─────────
   articles = signal<ArticleDraft[]>([]);
   private seq = 0;
+
+  /** "PKR 1,200" */
+  money(n: number): string {
+    return 'PKR ' + Math.round(n).toLocaleString('en-US');
+  }
+  /** What one article costs: its chosen customisation prices times the quantity. */
+  priceOf(a: ArticleDraft): number {
+    return Object.values(a.picks).reduce((sum, p) => sum + (Number(p.customer_price) || 0), 0) * (a.quantity || 1);
+  }
+  total = computed(() => this.articles().reduce((sum, a) => sum + this.priceOf(a), 0));
+  hasPrices = computed(() => this.articles().some((a) => Object.values(a.picks).some((p) => p.customer_price != null)));
+
+  /** The article whose "Other" brand name is being typed, and what was typed. */
+  otherFor = signal<number | null>(null);
+  otherName = signal('');
+
+  openOther(a: ArticleDraft): void {
+    this.otherName.set('');
+    this.otherFor.set(a.key);
+    setTimeout(() => document.getElementById('other-brand-' + a.key)?.focus(), 50);
+  }
+
+  saveOther(a: ArticleDraft): void {
+    const name = this.otherName().trim();
+    if (name.length < 2) {
+      this.toast.error('Type the brand name.');
+      return;
+    }
+    this.otherFor.set(null);
+    this.onArticleBrandCreate(a, name);
+  }
+
+  onArticleBrandCreate(a: ArticleDraft, name: string): void {
+    this.creatingBrand.set(true);
+    this.catalog.createBrand(name).subscribe({
+      next: ({ data }) => {
+        this.patchArticle(a.key, { brand: data });
+        this.creatingBrand.set(false);
+        this.toast.success('Brand added');
+      },
+      error: (err) => {
+        this.creatingBrand.set(false);
+        this.toast.error(err);
+      },
+    });
+  }
+
+  // Delivery address asked when a new order is submitted: the profile address by default, changeable here
+  private auth = inject(AuthService);
+  private configService = inject(ConfigService);
+  addressOpen = signal(false);
+  addressEditing = signal(false);
+  addrCountry = signal('');
+  addrCity = signal('');
+  addrAddress = signal('');
+  /** The phone for this order's delivery (the profile's by default). Saved on the order only. */
+  addrPhone = signal('');
+  addressText = computed(() => [this.addrAddress(), this.addrCity(), this.addrCountry()].filter((x) => x.trim()).join(', '));
+
+  openAddress(): void {
+    if (!this.step2Valid()) {
+      this.goTo(3);
+      return;
+    }
+    if (this.international() === null) {
+      this.touch('international');
+      this.showErrors.set(true);
+      return;
+    }
+    const u = this.auth.user();
+    this.addrCountry.set(u?.country ?? '');
+    this.addrCity.set(u?.city ?? '');
+    this.addrAddress.set(u?.address ?? '');
+    this.addrPhone.set(u?.phone ?? '');
+    this.addressEditing.set(!this.addressText());
+    this.addressOpen.set(true);
+  }
+
+  confirmAddress(): void {
+    if (!this.addrAddress().trim() || !this.addrCity().trim()) {
+      this.addressEditing.set(true);
+      this.toast.error('Enter the delivery address and city.');
+      return;
+    }
+    if (this.addrPhone().trim().replace(/\D/g, '').length < 7) {
+      this.addressEditing.set(true);
+      this.toast.error('Enter a phone number we can reach for this delivery.');
+      return;
+    }
+    this.addressOpen.set(false);
+    this.submit();
+  }
 
   // Article types are fetched once per wizard session (first page on entering step 2, then "Load more").
   types = signal<ArticleType[]>([]);
@@ -239,12 +366,12 @@ export class OrderFormPage {
   private saveTimer?: ReturnType<typeof setTimeout>;
 
   private brandSel = viewChild<SearchSelectComponent<Brand>>('brandSel');
-  private courierSel = viewChild<SearchSelectComponent<Courier>>('courierSel');
 
   articleErrors = computed(() =>
     this.articles().map((a) => {
       const e: Record<string, string> = {};
       if (!a.unit_title.trim()) e['title'] = 'Enter the product name (e.g. "Embroidered lawn 3-pc").';
+      if (this.simple() && !a.brand) e['brand'] = 'Choose the brand this article is from.';
       if (a.product_link.trim() && !/^https?:\/\/\S+$/i.test(a.product_link.trim())) e['link'] = 'Paste a full link starting with https://';
       if (!(a.quantity >= 1 && a.quantity <= 20)) e['quantity'] = 'Quantity must be between 1 and 20.';
       return e;
@@ -258,6 +385,7 @@ export class OrderFormPage {
   private previewSubs = new Map<number, Subscription>();
 
   constructor() {
+    this.configService.load();
     this.loadCharts();
 
     effect(() => {
@@ -270,12 +398,6 @@ export class OrderFormPage {
           if (imp) this.applyImport(imp);
         }
       });
-    });
-
-    // The partners load once; a new order then starts with the customer's usual (or the recommended) one.
-    this.choice.load();
-    effect(() => {
-      if (this.choice.loaded() && !this.partnerLocked()) untracked(() => this.applyDefaultPartner());
     });
 
     // Load article types the first time step 2 opens.
@@ -388,6 +510,7 @@ export class OrderFormPage {
             return;
           }
           this.fromImport = imp.id;
+          this.emailOrder.set(imp.source === 'email');
           this.clearDraft();
           this.resetForCreate();
           this.draftEnabled = true;
@@ -395,17 +518,21 @@ export class OrderFormPage {
           if (x.tracking_number) this.trackingNumber.set(x.tracking_number);
           if (x.items.length) {
             this.articles.set(
-              x.items.slice(0, MAX_ARTICLES).map((it) => ({
-                ...this.newArticle(),
-                unit_title: (it.title || '').slice(0, 200),
-                product_link: it.url && /^https?:\/\/\S+$/i.test(it.url) ? it.url : '',
-                product_image_url: it.image_url && /^https?:\/\//i.test(it.image_url) ? it.image_url : '',
-                quantity: Math.min(20, Math.max(1, Math.round(Number(it.quantity)) || 1)),
-              })),
+              // an email order has one article per unit: Product A x2 = two articles
+              x.items
+                .flatMap((it) => Array.from({ length: Math.min(20, Math.max(1, Math.round(Number(it.quantity)) || 1)) }, () => it))
+                .slice(0, MAX_ARTICLES)
+                .map((it) => ({
+                  ...this.newArticle(),
+                  unit_title: (it.title || '').slice(0, 200),
+                  product_link: it.url && /^https?:\/\/\S+$/i.test(it.url) ? it.url : '',
+                  product_image_url: it.image_url && /^https?:\/\//i.test(it.image_url) ? it.image_url : '',
+                  quantity: 1,
+                })),
             );
           }
           if (x.brand) this.matchBrand(x.brand);
-          this.toast.info('Filled in from your email — check the details, then choose your courier and sizes.');
+          this.toast.info('Filled in from your email — check the details, then choose your sizes.');
         },
         error: (err: unknown) => {
           this.importing.set(false);
@@ -505,7 +632,9 @@ export class OrderFormPage {
       .subscribe({
         next: (order) => {
           this.loadingOrder.set(false);
-          if (order.status !== 'submitted' && order.status !== 'draft') {
+          // a website order whose parcel was checked can be completed (articles, sizes, notes) even though the parcel is in
+          const completing = order.status === 'received' && order.order_source === 'website' && !!order.details_pending;
+          if (order.status !== 'submitted' && order.status !== 'draft' && !completing) {
             this.notEditable.set(order);
             return;
           }
@@ -520,28 +649,34 @@ export class OrderFormPage {
   }
 
   private resetForCreate(): void {
-    this.step.set(1);
+    this.step.set(this.importId() ? 1 : 2);
     this.partner.set(null);
+    this.emailOrder.set(false);
+    this.emailCourierName.set(null);
     this.brand.set(null);
     this.brandOrderNumber.set('');
     this.courier.set(null);
     this.trackingNumber.set('');
     this.international.set(null);
+    this.expressStitching.set(false);
     this.note.set('');
     this.voice.set(null);
     this.articles.set([this.newArticle()]);
   }
 
   private prefill(o: OrderDetail): void {
-    // an order that already has a partner keeps it; a draft without one starts from the customer's usual / recommended partner
-    const own = this.choice.fromOrder(o.partner);
-    this.partner.set(own);
-    if (!own && !this.partnerLocked()) this.applyDefaultPartner();
+    // the partner is shown (and its articles offered) only once the admin has assigned one
+    this.partner.set(o.partner ?? null);
+    // an order made from an email, or a website order being completed after its parcel was checked: its articles are the ones that arrived
+    this.emailOrder.set(o.order_source === 'email' || o.import_source === 'email' || (o.order_source === 'website' && o.status === 'received' && !!o.details_pending));
+    this.emailCourierName.set(o.courier_name ?? null);
     this.brand.set(o.brand_ref ?? (o.brand_id ? { id: o.brand_id, name: o.brand } : null));
     this.brandOrderNumber.set(o.brand_order_number ?? '');
     this.courier.set(o.courier ?? null);
     this.trackingNumber.set(o.tracking_number ?? '');
     this.international.set(o.international_shipping ?? (o.shipping_service === 'express' ? true : o.shipping_service === 'standard' ? false : null));
+    this.intlKnown.set(o.international_shipping != null);
+    this.expressStitching.set(o.express_stitching === true);
     this.note.set(o.customer_notes ?? '');
     const names: Record<string, string> = {};
     this.articles.set(
@@ -556,6 +691,7 @@ export class OrderFormPage {
           id: u.id,
           existingImages: u.reference_images ?? [],
           open: i === 0,
+          locked: o.import_source === 'email' && !(u.status === 'received' && u.review_status === 'approved'),
           product_link: u.product_link ?? '',
           unit_title: u.unit_title ?? '',
           product_image_url: u.product_image_url ?? '',
@@ -569,33 +705,9 @@ export class OrderFormPage {
       }),
     );
     this.typeNames.update((m) => ({ ...m, ...names }));
+    // an order made from an email has its articles fixed: two steps, starting with the articles
+    if (this.emailOrder()) this.step.set(2);
     if (this.articles().length === 0) this.articles.set([this.newArticle()]);
-  }
-
-  // ───────── stitching partner ─────────
-
-  /** Start a new order with the partner the customer used last, or the one the platform recommends. */
-  private applyDefaultPartner(): void {
-    if (this.partner()) return;
-    const fallback = this.choice.defaultPartner();
-    if (fallback) this.partner.set(fallback);
-  }
-
-  choosePartner(p: ClientPartner): void {
-    if (this.partnerLocked() || p.id === this.partner()?.id) return;
-    const hadPicks = this.articles().some((a) => Object.keys(a.picks).length > 0);
-    this.partner.set(p);
-    this.choice.remember(p.id);
-    // every partner offers its own articles: forget the loaded lists and the choices made from the previous partner
-    this.types.set([]);
-    this.typesLoaded = false;
-    this.typesPage = 0;
-    this.typesHasMore.set(false);
-    this.articleFetchers.clear();
-    if (hadPicks) {
-      this.articles.update((list) => list.map((a) => ({ ...a, picks: {} })));
-      this.toast.info(`Article choices were cleared: ${p.name} offers its own set.`);
-    }
   }
 
   // ───────── step 1 helpers ─────────
@@ -656,8 +768,6 @@ export class OrderFormPage {
     const e = this.step1Errors();
     setTimeout(() => {
       if (e.brand) this.brandSel()?.focus();
-      else if (e.courier) this.courierSel()?.focus();
-      else if (e.tracking) document.getElementById('trk')?.focus();
       else if (e.international) document.getElementById('intl-yes')?.focus();
     }, 50);
   }
@@ -668,6 +778,8 @@ export class OrderFormPage {
     return {
       key: ++this.seq,
       open: true,
+      locked: false,
+      brand: null,
       product_link: '',
       unit_title: '',
       titleFromLink: false,
@@ -692,10 +804,10 @@ export class OrderFormPage {
     }
     const prev = this.articles().at(-1);
     const next = this.newArticle();
-    // Handy defaults: same size chart and customisation as the previous article
+    // Handy defaults: same size chart and brand as the previous article. Customisation always starts empty.
     if (prev) {
       next.size_chart_id = prev.size_chart_id;
-      next.picks = { ...prev.picks };
+      next.brand = prev.brand;
     }
     this.articles.update((list) => [...list.map((a) => ({ ...a, open: false })), next]);
   }
@@ -898,7 +1010,8 @@ export class OrderFormPage {
   // ───────── steps ─────────
 
   goTo(step: Step): void {
-    if (step > 1 && !this.step1Valid()) {
+    if (this.twoStep() && step < 2) step = 2;
+    if (step > 1 && !this.twoStep() && !this.step1Valid()) {
       this.showErrors.set(true);
       this.step.set(1);
       this.focusFirstInvalid();
@@ -927,25 +1040,30 @@ export class OrderFormPage {
   }
 
   back(): void {
+    if (this.twoStep() && this.step() <= 2) {
+      void this.router.navigate(this.isEdit() ? ['/app/orders', this.id()] : ['/app/orders']);
+      return;
+    }
     this.goTo(Math.max(1, this.step() - 1) as Step);
   }
 
   // ───────── submit ─────────
 
   private buildBody(): OrderInput {
+    const simple = this.simple();
     return {
-      ...(this.partnerLocked() ? {} : { partner_id: this.partner()?.id ?? null }),
-      brand_id: this.brand()!.id,
-      courier_id: this.courier()!.id,
-      tracking_number: this.trackingNumber().trim() || null,
+      ...(simple
+        ? { destination_country: this.addrCountry().trim() || null, destination_city: this.addrCity().trim() || null, destination_address: this.addrAddress().trim() || null, destination_phone: this.addrPhone().trim() || null }
+        : { brand_id: this.brand()!.id, courier_id: this.courier()?.id ?? null, tracking_number: this.trackingNumber().trim() || null, brand_order_number: this.brandOrderNumber().trim() || null }),
       international_shipping: this.international() === true,
-      brand_order_number: this.brandOrderNumber().trim() || null,
+      express_stitching: this.expressStitching(),
       note: this.note().trim() || null,
       ...(this.fromImport && !this.id() ? { import_id: this.fromImport } : {}),
       units: this.articles().map((a): UnitInput => {
         const unit: UnitInput = {
           unit_title: a.unit_title.trim(),
-          product_link: a.product_link.trim() || null,
+          ...(simple ? { brand_id: a.brand?.id ?? null } : {}),
+          product_link: simple ? null : a.product_link.trim() || null,
           product_image_url: a.product_image_url || null,
           size_chart_id: a.size_chart_id || null,
           notes: a.notes.trim() || null,
@@ -965,7 +1083,8 @@ export class OrderFormPage {
   }
 
   submit(): void {
-    if (!this.step1Valid() || !this.step2Valid()) {
+    if ((!this.twoStep() && !this.step1Valid()) || !this.step2Valid() || (this.twoStep() && this.international() === null) || (this.emailOrder() && !this.brand())) {
+      this.showErrors.set(true);
       this.goTo(3);
       return;
     }

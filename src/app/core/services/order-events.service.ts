@@ -22,6 +22,8 @@ export class OrderEventsService {
   private lastToast = 0;
 
   constructor() {
+    // an article of one of my orders moved: the open order page refreshes itself
+    this.socket.unitUpdate$.subscribe((e) => this.updated$.next({ orderId: e.orderId, status: '', status_label: e.stateLabel ?? '' }));
     this.socket.orderUpdate$.subscribe((e) => {
       this.notif.refreshCount();
       this.updated$.next(e);

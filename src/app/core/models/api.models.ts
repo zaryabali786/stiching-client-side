@@ -98,6 +98,8 @@ export interface PlatformConfig {
   shipToCity: string;
   shipToPhone: string;
   partnerName: string;
+  /** Express stitching as the admin decided it: offered or not, and how many days it takes. */
+  expressStitching?: { enabled: boolean; days: number };
   /** Card payments: the publishable key is public by design; the secret key never leaves the server. */
   payments?: { stripe: { enabled: boolean; publishableKey: string | null } };
   /** Google sign-in: the OAuth client id is public by design; the client secret stays on the server. */
@@ -141,6 +143,8 @@ export interface AppNotification {
 
 export interface NotificationMeta {
   unreadCount: number;
+  /** unread ones about an order (shown on the Orders tab) */
+  orders?: number;
 }
 
 // ───────────── Orders ─────────────
@@ -185,12 +189,45 @@ export interface OrderListRow {
   status: OrderStatus;
   status_label: string;
   has_issue: boolean;
+  /** Set only when the customer sent articles back: where the return stands and where it goes. */
+  groups?: OrderGroup[];
+  /** 'return' = the shipment of one returned article back to the customer (it has its own invoice and payment). */
+  order_kind?: 'order' | 'return';
+  return_badge?: { status: 'requested' | 'in_progress' | 'completed' | 'on_hold'; to: 'brand' | 'customer' | null; count: number; total: number; whole_parcel: boolean; shipments?: { courier: string | null; tracking: string | null }[] } | null;
   /** 'email' for an order made from an email in the Inbox. */
   import_source?: 'manual' | 'invoice' | 'link' | 'email';
   created_at: string;
   destination_city: string | null;
   destination_country: string | null;
   units_count: number;
+}
+
+/** Where one article stands in the customer's approval. */
+export type ApprovalState = 'pending' | 'approved' | 'rejected' | 'in_progress';
+
+export interface ApprovalArticle {
+  unit_id: string;
+  title: string | null;
+  status: ApprovalState;
+  photos: MediaRef[];
+  requested_at: string | null;
+  decided_at: string | null;
+  /** what the customer asked to change, when rejected */
+  change_request: string | null;
+}
+
+/** An order that has had photos sent for approval, with every article and its state. */
+export interface ApprovalOrder {
+  order_id: string;
+  reference: string | null;
+  brand: string | null;
+  articles: ApprovalArticle[];
+}
+
+export interface ApprovalsOverview {
+  /** articles waiting for the customer (the badge) */
+  pending: number;
+  orders: ApprovalOrder[];
 }
 
 export interface MediaRef {
@@ -217,8 +254,39 @@ export interface UnitApproval {
   change_request_audio?: VoiceNote | null;
 }
 
+/** The courier parcel of one returned article: booked (CN) > handed over > in transit > delivered. */
+export interface ReturnShipmentView {
+  courier_name: string;
+  cn_number: string;
+  status: 'booked' | 'handed_over' | 'in_transit' | 'delivered';
+  status_label: string;
+  booked_at: string;
+  handed_over_at: string | null;
+  delivered_at: string | null;
+  events: { status: string; note: string | null; occurred_at: string }[];
+}
+
+/** Where a returned article is posted back to (the customer's delivery address unless they change it). */
+export interface ReturnShipping {
+  name: string;
+  phone: string;
+  address: string;
+  city: string;
+  country: string;
+}
+
+/** How one order is shown in up to four groups (<ref>, <ref>-HOLD, <ref>-RETURN, <ref>-RESOLVED). */
+export interface OrderGroup {
+  group: 'main' | 'hold' | 'return' | 'resolved';
+  reference: string;
+  label: string;
+  count: number;
+}
+
 export interface OrderUnit {
   id: string;
+  group?: OrderGroup['group'];
+  group_reference?: string;
   order_id: string;
   line_no: number;
   unit_title: string;
@@ -243,6 +311,31 @@ export interface OrderUnit {
   issue_media: MediaRef[] | null;
   received_at: string | null;
   product_image_url?: string | null;
+  /** Permanent article code (also its barcode). */
+  code?: string | null;
+  /** Photos / video of this article taken when we received it. */
+  receive_media?: MediaRef[] | null;
+  /** Your decision on the received article: none (nothing to review) | pending | approved | rejected. */
+  review_status?: 'none' | 'pending' | 'approved' | 'rejected';
+  review_note?: string | null;
+  review_media?: MediaRef[] | null;
+  /** none | requested (you asked to send it back) | sent_back | resubmitted (the corrected one is back for your review). */
+  return_status?: 'none' | 'requested' | 'sent_back' | 'resubmitted' | 'held' | 'returned';
+  /** The courier shipment of this returned article. */
+  return_shipment?: ReturnShipmentView | null;
+  hold_received_at?: string | null;
+  hold_resolved_at?: string | null;
+  return_shipping?: ReturnShipping | null;
+  /** Where a rejected article goes back to. */
+  return_to?: 'brand' | 'customer' | null;
+  return_note?: string | null;
+  return_courier?: string | null;
+  return_tracking?: string | null;
+  resubmit_count?: number;
+  /** One word for where the article is, with its label and the production stage it is in. */
+  state?: 'pending_receipt' | 'received' | 'pending_approval' | 'approved' | 'rejected' | 'return_requested' | 'returned' | 'issue' | 'in_production' | 'completed';
+  state_label?: string;
+  stage_label?: string | null;
 }
 
 export interface OrderEvent {
@@ -319,17 +412,28 @@ export interface Order {
   customer_code: string | null;
   brand: string;
   import_source?: 'manual' | 'invoice' | 'link' | 'email';
+  /** Where the order came from: a brand's website, the customer's own parcel, or an order email. */
+  order_source?: 'website' | 'customer' | 'email';
+  /** Website / email orders: the parcel was checked and the customer still has to finish the articles, sizes and notes. */
+  details_pending?: boolean;
+  details_completed_at?: string | null;
+  /** The rejected / returned articles of the order and where they go. */
+  groups?: OrderGroup[];
+  return_summary?: { count: number; total: number; to: 'brand' | 'customer' | null; status: 'requested' | 'sent_back'; whole_parcel: boolean } | null;
   brand_id?: string | null;
   brand_order_number: string | null;
   tracking_number: string | null;
   courier_id?: string | null;
   international_shipping?: boolean | null;
+  express_stitching?: boolean;
+  express_days?: number | null;
   status: OrderStatus;
   has_issue: boolean;
   customer_notes: string | null;
   destination_country: string | null;
   destination_city: string | null;
   destination_address: string | null;
+  destination_phone?: string | null;
   shipping_service: 'express' | 'standard' | null;
   due_date: string | null;
   weight_kg: number | null;
@@ -337,6 +441,11 @@ export interface Order {
   change_request: string | null;
   change_request_audio?: VoiceNote | null;
   received_at: string | null;
+  /** Photos / video of the whole parcel when it arrived. */
+  parcel_media?: MediaRef[] | null;
+  parcel_received_at?: string | null;
+  /** 'pending' = the parcel arrived and waits for the customer to review and approve it. */
+  parcel_review?: 'none' | 'pending' | 'approved';
   packed_at: string | null;
   paid_at: string | null;
   shipped_at: string | null;
@@ -371,6 +480,10 @@ export interface OrderPartner {
 
 export interface OrderDetail extends Order {
   status_label: string;
+  /** 'return' = the shipment of one returned article back to the customer: it has its own invoice and payment. */
+  order_kind?: 'order' | 'return';
+  /** The article a return order sends back. */
+  return_unit?: { id: string; unit_title: string; code: string | null; order_id: string } | null;
   partner?: OrderPartner | null;
   units: OrderUnit[];
   events: OrderEvent[];
@@ -379,9 +492,13 @@ export interface OrderDetail extends Order {
   payments: Payment[] | null;
   brand_ref?: Brand | null;
   courier?: Courier | null;
+  /** A courier name read from an email that is not in the courier list. */
+  courier_name?: string | null;
 }
 
 export interface UnitInput {
+  /** The brand this article was bought from (direct-from-customer orders). */
+  brand_id?: string | null;
   /** Existing article id when editing (updated in place). */
   id?: string;
   /** Saved reference photos to keep when editing. */
@@ -401,14 +518,20 @@ export interface UnitInput {
 }
 
 export interface OrderInput {
-  /** The stitching partner chosen for this order (omitted when the order is already submitted). */
-  partner_id?: string | null;
-  brand_id: string;
-  courier_id: string;
-  tracking_number: string | null;
+  /** Left out for direct-from-customer orders: the first article's brand is used. */
+  brand_id?: string;
+  /** Optional: can be added later by the customer, the admin or a follow-up email. */
+  courier_id?: string | null;
+  tracking_number?: string | null;
   international_shipping: boolean;
-  brand_order_number: string | null;
+  express_stitching?: boolean;
+  brand_order_number?: string | null;
   note: string | null;
+  /** Where the finished order is delivered (defaults to the profile address). */
+  destination_country?: string | null;
+  destination_city?: string | null;
+  destination_address?: string | null;
+  destination_phone?: string | null;
   /** Draft read from an email / invoice / links that this order was made from (marks it used). */
   import_id?: string | null;
   units: UnitInput[];
@@ -438,6 +561,8 @@ export interface Article {
   article_type_id: string;
   name: string;
   image_url: string | null;
+  /** What the customer pays for this choice (no partner cost is ever sent). */
+  customer_price?: number | null;
 }
 
 /** An article chosen for one piece, as returned inside OrderDetail units. */
@@ -666,6 +791,7 @@ export interface OrderImport {
     currency: string | null;
     total: number | null;
     tracking_number: string | null;
+    courier_name?: string | null;
     items: ImportItem[];
   } | null;
   error: string | null;
@@ -675,29 +801,46 @@ export interface OrderImport {
 export interface InboxRow {
   id: string;
   from: string | null;
+  /** 'out' = an email the customer sent (`from` then holds who it went to) */
+  direction: 'in' | 'out';
+  has_attachments: boolean;
   subject: string | null;
   preview: string;
   received_at: string;
   is_read: boolean;
   import_id: string | null;
+  match: InboxMatch | null;
   draft: { status: OrderImport['status']; brand: string | null; items: number } | null;
+}
+
+/** What happened to a follow-up email: it updated an order, or it needs a person to look at it. */
+export interface InboxMatch {
+  status: 'matched' | 'review';
+  note: string | null;
+  order_id: string | null;
+  order_reference: string | null;
 }
 
 export interface InboxEmail {
   id: string;
   from: string | null;
   to: string | null;
+  direction: 'in' | 'out';
+  attachments: { name: string; type: string; size: number; url: string | null }[];
   subject: string | null;
   text: string | null;
   html: string | null;
   received_at: string;
   is_read: boolean;
   import_id: string | null;
+  match: InboxMatch | null;
   draft: OrderImport | null;
 }
 
 export interface Mailbox {
   address: string | null;
   enabled: boolean;
+  /** false until outbound email (Postmark) is configured on the server */
+  can_send?: boolean;
   unread: number;
 }

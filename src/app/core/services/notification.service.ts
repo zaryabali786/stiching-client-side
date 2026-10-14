@@ -14,6 +14,8 @@ export class NotificationService {
   private auth = inject(AuthService);
 
   readonly unreadCount = signal(0);
+  /** Unread changes to the customer's orders: the badge on the Orders tab. */
+  readonly unreadOrders = signal(0);
   readonly isModalOpen = signal(false);
 
   readonly items = signal<AppNotification[]>([]);
@@ -57,6 +59,7 @@ export class NotificationService {
           this.items.set(items);
           this.hasMore.set(meta.hasMore);
           if (typeof meta.unreadCount === 'number') this.unreadCount.set(meta.unreadCount);
+          if (typeof meta.orders === 'number') this.unreadOrders.set(meta.orders);
           this.loading.set(false);
         },
         error: (err: Error) => {
@@ -92,9 +95,11 @@ export class NotificationService {
     const now = new Date().toISOString();
     this.items.update((list) => list.map((x) => (x.id === n.id ? { ...x, read_at: now } : x)));
     this.unreadCount.update((c) => Math.max(0, c - 1));
-    this.api.post<{ unreadCount: number }>(`/notifications/${n.id}/read`).subscribe({
+    if (n.order_id || n.link?.startsWith('/app/orders')) this.unreadOrders.update((c) => Math.max(0, c - 1));
+    this.api.post<{ unreadCount: number; orders?: number }>(`/notifications/${n.id}/read`).subscribe({
       next: ({ data }) => {
         if (typeof data?.unreadCount === 'number') this.unreadCount.set(data.unreadCount);
+        if (typeof data?.orders === 'number') this.unreadOrders.set(data.orders);
       },
       error: () => this.refreshCount(),
     });
@@ -108,6 +113,7 @@ export class NotificationService {
         const now = new Date().toISOString();
         this.items.update((list) => list.map((x) => (x.read_at ? x : { ...x, read_at: now })));
         this.unreadCount.set(0);
+        this.unreadOrders.set(0);
         this.markingAll.set(false);
       },
       error: (err) => {
@@ -137,9 +143,25 @@ export class NotificationService {
   }
 
   refreshCount(): void {
-    this.api.get<{ unreadCount: number }>('/notifications/unread-count').subscribe({
-      next: (r) => this.unreadCount.set(r.unreadCount ?? 0),
+    this.api.get<{ unreadCount: number; orders?: number }>('/notifications/unread-count').subscribe({
+      next: (r) => {
+        this.unreadCount.set(r.unreadCount ?? 0);
+        this.unreadOrders.set(r.orders ?? 0);
+      },
       error: () => undefined,
+    });
+  }
+
+  /** The customer opened the Orders tab: the changes there count as seen. */
+  markOrdersRead(): void {
+    if (this.unreadOrders() === 0) return;
+    const before = this.unreadOrders();
+    this.items.update((list) => list.map((x) => (!x.read_at && (x.order_id || x.link?.startsWith('/app/orders')) ? { ...x, read_at: new Date().toISOString() } : x)));
+    this.unreadCount.update((c) => Math.max(0, c - before));
+    this.unreadOrders.set(0);
+    this.api.post<{ unreadCount: number }>('/notifications/read-orders').subscribe({
+      next: ({ data }) => typeof data?.unreadCount === 'number' && this.unreadCount.set(data.unreadCount),
+      error: () => this.refreshCount(),
     });
   }
 
@@ -149,10 +171,13 @@ export class NotificationService {
       .pipe(
         filter(() => typeof document === 'undefined' || document.visibilityState !== 'hidden'),
         switchMap(() =>
-          this.api.get<{ unreadCount: number }>('/notifications/unread-count').pipe(catchError(() => EMPTY)),
+          this.api.get<{ unreadCount: number; orders?: number }>('/notifications/unread-count').pipe(catchError(() => EMPTY)),
         ),
       )
-      .subscribe((r) => this.unreadCount.set(r.unreadCount ?? 0));
+      .subscribe((r) => {
+        this.unreadCount.set(r.unreadCount ?? 0);
+        this.unreadOrders.set(r.orders ?? 0);
+      });
   }
 
   private stopPolling(): void {
@@ -160,6 +185,7 @@ export class NotificationService {
     this.poll = undefined;
     this.feed?.unsubscribe();
     this.unreadCount.set(0);
+    this.unreadOrders.set(0);
     this.items.set([]);
     this.hasMore.set(false);
     this.isModalOpen.set(false);

@@ -11,6 +11,8 @@ import {
   VoiceRef,
   PaymentConfirmation,
   PaymentStart,
+  ApprovalsOverview,
+  ReturnShipping,
 } from '../models/api.models';
 
 export interface OrderListQuery {
@@ -64,12 +66,37 @@ export class OrderService {
     return this.api.post(`/client/orders/${encodeURIComponent(id)}/cancel`);
   }
 
+  /** Orders with photos sent for approval, every article with its state (waiting / approved / rejected). */
+  approvalsOverview(): Observable<ApprovalsOverview> {
+    return this.api.get<ApprovalsOverview>('/client/approvals');
+  }
+
   /** One article (`unitId`) or every waiting article when omitted. */
   approve(id: string, unitId?: string): Observable<ApiResult<{ approved: number; stillWaiting: number } | null>> {
     return this.api.post(`/client/orders/${encodeURIComponent(id)}/approve`, unitId ? { unit_id: unitId } : {});
   }
 
   /** A written note, a voice note, or both. */
+  /** Approve or reject ONE received article. A rejection needs a reason; photos are optional. */
+  reviewArticle(id: string, unitId: string, body: { decision: 'approve' | 'reject'; action?: 'return' | 'hold'; note?: string; shipping?: ReturnShipping; return_to?: 'brand' | 'customer'; media?: { name: string; dataUrl: string }[] }): Observable<ApiResult<unknown>> {
+    return this.api.post(`/client/orders/${encodeURIComponent(id)}/units/${encodeURIComponent(unitId)}/review`, body);
+  }
+
+  /** Reject every article that is waiting: one reason, one place to send the parcel back to. */
+  rejectParcel(id: string, body: { note: string; action?: 'return' | 'hold'; shipping?: ReturnShipping; return_to?: 'brand' | 'customer'; media?: { name: string; dataUrl: string }[] }): Observable<ApiResult<unknown>> {
+    return this.api.post(`/client/orders/${encodeURIComponent(id)}/reject-parcel`, body);
+  }
+
+  /** Ask us to send a rejected article back (for correction or replacement). */
+  returnArticle(id: string, unitId: string, note?: string): Observable<ApiResult<unknown>> {
+    return this.api.post(`/client/orders/${encodeURIComponent(id)}/units/${encodeURIComponent(unitId)}/return`, { note: note || undefined });
+  }
+
+  /** The customer reviewed the photos / videos of the parcel we received and accepts them. */
+  approveParcel(id: string): Observable<ApiResult<unknown>> {
+    return this.api.post(`/client/orders/${encodeURIComponent(id)}/approve-parcel`, {});
+  }
+
   requestChanges(id: string, body: { unit_id?: string; note?: string; audio?: VoiceRef }): Observable<ApiResult<null>> {
     return this.api.post(`/client/orders/${encodeURIComponent(id)}/request-changes`, body);
   }

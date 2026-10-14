@@ -67,6 +67,18 @@
       }
     </section>
 
+    <!-- The order split by article status: <ref>, <ref>-HOLD, <ref>-RETURN, <ref>-RESOLVED -->
+    @if ((o.groups?.length ?? 0) > 1) {
+      <section class="card groups-card" aria-label="Order groups">
+        <h4>How your order is organised</h4>
+        <ul>
+          @for (g of o.groups; track g.group) {
+            <li [attr.data-g]="g.group"><span class="g-ref mono">{{ g.reference }}</span><span class="g-label">{{ g.label }}</span><span class="g-count">{{ g.count }} article{{ g.count === 1 ? '' : 's' }}</span></li>
+          }
+        </ul>
+      </section>
+    }
+
     <!-- Unit issues (red = problem) -->
     @if (issueUnits().length) {
       <section class="card issue-card" role="alert">
@@ -392,31 +404,49 @@
       }
     }
 
+    @if (o.order_kind === 'return') {
+      <section class="card return-order-card" aria-label="Return shipment">
+        <h4><ion-icon name="return-up-back-outline" aria-hidden="true"></ion-icon> Return shipment</h4>
+        <p>This is the shipment that sends <b>{{ o.return_unit?.unit_title || 'your rejected article' }}</b>@if (o.return_unit?.code) { <span class="mono"> ({{ o.return_unit!.code }})</span> } back to you. We invoice the return shipping first; once you pay it, it is booked with the courier and sent.</p>
+      </section>
+    }
+
+    <!-- Order details: one section, closed at first (order info, every article, cancel) -->
+    <section class="card od-toggle-card" [class.open]="detailsOpen()">
+      <button type="button" class="od-toggle" [attr.aria-expanded]="detailsOpen()" aria-controls="order-details-body" (click)="detailsOpen.set(!detailsOpen())">
+        <span class="od-toggle-text">
+          <strong>Order details</strong>
+          <small>{{ o.reference }} · {{ o.units.length }} article{{ o.units.length === 1 ? '' : 's' }} · {{ totalPieces() }} pc</small>
+        </span>
+        <ion-icon name="chevron-down-outline" class="od-chevron" [class.rotated]="detailsOpen()" aria-hidden="true"></ion-icon>
+      </button>
+    @if (detailsOpen()) {
+    <div id="order-details-body" class="od-body">
     <!-- Order info -->
-    <section class="card od-card" aria-labelledby="od-title">
+    <section class="od-card od-block" aria-labelledby="od-title">
       <header class="od-head">
-        <h3 id="od-title" class="card-title">Order details</h3>
+        <h3 id="od-title" class="card-title">Order info</h3>
         <span class="od-ref mono">{{ o.reference }}</span>
       </header>
+      <div class="od-qr">
+        <app-qr-code [value]="o.reference" [size]="96" />
+        <span class="muted-note">Your order ID. Show or scan this code to find the order.</span>
+      </div>
 
       <div class="od-group">
         <span class="od-group-label">Order</span>
         <dl class="od-list">
-          @if (o.partner; as op) {
-            <div class="od-row">
-              <span class="od-ico" aria-hidden="true"><ion-icon name="cut-outline"></ion-icon></span>
-              <dt>Stitching partner</dt><dd>{{ op.name }}@if (op.short_code) { <span class="mono"> · {{ op.short_code }}</span> }</dd>
-            </div>
-          }
           <div class="od-row">
             <span class="od-ico" aria-hidden="true"><ion-icon name="storefront-outline"></ion-icon></span>
             <dt>Brand</dt><dd>{{ o.brand_ref?.name || o.brand }}</dd>
           </div>
-          <div class="od-row">
-            <span class="od-ico" aria-hidden="true"><ion-icon name="receipt-outline"></ion-icon></span>
-            <dt>Brand order no.</dt>
-            <dd [class.od-empty]="!o.brand_order_number">{{ o.brand_order_number || 'Not added' }}</dd>
-          </div>
+          @if (o.brand_order_number) {
+            <div class="od-row">
+              <span class="od-ico" aria-hidden="true"><ion-icon name="receipt-outline"></ion-icon></span>
+              <dt>Brand order no.</dt>
+              <dd class="mono">{{ o.brand_order_number }}</dd>
+            </div>
+          }
           <div class="od-row">
             <span class="od-ico" aria-hidden="true"><ion-icon name="calendar-outline"></ion-icon></span>
             <dt>Created</dt><dd>{{ o.created_at | date: 'd MMM y, HH:mm' }}</dd>
@@ -436,13 +466,15 @@
           <div class="od-row">
             <span class="od-ico" aria-hidden="true"><ion-icon name="cube-outline"></ion-icon></span>
             <dt>Courier</dt>
-            <dd [class.od-empty]="!o.courier?.name">{{ o.courier?.name || 'Not chosen yet' }}</dd>
+            <dd [class.od-empty]="!o.courier?.name && !o.courier_name">{{ o.courier?.name || o.courier_name || 'Not added yet' }}</dd>
           </div>
-          <div class="od-row">
-            <span class="od-ico" aria-hidden="true"><ion-icon name="barcode-outline"></ion-icon></span>
-            <dt>Tracking number</dt>
-            <dd [class.od-empty]="!o.tracking_number" [class.mono]="!!o.tracking_number">{{ o.tracking_number || 'Not added' }}</dd>
-          </div>
+          @if (o.tracking_number) {
+            <div class="od-row">
+              <span class="od-ico" aria-hidden="true"><ion-icon name="barcode-outline"></ion-icon></span>
+              <dt>Tracking ID</dt>
+              <dd class="mono">{{ o.tracking_number }}</dd>
+            </div>
+          }
           <div class="od-row">
             <span class="od-ico" aria-hidden="true"><ion-icon name="airplane-outline"></ion-icon></span>
             <dt>Shipping</dt><dd>{{ shippingText(o) }}</dd>
@@ -505,12 +537,13 @@
                 <div class="unit-titles">
                   <div class="unit-title-line">
                     <strong class="unit-title-text">{{ u.unit_title }}</strong>
+                    @if (u.group && u.group !== 'main') { <span class="unit-group" [attr.data-g]="u.group">{{ u.group_reference }}</span> }
                     @if (u.status === 'issue') {
                       <span class="unit-mini-issue"><ion-icon name="alert-circle" aria-hidden="true"></ion-icon>Issue</span>
                     }
                   </div>
                   <span class="unit-subtitle">
-                    @if (u.stitching_type) {{{ u.stitching_type }} · }Qty {{ u.quantity }}
+                    @if (u.code) {<span class="mono">{{ u.code }}</span> · }@if (u.stitching_type) {{{ u.stitching_type }} · }Qty {{ u.quantity }}
                     @if (u.size_chart) {
                       <span class="unit-size-name">· {{ u.size_chart.name }}</span>
                     }
@@ -528,6 +561,12 @@
 
             @if (isUnitExpanded(u.id)) {
               <div class="unit-body" [id]="'unit-content-' + u.id">
+                @if (u.code) {
+                  <div class="unit-qr-row">
+                    <app-qr-code [value]="u.code" [size]="84" />
+                    <div><span class="muted-note">Article code</span><strong class="mono">{{ u.code }}</strong></div>
+                  </div>
+                }
                 @if (u.size_chart) {
                   <div class="u-row">
                     <ion-icon name="options-outline" aria-hidden="true"></ion-icon>
@@ -554,7 +593,7 @@
                 } @else if (designText(u)) {
                   <div class="u-row"><ion-icon name="shirt-outline" aria-hidden="true"></ion-icon><div><span>{{ designText(u) }}</span></div></div>
                 }
-                @if (u.product_link) {
+                @if (u.product_link && o.import_source !== 'email') {
                   <div class="u-row"><ion-icon name="link-outline" aria-hidden="true"></ion-icon><div><a [href]="u.product_link" target="_blank" rel="noopener">View product on {{ hostOf(u.product_link) }}<span class="sr-only"> (opens in a new tab)</span></a></div></div>
                 }
                 @if (u.notes) {
@@ -616,36 +655,145 @@
       </div>
     </section>
 
-    <!-- A draft made automatically from an email: nothing has been sent to us yet -->
-    @if (o.status === 'draft') {
-      <section class="card draft-card">
-        <span class="draft-tag"><ion-icon name="mail-outline" aria-hidden="true"></ion-icon> Draft · from mail</span>
-        <h3 class="card-title">Finish your order</h3>
-        <p class="muted-note">
-          We made this order from your email{{ o.brand_order_number ? ' (order ' + o.brand_order_number + ')' : '' }}. Nothing has been sent to us yet.
-          Check the products, choose your courier, set sizes and any stitching details, then submit it.
-        </p>
-        @if (confirmDiscard()) {
-          <div class="confirm-panel" role="alertdialog" aria-label="Confirm discarding the draft">
-            <p>Discard this draft? The email stays in your Inbox, so you can create the order again later.</p>
-            <div class="btn-row">
-              <button type="button" class="btn btn-outline btn-sm" (click)="confirmDiscard.set(false)" [disabled]="pending() === 'discard'">Keep draft</button>
-              <button type="button" class="btn btn-danger btn-sm" (click)="discardDraft()" [disabled]="pending() === 'discard'">
-                @if (pending() === 'discard') {
-                  <ion-spinner name="crescent"></ion-spinner>
+    <!-- The received parcel: the customer approves or rejects each article (every order source) -->
+    @if (reviewing()) {
+      <section class="card review-card" aria-label="Review your parcel">
+        @if (reviewing()) {
+          <div class="parcel-review">
+            <h4 class="pr-title"><ion-icon name="cube-outline" aria-hidden="true"></ion-icon><span>Your parcel arrived</span></h4>
+            <p class="muted-note">
+              @if (reviewWaiting() > 0) {
+                Check the photos and videos of each article. Approve the ones that look right. If one is wrong, reject it and choose Return or Hold. If our team found a problem with an article, you will see it here.
+                @if (ownParcel()) { Approved articles go straight to production. }
+              } @else if (approvedCount() > 0 && o.details_pending) {
+                Now add your sizes and details for the approved articles, then they go to production.
+              } @else if (approvedCount() > 0) {
+                Approved articles are going to production.
+              } @else {
+                The parcel is being returned. We will tell you here as it moves.
+              }
+            </p>
+            @if (o.return_summary?.whole_parcel) {
+              <div class="return-banner" role="status">
+                <ion-icon name="return-up-back-outline" aria-hidden="true"></ion-icon>
+                <span>
+                  @if (o.return_summary!.status === 'sent_back') { Your parcel was sent back to <b>{{ returnLabel(o.return_summary!.to) }}</b>. }
+                  @else { You rejected the parcel. We are sending it back to <b>{{ returnLabel(o.return_summary!.to) }}</b>. }
+                </span>
+              </div>
+            }
+            @if (o.parcel_media?.length) {
+              <div class="pr-parcel">
+              <span class="pr-k">Whole parcel</span>
+              <div class="pr-grid">
+                @for (m of o.parcel_media; track m.url) {
+                  <a [href]="m.url" target="_blank" rel="noopener" class="pr-item" [attr.aria-label]="'Open parcel ' + (m.type === 'video' ? 'video' : 'photo')">
+                    @if (m.type === 'video') { <video [src]="m.url" preload="metadata" muted playsinline></video><span class="pr-play" aria-hidden="true">▶</span> } @else { <img [src]="m.url" alt="Parcel photo" loading="lazy" /> }
+                  </a>
                 }
-                Discard draft
-              </button>
-            </div>
+              </div>
+              </div>
+            }
+            @for (u of o.units; track u.id) {
+              <div class="pr-unit" [class.is-rejected]="u.review_status === 'rejected'" [class.is-approved]="u.review_status === 'approved'">
+                <div class="pr-unit-head">
+                  <div class="pr-unit-meta">
+                    <strong>{{ u.unit_title }}</strong>
+                    @if (u.code) { <span class="pr-code">{{ u.code }}</span> }
+                  </div>
+                  <span class="state-chip" [attr.data-state]="u.state">{{ u.state_label }}</span>
+                </div>
+                @if (u.receive_media?.length) {
+                  <div class="pr-grid">
+                    @for (m of u.receive_media; track m.url) {
+                      <a [href]="m.url" target="_blank" rel="noopener" class="pr-item" [attr.aria-label]="'Open ' + u.unit_title + (m.type === 'video' ? ' video' : ' photo')">
+                        @if (m.type === 'video') { <video [src]="m.url" preload="metadata" muted playsinline></video><span class="pr-play" aria-hidden="true">▶</span> } @else { <img [src]="m.url" alt="Article photo" loading="lazy" /> }
+                      </a>
+                    }
+                  </div>
+                } @else if (u.review_status === 'pending') {
+                  <span class="muted-note">No photos for this article.</span>
+                }
+
+                @if (isIssue(u)) {
+                  <!-- our team found a problem: the customer holds the article or returns it -->
+                  <div class="pr-issue" role="alert">
+                    <span class="pr-k">Problem found by our team@if (u.issue_type) { · {{ eventLabel(u.issue_type) }} }</span>
+                    <p>{{ u.issue_note || 'A problem was found with this article.' }}</p>
+                    @if (u.issue_media?.length) {
+                      <div class="pr-grid">
+                        @for (m of u.issue_media; track m.url) {
+                          <a [href]="m.url" target="_blank" rel="noopener" class="pr-item" aria-label="Open the photo of the problem">
+                            @if (m.type === 'video') { <video [src]="m.url" preload="metadata" muted playsinline></video><span class="pr-play" aria-hidden="true">▶</span> } @else { <img [src]="m.url" alt="The problem" loading="lazy" /> }
+                          </a>
+                        }
+                      </div>
+                    }
+                  </div>
+                  <div class="pr-actions">
+                    <button type="button" class="btn btn-outline btn-sm" (click)="openReject(u, 'hold')" [disabled]="!!pending()">
+                      <ion-icon name="pause-circle-outline" aria-hidden="true"></ion-icon> Hold
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm" (click)="openReject(u, 'return')" [disabled]="!!pending()">
+                      <ion-icon name="return-up-back-outline" aria-hidden="true"></ion-icon> Return
+                    </button>
+                  </div>
+                } @else if (u.review_status === 'pending') {
+                  <!-- no problem was reported: approve it, or reject it (then Return or Hold) -->
+                  <div class="pr-actions">
+                    <button type="button" class="btn btn-outline btn-sm" (click)="openReject(u)" [disabled]="!!pending()">
+                      <ion-icon name="close-circle-outline" aria-hidden="true"></ion-icon> Reject
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm" (click)="approveArticle(u)" [disabled]="!!pending()">
+                      @if (pending() === 'review' && pendingKey() === u.id) { <ion-spinner name="crescent"></ion-spinner> }
+                      <ion-icon name="checkmark-circle-outline" aria-hidden="true"></ion-icon> Approve
+                    </button>
+                  </div>
+                }
+                @if (u.review_status === 'rejected') {
+                  <div class="pr-reject">
+                    <span class="pr-k">Why you rejected it</span>
+                    <p>{{ u.review_note }}</p>
+                    @if (u.review_media?.length) {
+                      <div class="pr-grid">
+                        @for (m of u.review_media; track m.url) {
+                          <a [href]="m.url" target="_blank" rel="noopener" class="pr-item" aria-label="Open your photo"><img [src]="m.url" alt="Your photo" loading="lazy" /></a>
+                        }
+                      </div>
+                    }
+                    @if (u.return_status === 'held') {
+                      <p class="pr-step"><ion-icon name="pause-circle-outline" aria-hidden="true"></ion-icon> On hold. We keep it safe until you decide.</p>
+                    } @else if (u.return_status === 'requested') {
+                      <p class="pr-step"><ion-icon name="time-outline" aria-hidden="true"></ion-icon> Return requested. We will send it back to {{ returnLabel(u.return_to) }} and tell you here.</p>
+                    } @else if (u.return_status === 'sent_back') {
+                      <p class="pr-step"><ion-icon name="paper-plane-outline" aria-hidden="true"></ion-icon> Sent back to {{ returnLabel(u.return_to) }}@if (u.return_courier || u.return_tracking) { · {{ u.return_courier }} {{ u.return_tracking }} }.</p>
+                    }
+                  </div>
+                } @else if (u.return_status === 'sent_back') {
+                  <p class="pr-step"><ion-icon name="paper-plane-outline" aria-hidden="true"></ion-icon> Sent back to {{ returnLabel(u.return_to) }}.</p>
+                }
+              </div>
+            }
+            @if (reviewWaiting() > 1) {
+              <div class="pr-bulk">
+                <button type="button" class="btn btn-outline" (click)="openReject('parcel')" [disabled]="!!pending()">
+                  <ion-icon name="close-circle-outline" aria-hidden="true"></ion-icon> Reject parcel
+                </button>
+                @if (approvableCount() > 1) {
+                  <button type="button" class="btn btn-primary" (click)="approveParcel()" [disabled]="!!pending()">
+                    @if (pending() === 'parcel') { <ion-spinner name="crescent"></ion-spinner> }
+                    <ion-icon name="checkmark-done-outline" aria-hidden="true"></ion-icon> Approve all {{ approvableCount() }}
+                  </button>
+                }
+              </div>
+            }
           </div>
-        } @else {
-          <button type="button" class="btn btn-danger-outline btn-sm" (click)="confirmDiscard.set(true)">Discard draft</button>
         }
       </section>
     }
 
     @if (o.status === 'submitted') {
-      <section class="card">
+      <section class="od-cancel">
         <h3 class="card-title">Need to cancel?</h3>
         <p class="muted-note">You can edit or cancel this order until your parcel arrives at our atelier.</p>
         @if (confirmCancel()) {
@@ -666,6 +814,96 @@
         }
       </section>
     }
+    </div>
+    }
+    </section>
+
+    <!-- Return tracking: shown whenever articles were sent back -->
+    @if (returnInfo(); as ri) {
+      <section class="card return-card" aria-label="Your return">
+        <header class="rc-head">
+          <span class="rc-icon"><ion-icon name="return-up-back-outline" aria-hidden="true"></ion-icon></span>
+          <div>
+            <h4>{{ ri.step === 3 ? 'Return completed' : ri.step >= 1 ? 'Return in progress' : 'Return requested' }}</h4>
+            <p>
+              {{ ri.whole ? 'Whole parcel' : ri.rows.length + ' of ' + o.units.length + ' articles' }}
+              @if (ri.to) { · Returning to <b>{{ ri.to === 'brand' ? 'the brand' : 'you' }}</b> } @else { · Destination to be confirmed }
+            </p>
+          </div>
+        </header>
+
+        <ol class="rc-steps" aria-label="Return progress">
+          @for (st of returnSteps; track st; let i = $index) {
+            <li [class.done]="i < ri.step || ri.step === 3" [class.current]="i === ri.step && ri.step < 3"><span class="dot"></span><span class="lbl">{{ st }}</span></li>
+          }
+        </ol>
+
+        @if (ri.shipments.length) {
+          <div class="rc-ship">
+            @for (s of ri.shipments; track $index) {
+              <div class="rc-ship-row">
+                <div class="rc-field"><span class="rc-k">Courier</span><strong>{{ s.courier || '—' }}</strong>@if (s.status) { <small class="rc-state">{{ s.status }}@if (s.last) { · {{ s.last }} }</small> }</div>
+                <div class="rc-field"><span class="rc-k">CN / tracking ID</span>
+                  @if (s.tracking) {
+                    <span class="rc-track"><strong>{{ s.tracking }}</strong>
+                      <button type="button" class="rc-copy" (click)="copyTracking(s.tracking)" [attr.aria-label]="'Copy tracking number ' + s.tracking">
+                        <ion-icon [name]="copied() === s.tracking ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon>{{ copied() === s.tracking ? 'Copied' : 'Copy' }}
+                      </button>
+                    </span>
+                  } @else { <strong>—</strong> }
+                </div>
+              </div>
+            }
+          </div>
+        } @else if (ri.step === 0) {
+          <p class="rc-wait">We are arranging the return. The courier and CN will appear here as soon as it is booked.</p>
+        }
+
+        <ul class="rc-items">
+          @for (u of ri.rows; track u.id) {
+            <li><span>{{ u.unit_title }}@if (u.code) { <small>{{ u.code }}</small> }</span>
+              <em [attr.data-s]="u.return_status">{{ u.return_status === 'returned' ? 'Returned' : u.return_status === 'sent_back' ? (u.return_shipment?.status === 'in_transit' ? 'In transit' : 'With the courier') : u.return_shipment ? 'CN booked' : 'To be sent back' }}</em></li>
+          }
+        </ul>
+      </section>
+    }
+
+
+    <!-- A draft made automatically from an email: nothing has been sent to us yet -->
+    @if (o.status === 'draft') {
+      <section class="card draft-card">
+        <span class="draft-tag"><ion-icon name="mail-outline" aria-hidden="true"></ion-icon> Draft · from mail</span>
+        <h3 class="card-title">Finish your order</h3>
+        <p class="muted-note">
+          We made this order from your email{{ o.brand_order_number ? ' (order ' + o.brand_order_number + ')' : '' }}. Nothing has been sent to us yet.
+          Choose Complete draft order to add the sizes and stitching details, or delete the draft.
+        </p>
+        @if (confirmDiscard()) {
+          <div class="confirm-panel" role="alertdialog" aria-label="Confirm discarding the draft">
+            <p>Delete this draft? The email stays in your Inbox, so you can create the order again later.</p>
+            <div class="btn-row">
+              <button type="button" class="btn btn-outline btn-sm" (click)="confirmDiscard.set(false)" [disabled]="pending() === 'discard'">Keep draft</button>
+              <button type="button" class="btn btn-danger btn-sm" (click)="discardDraft()" [disabled]="pending() === 'discard'">
+                @if (pending() === 'discard') {
+                  <ion-spinner name="crescent"></ion-spinner>
+                }
+                Delete the draft
+              </button>
+            </div>
+          </div>
+        } @else {
+          <div class="btn-row draft-actions">
+            <button type="button" class="btn btn-danger-outline" (click)="confirmDiscard.set(true)">
+              <ion-icon name="trash-outline" aria-hidden="true"></ion-icon> Delete the draft
+            </button>
+            <a class="btn btn-primary" [routerLink]="['/app/orders', o.id, 'edit']">
+              <ion-icon name="create-outline" aria-hidden="true"></ion-icon> Complete draft order
+            </a>
+          </div>
+        }
+      </section>
+    }
+
 
     <!-- Order timeline (everything that happened to the whole order; collapsible) -->
     @if (timeline().length) {
@@ -715,13 +953,48 @@
           <ion-icon name="card-outline" aria-hidden="true"></ion-icon> Pay {{ payAmount() }}
         </button>
       </div>
+    } @else if (o.status === 'received' && o.details_pending && o.order_source === 'website') {
+      <div class="action-bar" role="region" aria-label="Complete your order">
+        @if (approvableCount() > 0) {
+          <div class="ab-text"><span class="ab-k">Your parcel arrived</span><span class="ab-sub">Approve or reject each article</span></div>
+          <button type="button" class="btn btn-primary" (click)="approveParcel()" [disabled]="!!pending()"><ion-icon name="checkmark-done-outline" aria-hidden="true"></ion-icon> Approve all</button>
+        } @else if (issuePending() > 0) {
+          <div class="ab-text"><span class="ab-k">A problem was found</span><span class="ab-sub">Open the article and choose Hold or Return</span></div>
+        } @else if (approvedCount() > 0) {
+          <div class="ab-text"><span class="ab-k">Approved</span><span class="ab-sub">Add sizes, then it goes to production</span></div>
+          <a class="btn btn-primary" [routerLink]="['/app/orders', o.id, 'edit']"><ion-icon name="create-outline" aria-hidden="true"></ion-icon> Add size</a>
+        } @else {
+          <div class="ab-text"><span class="ab-k">Parcel being returned</span><span class="ab-sub">We will tell you here</span></div>
+        }
+      </div>
     } @else if (o.status === 'draft' && !confirmDiscard()) {
       <div class="action-bar" role="region" aria-label="Draft actions">
-        <div class="ab-text">
-          <span class="ab-k">Draft · from mail</span>
-          <span class="ab-sub">Add courier and sizes, then submit</span>
-        </div>
-        <a class="btn btn-primary" [routerLink]="['/app/orders', o.id, 'edit']"><ion-icon name="create-outline" aria-hidden="true"></ion-icon> Complete order</a>
+        @if (reviewWaiting() > 0) {
+          <div class="ab-text">
+            <span class="ab-k">Your parcel arrived</span>
+            <span class="ab-sub">Approve or reject each article</span>
+          </div>
+          <button type="button" class="btn btn-primary" (click)="approveParcel()" [disabled]="!!pending()">
+            @if (pending() === 'parcel') { <ion-spinner name="crescent"></ion-spinner> }
+            <ion-icon name="checkmark-done-outline" aria-hidden="true"></ion-icon> Approve all
+          </button>
+        } @else if (approvedCount() > 0) {
+          <div class="ab-text">
+            <span class="ab-k">Approved</span>
+            <span class="ab-sub">Add sizes, then submit</span>
+          </div>
+          <a class="btn btn-primary" [routerLink]="['/app/orders', o.id, 'edit']"><ion-icon name="create-outline" aria-hidden="true"></ion-icon> Add size</a>
+        } @else if (reviewing()) {
+          <div class="ab-text">
+            <span class="ab-k">Waiting for the corrected article</span>
+            <span class="ab-sub">We will ask you to review it</span>
+          </div>
+        } @else {
+          <div class="ab-text">
+            <span class="ab-k">Waiting for your parcel</span>
+            <span class="ab-sub">You can complete the order once it arrives</span>
+          </div>
+        }
       </div>
     } @else if (o.status === 'submitted' && !confirmCancel()) {
       <div class="action-bar" role="region" aria-label="Order actions">
@@ -752,3 +1025,93 @@
     (closed)="payOpen.set(false)"
   />
 }
+
+<!-- Reject one article, or the whole parcel: a reason, and where it goes back to -->
+<app-sheet [open]="!!rejectFor()" [eyebrow]="rejectFor() === 'parcel' ? 'Reject parcel' : 'Reject article'" [title]="rejectTitle()" [locked]="rejectBusy()" (closed)="closeReject()">
+  <div class="rj">
+    <div class="rj-mode" role="radiogroup" aria-label="What should we do?">
+      <button type="button" role="radio" [class.on]="rejectMode() === 'return'" [attr.aria-checked]="rejectMode() === 'return'" (click)="rejectMode.set('return')">
+        <ion-icon name="return-up-back-outline" aria-hidden="true"></ion-icon><strong>Return</strong><small>Send it back with notes and photos</small>
+      </button>
+      <button type="button" role="radio" [class.on]="rejectMode() === 'hold'" [attr.aria-checked]="rejectMode() === 'hold'" (click)="rejectMode.set('hold')">
+        <ion-icon name="pause-circle-outline" aria-hidden="true"></ion-icon><strong>Hold</strong><small>Keep it with us for now</small>
+      </button>
+    </div>
+    <p class="rj-intro">
+      @if (rejectMode() === 'hold') { We keep {{ rejectFor() === 'parcel' ? 'the waiting articles' : 'this article' }} safe and do nothing else until you tell us. Write a short note. }
+      @else if (rejectFor() === 'parcel') { Tell us what is wrong with the parcel and where it should go back to. All {{ reviewWaiting() }} waiting articles are included. }
+      @else { Tell us what is wrong with this article and where the parcel should go back to. }
+    </p>
+
+    <div class="field">
+      <label for="reject-note">{{ rejectMode() === 'hold' ? 'Why are you holding it?' : 'What is wrong?' }} <span class="req">required</span></label>
+      <textarea id="reject-note" class="textarea" rows="4" maxlength="1000" [placeholder]="rejectMode() === 'hold' ? 'e.g. I will decide after checking the colour in daylight' : 'e.g. Wrong colour, torn at the hem'" [ngModel]="rejectNote()" (ngModelChange)="rejectNote.set($event)"></textarea>
+      @if (rejectTouched() && rejectNote().trim().length < 3) { <span class="field-error">Please write a short note.</span> }
+    </div>
+
+    @if (rejectMode() === 'return') {
+    <div class="field">
+      <span class="field-label" id="dest-label">Where should the parcel go back to?@if (returnTargets().length > 1) { <span class="req">required</span> }</span>
+      @if (returnTargets().length > 1) {
+        <div class="dest" role="radiogroup" aria-labelledby="dest-label">
+          <button type="button" role="radio" class="dest-opt" [class.on]="returnTo() === 'brand'" [attr.aria-checked]="returnTo() === 'brand'" (click)="returnTo.set('brand')">
+            <ion-icon name="storefront-outline" aria-hidden="true"></ion-icon>
+            <span><strong>Send parcel directly to the brand</strong><small>We post it back to the brand you bought from.</small></span>
+          </button>
+          <button type="button" role="radio" class="dest-opt" [class.on]="returnTo() === 'customer'" [attr.aria-checked]="returnTo() === 'customer'" (click)="returnTo.set('customer')">
+            <ion-icon name="home-outline" aria-hidden="true"></ion-icon>
+            <span><strong>Send parcel directly to me</strong><small>We post it to your delivery address.</small></span>
+          </button>
+        </div>
+        @if (rejectTouched() && !returnTo()) { <span class="field-error">Choose where the parcel should go.</span> }
+      } @else {
+        <p class="dest-fixed"><ion-icon name="home-outline" aria-hidden="true"></ion-icon><span>We will send the parcel back to you, and you can follow it here.</span></p>
+      }
+    </div>
+
+    @if (needsShipping()) {
+    <div class="field ship-fields">
+      <span class="field-label">Shipping details for this return <span class="req">required</span></span>
+      <p class="ship-hint">We use your delivery address. Change anything that should be different for this return.</p>
+      <div class="ship-grid">
+        <div class="field"><label for="rs-name">Name</label><input id="rs-name" class="input" autocomplete="name" [ngModel]="rejectShip().name" (ngModelChange)="setShip({ name: $event })" /></div>
+        <div class="field"><label for="rs-phone">Phone</label><input id="rs-phone" class="input" type="tel" inputmode="tel" autocomplete="tel" [ngModel]="rejectShip().phone" (ngModelChange)="setShip({ phone: $event })" />
+          @if (rejectTouched() && rejectShip().phone.replace('+', '').replace(' ', '').length < 7) { <span class="field-error">Enter a phone number.</span> }</div>
+      </div>
+      <div class="field"><label for="rs-addr">Address</label><textarea id="rs-addr" class="textarea" rows="2" autocomplete="street-address" placeholder="House, street, area" [ngModel]="rejectShip().address" (ngModelChange)="setShip({ address: $event })"></textarea>
+        @if (rejectTouched() && !rejectShip().address.trim()) { <span class="field-error">Enter the address.</span> }</div>
+      <div class="ship-grid">
+        <div class="field"><label for="rs-city">City</label><input id="rs-city" class="input" autocomplete="address-level2" [ngModel]="rejectShip().city" (ngModelChange)="setShip({ city: $event })" />
+          @if (rejectTouched() && !rejectShip().city.trim()) { <span class="field-error">Enter the city.</span> }</div>
+        <div class="field"><label for="rs-country">Country</label><input id="rs-country" class="input" autocomplete="country-name" [ngModel]="rejectShip().country" (ngModelChange)="setShip({ country: $event })" /></div>
+      </div>
+    </div>
+    }
+
+    <div class="field">
+      <span class="field-label">Photos <span class="opt">optional · up to 4</span></span>
+      <div class="photos">
+        @for (p of rejectPhotos(); track $index) {
+          <div class="photo">
+            <img [src]="p.dataUrl" [alt]="p.name" />
+            <button type="button" (click)="removeRejectPhoto($index)" aria-label="Remove photo"><ion-icon name="close-outline" aria-hidden="true"></ion-icon></button>
+          </div>
+        }
+        @if (rejectPhotos().length < 4) {
+          <label class="photo add">
+            <ion-icon name="camera-outline" aria-hidden="true"></ion-icon><span>Add photo</span>
+            <input type="file" accept="image/*" multiple (change)="onRejectPhotos($any($event.target))" aria-label="Add photos of the problem" />
+          </label>
+        }
+      </div>
+    </div>
+    }
+  </div>
+  <div sheet-footer class="reject-foot">
+    <button type="button" class="btn btn-outline" (click)="closeReject()" [disabled]="rejectBusy()">Cancel</button>
+    <button type="button" class="btn btn-danger" (click)="submitReject()" [disabled]="rejectBusy()">
+      @if (rejectBusy()) { <ion-spinner name="crescent"></ion-spinner> }
+      {{ rejectMode() === 'hold' ? 'Put on hold' : rejectFor() === 'parcel' ? 'Reject parcel' : 'Reject article' }}
+    </button>
+  </div>
+</app-sheet>

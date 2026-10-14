@@ -74,7 +74,7 @@ export function progressIndex(status: OrderStatus): number {
 export function statusHint(status: OrderStatus): string {
   switch (status) {
     case 'draft':
-      return 'We made this draft from your email. Add your courier and sizes, then submit it.';
+      return 'We made this draft from your email. Add your size, then submit it.';
     case 'submitted':
       return 'Waiting for your parcel to arrive at our atelier.';
     case 'received':

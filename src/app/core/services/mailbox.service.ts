@@ -42,15 +42,21 @@ export class MailboxService {
     return this.api.get<Mailbox>('/client/inbox/address').pipe(tap((m) => this.unread.set(m.unread)));
   }
 
-  list(query: { page: number; limit?: number; search?: string; unread?: boolean }): Observable<Paged<InboxRow, { unread: number }>> {
+  list(query: { page: number; limit?: number; search?: string; unread?: boolean; sent?: boolean }): Observable<Paged<InboxRow, { unread: number }>> {
     return this.api
       .getPage<InboxRow, { unread: number }>('/client/inbox', {
         page: query.page,
         limit: query.limit ?? 20,
         search: query.search,
         unread: query.unread ? 1 : undefined,
+        box: query.sent ? 'sent' : undefined,
       })
       .pipe(tap(({ meta }) => typeof meta.unread === 'number' && this.unread.set(meta.unread)));
+  }
+
+  /** A new email, or a reply when `replyToId` is set. Pictures go as data URLs. */
+  send(body: { to?: string; subject?: string; text: string; replyToId?: string; attachments?: { name: string; dataUrl: string }[] }): Observable<ApiResult<{ id: string; to: string; subject: string }>> {
+    return this.api.post<{ id: string; to: string; subject: string }>('/client/inbox/send', body);
   }
 
   /** Opening an email marks it read. */

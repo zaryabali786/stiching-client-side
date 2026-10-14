@@ -5,6 +5,8 @@ import { ChatInboxService, InboxChat } from '../core/services/chat-inbox.service
 import { ChatUiService } from '../core/services/chat-ui.service';
 import { ChatFabComponent } from './chat-fab.component';
 import { ChatPanelComponent } from './chat-panel.component';
+import { SupportChatPanelComponent } from './support-chat-panel.component';
+import { SupportChatService } from '../core/services/support-chat.service';
 import { SheetComponent } from './sheet.component';
 import { EmptyStateComponent, ErrorStateComponent, SkeletonComponent } from './ui-states';
 import { TimeAgoPipe } from './time-ago.pipe';
@@ -16,12 +18,12 @@ import { TimeAgoPipe } from './time-ago.pipe';
  */
 @Component({
   selector: 'app-chat-dock',
-  imports: [RouterLink, IonIcon, ChatFabComponent, ChatPanelComponent, SheetComponent, SkeletonComponent, EmptyStateComponent, ErrorStateComponent, TimeAgoPipe],
+  imports: [RouterLink, IonIcon, ChatFabComponent, ChatPanelComponent, SupportChatPanelComponent, SheetComponent, SkeletonComponent, EmptyStateComponent, ErrorStateComponent, TimeAgoPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-chat-fab [unread]="fabUnread()" [pulseKey]="pulse()" [layoutKey]="layoutKey()" (activated)="onFab()" />
 
-    <app-sheet [open]="open()" [tall]="true" [flush]="!!target()" [title]="title()" [eyebrow]="eyebrow()" (closed)="ui.close()">
+    <app-sheet [open]="open()" [tall]="true" [flush]="!!target() || ui.supportOpen()" [title]="title()" [eyebrow]="eyebrow()" (closed)="ui.close()">
       @if (target(); as t) {
         <div class="wrap">
           @if (t.fromList) {
@@ -34,6 +36,8 @@ import { TimeAgoPipe } from './time-ago.pipe';
           }
           <app-chat-panel [orderId]="t.orderId" [unitId]="t.unitId" [fill]="true" (read)="onRead(t.orderId)" />
         </div>
+      } @else if (ui.supportOpen()) {
+        <app-support-chat-panel />
       } @else if (ui.listOpen()) {
         @if (inbox.loading() && !inbox.items().length) {
           <app-skeleton variant="tiles" [count]="3" />
@@ -103,18 +107,19 @@ import { TimeAgoPipe } from './time-ago.pipe';
 export class ChatDockComponent {
   protected ui = inject(ChatUiService);
   protected inbox = inject(ChatInboxService);
+  protected support = inject(SupportChatService);
 
   /** Anything that changes the bars at the bottom (tab bar, sticky action bar): the button re-clamps. */
   readonly layoutKey = input<unknown>(null);
 
   protected target = this.ui.target;
-  protected open = computed(() => this.ui.listOpen() || !!this.ui.target());
-  protected title = computed(() => this.ui.target()?.title ?? 'Your chats');
-  protected eyebrow = computed(() => this.ui.target()?.reference ?? 'Messages');
+  protected open = computed(() => this.ui.listOpen() || this.ui.supportOpen() || !!this.ui.target());
+  protected title = computed(() => (this.ui.supportOpen() ? 'Chat with us' : this.ui.target()?.title ?? 'Your chats'));
+  protected eyebrow = computed(() => (this.ui.supportOpen() ? 'Support' : this.ui.target()?.reference ?? 'Messages'));
   /** On an order page the button shows that order's General unread; elsewhere the total over all orders. */
   protected fabUnread = computed(() => {
     const page = this.ui.pageOrder();
-    return page ? this.inbox.generalUnreadOf(page.id) : this.inbox.totalUnread();
+    return page ? this.inbox.generalUnreadOf(page.id) : this.support.unread();
   });
   /** Bumped when unread grows while the chat is closed (the button pulses). */
   protected pulse = signal(0);
@@ -122,7 +127,7 @@ export class ChatDockComponent {
   constructor() {
     let prev: number | null = null;
     effect(() => {
-      const n = this.inbox.totalUnread();
+      const n = this.inbox.totalUnread() + this.support.unread();
       const loaded = this.inbox.loaded();
       untracked(() => {
         if (loaded && prev !== null && n > prev && !this.open()) this.pulse.update((x) => x + 1);
@@ -137,8 +142,8 @@ export class ChatDockComponent {
       this.ui.openChat({ orderId: page.id, reference: page.reference, unitId: 'general', title: 'Chat' });
       return;
     }
-    this.inbox.reload(true);
-    this.ui.openList();
+    // outside an order page the button is the general chat with our team (no list of order chats)
+    this.ui.openSupport();
   }
 
   protected openFromList(c: InboxChat): void {

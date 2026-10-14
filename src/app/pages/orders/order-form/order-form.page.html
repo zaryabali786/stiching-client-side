@@ -10,7 +10,7 @@
       </a>
     }
     <div>
-      <span class="eyebrow">{{ isDraft() ? 'Draft · from mail' : isEdit() ? 'Edit order' : 'New order' }} · Step {{ step() }} of 3</span>
+      <span class="eyebrow">{{ isDraft() ? 'Draft · from mail' : isEdit() ? 'Edit order' : 'New order' }} · Step {{ stepNo() }} of {{ stepCount() }}</span>
       <h1 class="page-title">{{ stepTitle() }}</h1>
     </div>
   </header>
@@ -32,25 +32,25 @@
     <!-- Stepper -->
     <nav class="stepper" aria-label="Order steps">
       <ol>
-        @for (label of stepLabels; track label; let i = $index) {
+        @for (st of stepList(); track st.n; let i = $index) {
           <li>
             <button
               type="button"
               class="step"
-              [class.current]="step() === i + 1"
-              [class.done]="step() > i + 1"
-              [attr.aria-current]="step() === i + 1 ? 'step' : null"
-              (click)="goTo($any(i + 1))"
+              [class.current]="step() === st.n"
+              [class.done]="step() > st.n"
+              [attr.aria-current]="step() === st.n ? 'step' : null"
+              (click)="goTo(st.n)"
             >
               <span class="num" aria-hidden="true">
-                @if (step() > i + 1) {
+                @if (step() > st.n) {
                   <ion-icon name="checkmark-outline"></ion-icon>
                 } @else {
                   {{ i + 1 }}
                 }
               </span>
-              <span class="lbl">{{ label }}</span>
-              @if (step() > i + 1) {
+              <span class="lbl">{{ st.label }}</span>
+              @if (step() > st.n) {
                 <span class="sr-only">(done)</span>
               }
             </button>
@@ -80,52 +80,6 @@
         }
       }
 
-      <!-- Which stitching partner this order goes to: its articles are offered and its address is where the parcel is sent -->
-      @if (partnerLocked()) {
-        @if (partner(); as lp) {
-          <section class="card partner-card locked" aria-label="Stitching partner">
-            <span class="pc-ico" aria-hidden="true"><ion-icon name="cut-outline"></ion-icon></span>
-            <div class="pc-body"><span class="pc-k">Stitching partner</span><strong>{{ lp.name }}</strong><small>This order is with {{ lp.name }}, so it cannot change.</small></div>
-          </section>
-        }
-      } @else if (choice.partners().length) {
-        <section class="card partner-pick" aria-labelledby="pp-title">
-          <div class="pp-head">
-            <h3 id="pp-title" class="card-title">Who will stitch it?</h3>
-            <p class="hint">Choose a stitching partner. You will see their articles, and the address to send your parcel to.</p>
-          </div>
-          <div class="pp-list" role="radiogroup" aria-label="Stitching partner" [class.invalid]="showError('partner')">
-            @for (p of choice.partners(); track p.id) {
-              <button type="button" class="pp-card" role="radio" [class.on]="partner()?.id === p.id" [attr.aria-checked]="partner()?.id === p.id" (click)="choosePartner(p); touch('partner')">
-                <span class="pp-avatar" aria-hidden="true">{{ p.name.charAt(0) }}</span>
-                <span class="pp-text">
-                  <span class="pp-name">{{ p.name }}
-                    @if (p.recommended) { <span class="pp-badge">Recommended</span> }
-                  </span>
-                  <span class="pp-meta">
-                    @if (p.city) { <span><ion-icon name="location-outline" aria-hidden="true"></ion-icon>{{ p.city }}</span> }
-                    @if (p.turnaround_days) { <span><ion-icon name="time-outline" aria-hidden="true"></ion-icon>about {{ p.turnaround_days }} days</span> }
-                  </span>
-                  @if (p.tagline) { <span class="pp-tag">{{ p.tagline }}</span> }
-                </span>
-                <span class="pp-radio" aria-hidden="true"></span>
-              </button>
-            }
-          </div>
-          @if (showError('partner')) { <p class="field-error" role="alert">{{ step1Errors().partner }}</p> }
-          @if (partner(); as sel) {
-            <div class="pp-ship">
-              <span class="pp-ship-ico" aria-hidden="true"><ion-icon name="location-outline"></ion-icon></span>
-              <div>
-                <span class="pp-ship-k">You will send your parcel to</span>
-                <strong>{{ sel.receiving.name }}</strong>
-                <span>{{ sel.receiving.address }}@if (sel.receiving.city) {, {{ sel.receiving.city }}}</span>
-                @if (sel.short_code) { <small>Write your customer code and <b class="mono">{{ sel.short_code }}</b> on the parcel label.</small> }
-              </div>
-            </div>
-          }
-        </section>
-      }
 
       <section class="card stack-lg">
         <app-search-select
@@ -155,56 +109,42 @@
         </div>
 
         <app-search-select
-          #courierSel
           label="Courier"
           placeholder="Search or choose a courier"
           searchPlaceholder="Type a courier name…"
-          [required]="true"
+          [required]="false"
           [value]="courier()"
           [fetch]="fetchCouriers"
           [itemLabel]="courierLabel"
           [itemSubtitle]="courierSub"
-          hint="The courier delivering your parcel from the brand to us."
-          [invalid]="showError('courier')"
-          [error]="step1Errors().courier ?? ''"
-          (selected)="courier.set($event); touch('courier')"
+          hint="Optional. Add it now, or later when the brand sends you the dispatch email."
+          (selected)="courier.set($event)"
           (cleared)="courier.set(null)"
-          (touched)="touch('courier')"
         />
+        @if (!courier() && emailCourierName()) {
+          <p class="note ok" role="status">
+            <ion-icon name="mail-outline" aria-hidden="true"></ion-icon>
+            <span>Courier read from your email: <b>{{ emailCourierName() }}</b></span>
+          </p>
+        }
 
         <div class="field">
           <label for="trk">
             Tracking number
-            @if (trackingRequired()) {
-              <span class="req">required</span>
-            } @else {
-              <span class="opt">optional</span>
-            }
+            <span class="opt">optional</span>
           </label>
           <input
             id="trk"
             class="input"
             placeholder="e.g. TCS 123456"
             autocomplete="off"
-            [class.invalid]="showError('tracking')"
-            [attr.aria-invalid]="showError('tracking')"
-            [attr.aria-required]="trackingRequired()"
-            [attr.aria-describedby]="showError('tracking') ? 'trk-err' : 'trk-hint'"
             [ngModel]="trackingNumber()"
             (ngModelChange)="trackingNumber.set($event)"
-            (blur)="touch('tracking')"
+            aria-describedby="trk-hint"
           />
-          @if (showError('tracking')) {
-            <span class="field-error" id="trk-err" role="alert">{{ step1Errors().tracking }}</span>
-          } @else {
-            <span class="hint" id="trk-hint">
-              {{
-                trackingRequired()
-                  ? 'Required for ' + courier()!.name + '. You will find it in the brand’s dispatch email or SMS.'
-                  : 'Optional. Add it if the courier gave you one; it helps us match your parcel.'
-              }}
-            </span>
-          }
+          <span class="hint" id="trk-hint">
+            Optional. If you leave it empty, we add the courier and tracking number ourselves when the brand's dispatch email reaches your Inbox.
+          </span>
         </div>
 
         <div class="field">
@@ -261,6 +201,17 @@
 
     <!-- ───────── STEP 2 · Articles ───────── -->
     @if (step() === 2) {
+      @if (emailOrder()) {
+        <section class="card facts" aria-label="Order details from your email">
+          <div class="fact"><span class="fact-k">Brand</span><strong>{{ brand()?.name || '—' }}</strong></div>
+          @if (trackingNumber().trim()) {
+            <div class="fact"><span class="fact-k">Tracking ID</span><strong class="mono">{{ trackingNumber() }}</strong></div>
+          }
+          @if (brandOrderNumber().trim()) {
+            <div class="fact"><span class="fact-k">Brand order no.</span><strong class="mono">{{ brandOrderNumber() }}</strong></div>
+          }
+        </section>
+      }
       @for (a of articles(); track a.key; let i = $index) {
         <article class="card article" [class.has-error]="showErrors() && hasErrors(i)">
           <button type="button" class="article-head" (click)="toggleArticle(a)" [attr.aria-expanded]="a.open" [attr.aria-controls]="'art-body-' + a.key">
@@ -274,7 +225,7 @@
               @if (showErrors() && hasErrors(i) && !a.open) {
                 <span class="meta err">Needs attention — tap to fix</span>
               } @else {
-                <span class="meta">{{ a.size_chart_id ? chartLabel(a.size_chart_id) : 'No size chart' }} · Qty {{ a.quantity }}</span>
+                <span class="meta">{{ a.size_chart_id ? chartLabel(a.size_chart_id) : 'No size chart' }} · Qty {{ a.quantity }}@if (a.brand) { · {{ a.brand.name }} }@if (hasPrices()) { · {{ money(priceOf(a)) }} }</span>
               }
               @if (chips(a).length) {
                 <div class="opt-chips">
@@ -294,59 +245,107 @@
           </button>
 
           @if (a.open) {
-            <div class="article-body" [id]="'art-body-' + a.key">
+            <fieldset class="article-body" [disabled]="a.locked" [id]="'art-body-' + a.key">
+              @if (a.locked) {
+                <p class="locked-note" role="status"><ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon> You can edit this article after we receive it and you approve it.</p>
+              }
               <!-- Product -->
               <div class="sub">
-                  <div class="field">
-                    <label [for]="'link' + a.key">Product link <span class="opt">optional</span></label>
-                    <div class="link-row">
-                      <div class="input-affix leading">
-                        <ion-icon class="affix-icon" name="link-outline" aria-hidden="true"></ion-icon>
-                        <input
-                          [id]="'link' + a.key"
-                          class="input"
-                          type="url"
-                          inputmode="url"
-                          autocomplete="off"
-                          placeholder="https://brand.com/product"
-                          [class.invalid]="showErrors() && articleErrors()[i]['link']"
-                          [attr.aria-invalid]="showErrors() && !!articleErrors()[i]['link']"
-                          [ngModel]="a.product_link"
-                          (ngModelChange)="setLink(a, $event)"
-                          (keydown.enter)="$event.preventDefault(); fetchPreview(a)"
-                        />
+                  <!-- an order made from an email already knows its products, so there is no product link to fill in -->
+                  @if (!emailOrder() && !simple()) {
+                    <div class="field">
+                      <label [for]="'link' + a.key">Product link <span class="opt">optional</span></label>
+                      <div class="link-row">
+                        <div class="input-affix leading">
+                          <ion-icon class="affix-icon" name="link-outline" aria-hidden="true"></ion-icon>
+                          <input
+                            [id]="'link' + a.key"
+                            class="input"
+                            type="url"
+                            inputmode="url"
+                            autocomplete="off"
+                            placeholder="https://brand.com/product"
+                            [class.invalid]="showErrors() && articleErrors()[i]['link']"
+                            [attr.aria-invalid]="showErrors() && !!articleErrors()[i]['link']"
+                            [ngModel]="a.product_link"
+                            (ngModelChange)="setLink(a, $event)"
+                            (keydown.enter)="$event.preventDefault(); fetchPreview(a)"
+                          />
+                        </div>
+                        <button type="button" class="btn btn-outline btn-sm" (click)="fetchPreview(a)" [disabled]="!a.product_link.trim() || a.preview.state === 'loading'">
+                          @if (a.preview.state === 'loading') {
+                            <ion-spinner name="crescent"></ion-spinner> Fetching…
+                          } @else {
+                            Fetch details
+                          }
+                        </button>
                       </div>
-                      <button type="button" class="btn btn-outline btn-sm" (click)="fetchPreview(a)" [disabled]="!a.product_link.trim() || a.preview.state === 'loading'">
-                        @if (a.preview.state === 'loading') {
-                          <ion-spinner name="crescent"></ion-spinner> Fetching…
-                        } @else {
-                          Fetch details
-                        }
-                      </button>
+                      @if (showErrors() && articleErrors()[i]['link']) {
+                        <span class="field-error">{{ articleErrors()[i]['link'] }}</span>
+                      }
+                      @if (a.preview.state === 'failed') {
+                        <p class="note warn" role="status">
+                          <ion-icon name="alert-circle-outline" aria-hidden="true"></ion-icon>
+                          <span>{{ a.preview.message }} You can type the product name below.</span>
+                        </p>
+                      } @else if (a.preview.state === 'ok') {
+                        <p class="note ok" role="status">
+                          <ion-icon name="checkmark-circle-outline" aria-hidden="true"></ion-icon>
+                          <span>Found it. Check the name below.</span>
+                        </p>
+                      }
                     </div>
-                    @if (showErrors() && articleErrors()[i]['link']) {
-                      <span class="field-error">{{ articleErrors()[i]['link'] }}</span>
-                    }
-                    @if (a.preview.state === 'failed') {
-                      <p class="note warn" role="status">
-                        <ion-icon name="alert-circle-outline" aria-hidden="true"></ion-icon>
-                        <span>{{ a.preview.message }} You can type the product name below.</span>
-                      </p>
-                    } @else if (a.preview.state === 'ok') {
-                      <p class="note ok" role="status">
-                        <ion-icon name="checkmark-circle-outline" aria-hidden="true"></ion-icon>
-                        <span>Found it. Check the name below.</span>
-                      </p>
-                    }
-                  </div>
+                  }
 
+                @if (simple()) {
+                  @if (otherFor() === a.key) {
+                    <div class="field other-brand">
+                      <label [for]="'other-brand-' + a.key">Brand <span class="req">required</span></label>
+                      <div class="link-row">
+                        <input [id]="'other-brand-' + a.key" class="input" placeholder="Type the brand's name" autocomplete="off" maxlength="80"
+                          [ngModel]="otherName()" (ngModelChange)="otherName.set($event)" (keydown.enter)="$event.preventDefault(); saveOther(a)" />
+                        <button type="button" class="btn btn-primary btn-sm" (click)="saveOther(a)" [disabled]="creatingBrand()">Add</button>
+                        <button type="button" class="btn btn-ghost btn-sm" (click)="otherFor.set(null)">Cancel</button>
+                      </div>
+                      <span class="hint">Not in the list? Type the brand's name and add it.</span>
+                    </div>
+                  } @else {
+                    <app-search-select
+                      label="Brand"
+                      placeholder="Search or choose a brand"
+                      searchPlaceholder="Type a brand name…"
+                      createLabel="new brand"
+                      busyText="Adding brand…"
+                      [required]="true"
+                      [allowCreate]="false"
+                      otherLabel="Other"
+                      (other)="openOther(a)"
+                      [value]="a.brand"
+                      [fetch]="fetchBrands"
+                      [itemLabel]="brandLabel"
+                      [busy]="creatingBrand()"
+                      [invalid]="showErrors() && !!articleErrors()[i]['brand']"
+                      [error]="articleErrors()[i]['brand'] ?? ''"
+                      (selected)="patchArticle(a.key, { brand: $event })"
+                      (cleared)="patchArticle(a.key, { brand: null })"
+                      (create)="onArticleBrandCreate(a, $event)"
+                    />
+                  }
+                }
+
+                @if (emailOrder() && a.product_image_url) {
+                  <figure class="cloth"><img [src]="a.product_image_url" alt="Cloth from your order email" referrerpolicy="no-referrer" loading="lazy" /><figcaption>Cloth from your email</figcaption></figure>
+                }
                 <div class="product-row">
-                  @if (a.product_image_url) {
+                  @if (a.product_image_url && !emailOrder()) {
                     <div class="product-img">
                       <img [src]="a.product_image_url" alt="Product picture" referrerpolicy="no-referrer" />
                       <button type="button" (click)="clearImage(a)" aria-label="Remove product picture"><ion-icon name="close-outline" aria-hidden="true"></ion-icon></button>
                     </div>
                   }
+                  @if (emailOrder()) {
+                    <div class="field grow"><span class="field-label">Product</span><strong class="readonly-text">{{ a.unit_title }}</strong></div>
+                  } @else {
                   <div class="field grow">
                     <label [for]="'title' + a.key">Product name <span class="req">required</span></label>
                     <input
@@ -363,6 +362,7 @@
                       <span class="field-error" [id]="'title-err' + a.key">{{ articleErrors()[i]['title'] }}</span>
                     }
                   </div>
+                  }
                 </div>
               </div>
 
@@ -406,7 +406,7 @@
                     <span>{{ typesError() }} <button type="button" class="link-btn" (click)="retryTypes()">Retry</button></span>
                   </div>
                 } @else if (!types().length) {
-                  <app-empty-state icon="shirt-outline" title="No customisation options yet" message="You can continue without. Add notes for the tailor below if you need something specific." />
+                  <app-empty-state icon="shirt-outline" title="No customisation options yet" message="You can continue without. Add notes for the specific product below if you need something specific." />
                 } @else {
                   @for (t of types(); track t.id) {
                     <app-search-select
@@ -417,6 +417,7 @@
                       [fetch]="articleFetch(t.id)"
                       [itemLabel]="articleLabel"
                       [itemImage]="articleImage"
+                      [itemSubtitle]="articlePriceSub"
                       (selected)="pick(a, t.id, $event)"
                       (cleared)="unpick(a, t.id)"
                     />
@@ -445,7 +446,7 @@
               </div>
 
               <div class="field">
-                <label [for]="'anotes' + a.key">Notes for the tailor <span class="opt">optional</span></label>
+                <label [for]="'anotes' + a.key">Notes for the specific product <span class="opt">optional</span></label>
                 <textarea [id]="'anotes' + a.key" class="textarea" rows="2" placeholder="e.g. Add lining, keep embroidery centred" [ngModel]="a.notes" (ngModelChange)="patchArticle(a.key, { notes: $event })"></textarea>
                 <app-voice-note-field [value]="a.notes_audio" (valueChange)="patchArticle(a.key, { notes_audio: $event })" (busy)="setAudioBusy(a.key, $event)" />
               </div>
@@ -478,6 +479,8 @@
                 <span class="hint">Lace, neckline or design ideas. Large photos are resized automatically.</span>
               </div>
 
+              <!-- an email order has one article per unit, so there is no quantity to set -->
+              @if (!emailOrder()) {
               <div class="qty-row">
                 <span class="field-label">Quantity</span>
                 <div class="stepper-qty">
@@ -486,9 +489,14 @@
                   <button type="button" (click)="setQuantity(a, 1)" [disabled]="a.quantity >= 20" aria-label="Increase quantity"><ion-icon name="add-outline" aria-hidden="true"></ion-icon></button>
                 </div>
               </div>
+              }
+
+              @if (hasPrices()) {
+                <div class="price-row" aria-live="polite"><span>Article price</span><strong>{{ money(priceOf(a)) }}</strong></div>
+              }
 
               <div class="article-foot">
-                @if (articles().length > 1) {
+                @if (articles().length > 1 && !emailOrder()) {
                   <button type="button" class="btn btn-danger-outline btn-sm" (click)="removeArticle(a)">
                     <ion-icon name="trash-outline" aria-hidden="true"></ion-icon> Remove
                   </button>
@@ -497,21 +505,30 @@
                   <ion-icon name="chevron-up-outline" aria-hidden="true"></ion-icon> Collapse
                 </button>
               </div>
-            </div>
+            </fieldset>
           }
         </article>
       }
 
-      <button type="button" class="add-article" (click)="addArticle()">
-        <ion-icon name="add-outline" aria-hidden="true"></ion-icon> Add another article
-      </button>
+      @if (!emailOrder()) {
+        <button type="button" class="add-article" (click)="addArticle()">
+          <ion-icon name="add-outline" aria-hidden="true"></ion-icon> Add another article
+        </button>
+      }
+
+      @if (hasPrices()) {
+        <div class="card total-card" aria-live="polite">
+          <span>Total of all articles</span>
+          <strong>{{ money(total()) }}</strong>
+        </div>
+      }
     }
 
     <!-- ───────── STEP 3 · Notes & review ───────── -->
     @if (step() === 3) {
       <section class="card stack-lg">
         <div class="field">
-          <label for="note">Message for the partner <span class="opt">optional</span></label>
+          <label for="note">Notes for complete order <span class="opt">optional</span></label>
           <textarea id="note" class="textarea" rows="3" maxlength="2000" placeholder="Anything we should know about this order" [ngModel]="note()" (ngModelChange)="note.set($event)"></textarea>
           <span class="hint">We'll show this at the top of your conversation with the team.</span>
         </div>
@@ -530,11 +547,12 @@
           <h3 class="card-title">Order</h3>
           <button type="button" class="link-btn" (click)="goTo(1)" aria-label="Edit order details">Edit</button>
         </div>
-        @if (partner(); as rp) { <div class="kv"><span class="k">Stitching partner</span><span class="v">{{ rp.name }}@if (rp.short_code) { <span class="mono"> · {{ rp.short_code }}</span> }</span></div> }
+        @if (!simple()) {
         <div class="kv"><span class="k">Brand</span><span class="v">{{ brand()?.name }}</span></div>
         <div class="kv"><span class="k">Brand order no.</span><span class="v">{{ brandOrderNumber() || '—' }}</span></div>
-        <div class="kv"><span class="k">Courier</span><span class="v">{{ courier()?.name }}</span></div>
-        <div class="kv"><span class="k">Tracking no.</span><span class="v">{{ trackingNumber() || '—' }}</span></div>
+        @if (courier()?.name) { <div class="kv"><span class="k">Courier</span><span class="v">{{ courier()?.name }}</span></div> }
+        @if (trackingNumber().trim()) { <div class="kv"><span class="k">Tracking ID</span><span class="v mono">{{ trackingNumber() }}</span></div> }
+        }
         <div class="kv"><span class="k">International shipping</span><span class="v">{{ international() ? 'Yes' : 'No' }}</span></div>
         <div class="kv"><span class="k">Shipping type</span><span class="v">{{ shippingType() === 'express' ? 'Express shipping' : 'Standard shipping' }}</span></div>
       </section>
@@ -554,10 +572,11 @@
               }
               <div>
                 <strong>{{ a.unit_title }}</strong>
-                @if (a.product_link.trim()) {
+                @if (!emailOrder() && !simple() && a.product_link.trim()) {
                   <span>{{ hostOf(a.product_link) }}</span>
                 }
-                <span>Qty {{ a.quantity }}</span>
+                @if (a.brand) { <span>{{ a.brand.name }}</span> }
+                <span>Qty {{ a.quantity }}@if (hasPrices()) { · {{ money(priceOf(a)) }} }</span>
                 @if (chartOf(a.size_chart_id); as chart) {
                   <app-size-summary [chart]="chart" />
                 } @else {
@@ -593,11 +612,86 @@
             </div>
           }
         </div>
+        @if (hasPrices()) {
+          <div class="price-row total" aria-live="polite"><span>Total</span><strong>{{ money(total()) }}</strong></div>
+        }
       </section>
 
-      @if (!isEdit()) {
-        <app-ship-to-card eyebrow="Next step" heading="Then ship your parcel to us" [compact]="true" [partner]="partner()" />
+      @if (twoStep() && !intlKnown()) {
+        <section class="card stack-lg">
+        <div class="field">
+          <span class="field-label" id="intl-label">International shipping <span class="req">required</span></span>
+          <div
+            class="segmented block"
+            [class.invalid]="showError('international')"
+            role="radiogroup"
+            aria-labelledby="intl-label"
+            [attr.aria-describedby]="showError('international') ? 'intl-err' : 'intl-hint'"
+            aria-required="true"
+          >
+            <button
+              id="intl-yes"
+              type="button"
+              role="radio"
+              [attr.aria-checked]="international() === true"
+              [attr.tabindex]="international() === false ? -1 : 0"
+              [class.active]="international() === true"
+              (click)="chooseInternational(true)"
+              (keydown)="onIntlKey($event)"
+            >
+              Yes
+            </button>
+            <button
+              id="intl-no"
+              type="button"
+              role="radio"
+              [attr.aria-checked]="international() === false"
+              [attr.tabindex]="international() === false ? 0 : -1"
+              [class.active]="international() === false"
+              (click)="chooseInternational(false)"
+              (keydown)="onIntlKey($event)"
+            >
+              No
+            </button>
+          </div>
+          @if (showError('international')) {
+            <span class="field-error" id="intl-err" role="alert">{{ step1Errors().international }}</span>
+          } @else {
+            <span class="hint" id="intl-hint">Choose Yes if we should ship your finished order outside Pakistan.</span>
+          }
+          @if (shippingType(); as t) {
+            <div class="ship-type" role="status">
+              <span class="tag"><ion-icon name="airplane-outline" aria-hidden="true"></ion-icon> {{ t === 'express' ? 'Express shipping' : 'Standard shipping' }}</span>
+              <span class="ship-type-text">
+                {{ t === 'express' ? 'Fast international courier for your finished order.' : 'Economical courier for delivery within Pakistan.' }}
+              </span>
+            </div>
+          }
+        </div>
+        </section>
       }
+
+      @if (expressInfo(); as ex) {
+      <section class="card stack-lg">
+        <div class="field">
+          <span class="field-label" id="express-label">Express stitching <span class="opt">optional</span></span>
+          <div class="segmented block" role="radiogroup" aria-labelledby="express-label">
+            <button type="button" role="radio" [attr.aria-checked]="expressStitching()" [class.active]="expressStitching()" (click)="expressStitching.set(true)">Yes</button>
+            <button type="button" role="radio" [attr.aria-checked]="!expressStitching()" [class.active]="!expressStitching()" (click)="expressStitching.set(false)">No</button>
+          </div>
+          @if (expressStitching()) {
+            <div class="ship-type" role="status">
+              <span class="tag"><ion-icon name="flash-outline" aria-hidden="true"></ion-icon> Express stitching · {{ ex.days }} day{{ ex.days === 1 ? '' : 's' }}</span>
+              <span class="ship-type-text">Your order is stitched with priority and is ready in about {{ ex.days }} day{{ ex.days === 1 ? '' : 's' }} after you create it.</span>
+            </div>
+          } @else {
+            <span class="hint">Choose Yes to have your order stitched in {{ ex.days }} day{{ ex.days === 1 ? '' : 's' }} instead of the usual time.</span>
+          }
+        </div>
+      </section>
+      }
+
+      <app-ship-to-card [eyebrow]="isEdit() ? 'Receiving address' : 'Next step'" [heading]="isEdit() ? 'Ship your parcel to us' : 'Then ship your parcel to us'" [compact]="true" [showEmail]="true" [partner]="shipPartner()" />
 
       @if (submitError()) {
         <div class="form-error" role="alert">
@@ -615,7 +709,7 @@
         </button>
       }
       <span class="ab-text">
-        <span class="ab-k">Step {{ step() }} of 3</span>
+        <span class="ab-k">Step {{ stepNo() }} of {{ stepCount() }}</span>
         <span class="ab-sub">{{ footerHint() }}</span>
       </span>
       @if (step() < 3) {
@@ -623,7 +717,7 @@
           Next <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon>
         </button>
       } @else {
-        <button type="button" class="btn btn-primary" (click)="submit()" [disabled]="submitting() || anyUploading()">
+        <button type="button" class="btn btn-primary" (click)="simple() ? openAddress() : submit()" [disabled]="submitting() || anyUploading()">
           @if (submitting()) {
             <ion-spinner name="crescent"></ion-spinner> {{ isEdit() && !isDraft() ? 'Saving…' : 'Sending…' }}
           } @else {
@@ -642,3 +736,37 @@
   (saved)="onChartCreated($event)"
   (closed)="sizeFormFor.set(null)"
 />
+
+<!-- Delivery address, asked when a new order is submitted -->
+<app-sheet [open]="addressOpen()" eyebrow="Almost done" title="Where should we deliver?" (closed)="addressOpen.set(false)">
+  @if (!addressEditing()) {
+    <div class="addr-default">
+      <span class="addr-k">Your delivery address</span>
+      <address>{{ addressText() }}</address>
+      @if (addrPhone()) { <span class="addr-phone"><ion-icon name="call-outline" aria-hidden="true"></ion-icon> {{ addrPhone() }}</span> }
+      <button type="button" class="link-btn" (click)="addressEditing.set(true)"><ion-icon name="create-outline" aria-hidden="true"></ion-icon> Change address</button>
+    </div>
+  } @else {
+    <div class="field">
+      <label for="addr-line">Address</label>
+      <textarea id="addr-line" class="textarea" rows="2" placeholder="House, street, area" [ngModel]="addrAddress()" (ngModelChange)="addrAddress.set($event)"></textarea>
+    </div>
+    <div class="field">
+      <label for="addr-city">City</label>
+      <input id="addr-city" class="input" autocomplete="address-level2" [ngModel]="addrCity()" (ngModelChange)="addrCity.set($event)" />
+    </div>
+    <div class="field">
+      <label for="addr-phone">Phone number</label>
+      <input id="addr-phone" class="input" type="tel" inputmode="tel" autocomplete="tel" placeholder="+92 3xx xxxxxxx" [ngModel]="addrPhone()" (ngModelChange)="addrPhone.set($event)" />
+      <span class="hint">Used for this order's delivery only. Your profile stays as it is.</span>
+    </div>
+    <div class="field">
+      <label for="addr-country">Country</label>
+      <input id="addr-country" class="input" autocomplete="country-name" [ngModel]="addrCountry()" (ngModelChange)="addrCountry.set($event)" />
+    </div>
+  }
+  <div sheet-footer class="addr-foot">
+    <button type="button" class="btn btn-outline" (click)="addressOpen.set(false)">Cancel</button>
+    <button type="button" class="btn btn-primary" (click)="confirmAddress()" [disabled]="submitting()">Confirm &amp; submit</button>
+  </div>
+</app-sheet>

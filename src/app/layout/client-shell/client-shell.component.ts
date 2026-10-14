@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
@@ -12,12 +12,14 @@ import { ChatSocketService } from '../../core/services/chat-socket.service';
 import { OrderEventsService } from '../../core/services/order-events.service';
 import { OrderService } from '../../core/services/order.service';
 import { ToastService } from '../../core/services/toast.service';
-import { copyText } from '../../core/utils/image';
+import { ApprovalsService } from '../../core/services/approvals.service';
 import { ShellUiService } from '../../core/services/shell-ui.service';
 import { NotificationModalComponent } from '../../pages/components/notification-modal/notification-modal.component';
 import { ChatDockComponent } from '../../shared/chat-dock.component';
+import { NewOrderChoiceComponent } from '../../shared/new-order-choice.component';
+import { NewOrderService } from '../../core/services/new-order.service';
 
-type TabKey = 'home' | 'orders' | 'new' | 'sizes' | 'profile' | 'inbox';
+type TabKey = 'home' | 'orders' | 'new' | 'sizes' | 'profile' | 'inbox' | 'approvals';
 
 /**
  * Persistent chrome for every /app/* page: header (brand, customer code, bell), one scroll area
@@ -26,7 +28,7 @@ type TabKey = 'home' | 'orders' | 'new' | 'sizes' | 'profile' | 'inbox';
  */
 @Component({
   selector: 'app-client-shell',
-  imports: [RouterOutlet, RouterLink, IonIcon, NotificationModalComponent, ChatDockComponent],
+  imports: [RouterOutlet, RouterLink, IonIcon, NotificationModalComponent, ChatDockComponent, NewOrderChoiceComponent],
   templateUrl: './client-shell.component.html',
   styleUrl: './client-shell.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -44,12 +46,16 @@ export class ClientShellComponent {
   private router = inject(Router);
   private theme = inject(ThemeService);
   private shellUi = inject(ShellUiService);
+  protected newOrder = inject(NewOrderService);
   private toast = inject(ToastService);
   private destroyRef = inject(DestroyRef);
-  private copiedTimer?: ReturnType<typeof setTimeout>;
 
-  /** Brief tick on the code pill after copying. */
-  protected copied = signal(false);
+  /** The side menu (tabs). */
+  protected menuOpen = signal(false);
+  /** No logo file at assets/logo.png: the brand's first letter is shown instead. */
+  protected logoFailed = signal(false);
+  /** Articles waiting for the customer's approval: the badge on the Approvals tab. */
+  protected approvals = inject(ApprovalsService);
   private scroller = viewChild<ElementRef<HTMLElement>>('scroller');
 
   private url = toSignal(
@@ -80,6 +86,7 @@ export class ClientShellComponent {
     if (path.startsWith('/app/sizes')) return 'sizes';
     if (path.startsWith('/app/profile')) return 'profile';
     if (path.startsWith('/app/inbox')) return 'inbox';
+    if (path.startsWith('/app/approvals')) return 'approvals';
     return 'home';
   });
 
@@ -103,6 +110,32 @@ export class ClientShellComponent {
     return n > 99 ? '99+' : String(n);
   });
 
+  /** What changed on the Orders tab: drafts waiting to be completed + unread updates to orders. */
+  protected ordersBadge = computed(() => this.draftCount() + this.notif.unreadOrders());
+  protected ordersBadgeText = computed(() => (this.ordersBadge() > 99 ? '99+' : String(this.ordersBadge())));
+  /** The dot on the menu button: articles waiting for the customer's approval (the only tab in the menu). */
+  protected menuBadge = computed(() => this.approvals.count());
+  protected menuBadgeText = computed(() => (this.menuBadge() > 99 ? '99+' : String(this.menuBadge())));
+
+  protected openMenu(): void {
+    this.approvals.refresh();
+    this.menuOpen.set(true);
+  }
+
+  protected closeMenu(): void {
+    this.menuOpen.set(false);
+  }
+
+  @HostListener('document:keydown.escape')
+  protected onEscape(): void {
+    if (this.menuOpen()) this.closeMenu();
+  }
+
+  protected async signOut(): Promise<void> {
+    this.closeMenu();
+    await this.auth.logout();
+  }
+
   private refreshDrafts(): void {
     this.orders
       .list({ page: 1, limit: 1, status: 'draft' })
@@ -119,8 +152,26 @@ export class ClientShellComponent {
         takeUntilDestroyed(),
       )
       .subscribe(() => this.refreshDrafts());
-    this.orderEvents.updated$.pipe(takeUntilDestroyed()).subscribe(() => this.refreshDrafts());
+    this.orderEvents.updated$.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.refreshDrafts();
+      this.approvals.refresh();
+    });
     this.refreshDrafts();
+    this.approvals.refresh();
+    // the menu closes on every navigation
+    this.router.events
+      .pipe(
+        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => {
+        this.closeMenu();
+        this.approvals.refresh();
+      });
+    // being on the Orders tab means its changes have been seen: clear that badge (also when an update arrives live)
+    effect(() => {
+      if (this.activeTab() === 'orders' && this.notif.unreadOrders() > 0) untracked(() => this.notif.markOrdersRead());
+    });
     // Scroll the content area (not the window – it never scrolls) to the top on every navigation.
     this.router.events
       .pipe(
@@ -128,17 +179,5 @@ export class ClientShellComponent {
         takeUntilDestroyed(),
       )
       .subscribe(() => this.scroller()?.nativeElement.scrollTo({ top: 0 }));
-    this.destroyRef.onDestroy(() => clearTimeout(this.copiedTimer));
-  }
-
-  async copyCode(code: string): Promise<void> {
-    if (await copyText(code)) {
-      this.toast.success(`Customer code ${code} copied — write it on every parcel label.`);
-      this.copied.set(true);
-      clearTimeout(this.copiedTimer);
-      this.copiedTimer = setTimeout(() => this.copied.set(false), 2000);
-    } else {
-      this.toast.error('Could not copy — your code is ' + code + '.');
-    }
   }
 }

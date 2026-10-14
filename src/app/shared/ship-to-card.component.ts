@@ -4,7 +4,6 @@ import { ConfigService } from '../core/services/config.service';
 import { AuthService } from '../core/services/auth.service';
 import { ToastService } from '../core/services/toast.service';
 import { copyText } from '../core/utils/image';
-import { PartnerChoiceService } from '../core/services/partner-choice.service';
 import { ClientPartner } from '../core/models/api.models';
 
 /**
@@ -25,42 +24,44 @@ import { ClientPartner } from '../core/models/api.models';
         @if (addr()) {
           <button type="button" class="copy-btn" (click)="copy()" aria-label="Copy address and your customer code">
             <ion-icon [name]="copied() ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon>
-            <span>{{ copied() ? 'Copied' : 'Copy' }}</span>
+            <span>{{ copied() ? 'Copied' : 'Copy all' }}</span>
           </button>
         }
       </div>
 
-      @if (chooser() && partnerList().length > 1) {
-        <div class="chooser" role="group" aria-label="Choose a stitching partner">
-          @for (p of partnerList(); track p.id) {
-            <button type="button" class="chip-p" [class.on]="p.id === selected()?.id" [attr.aria-pressed]="p.id === selected()?.id" (click)="pickPartner(p)">{{ p.name }}</button>
-          }
-        </div>
-      }
-
       @if (addr(); as c) {
-        @if (selected(); as sp) {
-          <div class="who-line"><span class="who-ico" aria-hidden="true"><ion-icon name="cut-outline"></ion-icon></span>For orders stitched by <b>{{ sp.name }}</b>@if (sp.city) { <span class="who-city">· {{ sp.city }}</span> }</div>
-        }
-        <address class="address">
-          <strong>{{ c.name }}</strong>
-          <span>{{ c.address }}</span>
-          <span>{{ c.city }}</span>
-          @if (c.phone) {
-            <span class="phone"><ion-icon name="call-outline" aria-hidden="true"></ion-icon>{{ c.phone }}</span>
+        <dl class="rows">
+          @if (rowName(c.name); as n) {
+            <div class="row"><dt>Name</dt><dd>{{ n }}</dd>
+              <button type="button" class="mini" (click)="copyOne('name', n)" aria-label="Copy name"><ion-icon [name]="done() === 'name' ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon></button></div>
           }
-        </address>
+          @if (showEmail() && email(); as mail) {
+            <div class="row"><dt>Email</dt><dd class="mono-dd">{{ mail }}</dd>
+              <button type="button" class="mini" (click)="copyOne('email', mail)" aria-label="Copy your assigned shopping email"><ion-icon [name]="done() === 'email' ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon></button></div>
+          }
+          @if (c.phone) {
+            <div class="row"><dt>Number</dt><dd>{{ c.phone }}</dd>
+              <button type="button" class="mini" (click)="copyOne('phone', c.phone)" aria-label="Copy phone number"><ion-icon [name]="done() === 'phone' ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon></button></div>
+          }
+          <div class="row"><dt>Address</dt><dd>{{ c.address }}</dd>
+              <button type="button" class="mini" (click)="copyOne('address', c.address)" aria-label="Copy street address"><ion-icon [name]="done() === 'address' ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon></button></div>
+          <div class="row"><dt>City</dt><dd>{{ c.city }}</dd>
+              <button type="button" class="mini" (click)="copyOne('city', c.city)" aria-label="Copy city"><ion-icon [name]="done() === 'city' ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon></button></div>
+        </dl>
         <div class="label-note">
           <span class="label-k">Write this on the parcel label</span>
-          <span class="label-v">
-            <span class="who">{{ customerName() }}</span>
-            <b class="mono">{{ labelCode() }}</b>
+          <span class="label-row">
+            <span class="label-v">
+              <span class="who">{{ customerName() }}</span>
+              <b class="mono">{{ labelCode() }}</b>
+            </span>
+            <button type="button" class="mini" (click)="copyOne('label', customerName() + ' ' + labelCode())" aria-label="Copy the label text"><ion-icon [name]="done() === 'label' ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon></button>
           </span>
         </div>
         @if (!compact()) {
           <p class="explain">Use this as the delivery address when you buy from a brand's website.</p>
         }
-      } @else if (config.error() && !partnerList().length) {
+      } @else if (config.error()) {
         <div class="form-error">
           <ion-icon name="alert-circle-outline" aria-hidden="true"></ion-icon>
           <span>{{ config.error() }}</span>
@@ -106,6 +107,16 @@ import { ClientPartner } from '../core/models/api.models';
     .who-line { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: var(--fs-sm); opacity: 0.9; }
     .who-ico { width: 22px; height: 22px; border-radius: 7px; background: rgba(255,255,255,0.16); display: inline-flex; align-items: center; justify-content: center; font-size: 13px; }
     .who-city { opacity: 0.8; }
+    .rows { margin: 0; display: flex; flex-direction: column; gap: 6px; position: relative; z-index: 1; }
+    .row { display: grid; grid-template-columns: 64px 1fr auto; align-items: center; gap: 10px; padding: 8px 8px 8px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.07); }
+    .row dt { font-size: var(--fs-2xs); letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.65; font-weight: 600; }
+    .row dd { margin: 0; min-width: 0; overflow-wrap: anywhere; color: #fff; font-size: var(--fs-body); line-height: 1.35; }
+    .mono-dd { font-family: ui-monospace, monospace; font-size: 12px; word-break: break-all; }
+    .mini { flex: none; width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.22); background: rgba(255, 255, 255, 0.1); color: #fff; cursor: pointer; }
+    .mini ion-icon { font-size: 16px; color: inherit; }
+    .mini:hover { background: rgba(255, 255, 255, 0.22); }
+    .mini:focus-visible { outline-color: #fff; }
+    .label-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
     .address { display: flex; flex-direction: column; gap: 2px; font-style: normal; font-size: var(--fs-body); line-height: 1.45; color: var(--c-on-dark); }
     .address strong { font-size: var(--fs-body); color: #fff; }
     .phone { display: inline-flex; align-items: center; gap: 6px; margin-top: 2px; }
@@ -131,25 +142,21 @@ export class ShipToCardComponent {
   private toast = inject(ToastService);
   private copiedTimer?: ReturnType<typeof setTimeout>;
   protected copied = signal(false);
+  /** Which single field was copied last (its button shows a tick for a moment). */
+  protected done = signal<string | null>(null);
+  private doneTimer?: ReturnType<typeof setTimeout>;
 
   readonly eyebrow = input('Our receiving address');
   readonly heading = input('Ship your parcel to');
   readonly compact = input(false);
-  /** The partner whose address to show (an order's partner). Without it the customer's chosen / recommended partner is used. */
+  /** Also show the customer's assigned shopping email (the profile page does). */
+  readonly showEmail = input(false);
+  protected email = computed(() => this.auth.user()?.mailbox_address ?? '');
+  /** The partner whose address to show, once the admin assigned the order to one. Without it the parcel goes to our central address. */
   readonly partner = input<ClientPartner | null>(null);
-  /** Let the customer switch between partners (profile page). */
-  readonly chooser = input(false);
-  private choice = inject(PartnerChoiceService);
-  private picked = signal<string | null>(null);
-  protected partnerList = this.choice.partners;
 
   protected cfg = this.config.config;
-  protected selected = computed<ClientPartner | null>(() => {
-    const fixed = this.partner();
-    if (fixed) return fixed;
-    const list = this.choice.partners();
-    return list.find((p) => p.id === this.picked()) ?? this.choice.defaultPartner();
-  });
+  protected selected = computed<ClientPartner | null>(() => this.partner());
   /** The address to show: the partner's own, else the platform's default receiving address. */
   protected addr = computed(() => {
     const p = this.selected();
@@ -162,27 +169,44 @@ export class ShipToCardComponent {
     return p?.short_code ? `${this.code()} · ${p.short_code}` : this.code();
   });
 
-  protected pickPartner(p: ClientPartner): void {
-    this.picked.set(p.id);
-    this.choice.remember(p.id);
+  /** The generic "admin" login name is not a receiver name: only a real name (a partner's) is printed. */
+  protected nameOf(name: string | null | undefined): string {
+    const n = (name ?? '').trim();
+    return /^admin$/i.test(n) ? '' : n;
   }
+
+  /** The Name row: the receiver's name when the partner set one, else the customer's own name. */
+  protected rowName(name: string | null | undefined): string {
+    return this.nameOf(name) || this.customerName();
+  }
+
   protected customerName = computed(() => this.auth.user()?.full_name || this.auth.user()?.email || '');
   protected code = computed(() => this.auth.user()?.customer_code || '');
 
   constructor() {
     this.config.load();
-    this.choice.load();
-    inject(DestroyRef).onDestroy(() => clearTimeout(this.copiedTimer));
+    inject(DestroyRef).onDestroy(() => { clearTimeout(this.copiedTimer); clearTimeout(this.doneTimer); });
+  }
+
+  async copyOne(key: string, text: string): Promise<void> {
+    if (!text) return;
+    if (await copyText(text)) {
+      this.done.set(key);
+      clearTimeout(this.doneTimer);
+      this.doneTimer = setTimeout(() => this.done.set(null), 1600);
+    } else this.toast.error('Could not copy — please select the text manually.');
   }
 
   async copy(): Promise<void> {
     const c = this.addr();
     if (!c) return;
     const text = [
-      `${c.name} — ${this.customerName()} (${this.labelCode()})`,
-      c.address,
-      c.city,
-      c.phone ? `Phone: ${c.phone}` : '',
+      this.rowName(c.name) ? `Name: ${this.rowName(c.name)}` : '',
+      this.showEmail() && this.email() ? `Email: ${this.email()}` : '',
+      c.phone ? `Number: ${c.phone}` : '',
+      `Address: ${c.address}`,
+      `City: ${c.city}`,
+      `Label: ${this.customerName()} ${this.labelCode()}`,
     ]
       .filter(Boolean)
       .join('\n');

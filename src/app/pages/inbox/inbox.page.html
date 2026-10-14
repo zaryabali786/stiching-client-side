@@ -1,8 +1,110 @@
 <div class="page">
+  @if (composing()) {
+    <div class="cmp-overlay" (click)="closeComposer()" (dragover)="onDragOver($event)" (dragleave)="dragging.set(false)" (drop)="onDrop($event)">
+      <section class="cmp-dialog" [class.dragging]="dragging()" role="dialog" aria-modal="true" [attr.aria-label]="replyTo() ? 'Reply to email' : 'New email'" (click)="$event.stopPropagation()">
+        <header class="cmp-head">
+          <span class="cmp-ico" aria-hidden="true"><ion-icon [name]="replyTo() ? 'arrow-undo-outline' : 'create-outline'"></ion-icon></span>
+          <h2>{{ replyTo() ? 'Reply' : 'New email' }}</h2>
+          <button type="button" class="cmp-x" (click)="closeComposer()" [disabled]="sending()" aria-label="Close"><ion-icon name="close-outline" aria-hidden="true"></ion-icon></button>
+        </header>
+
+        <div class="cmp-scroll">
+          @if (!canSend()) {
+            <p class="cmp-warn"><ion-icon name="alert-circle-outline" aria-hidden="true"></ion-icon> Sending isn't switched on yet. You can write, but it can't be sent until it is.</p>
+          }
+
+          <div class="cmp-row">
+            <label>From</label>
+            <span class="cmp-chip mono">{{ address() }}</span>
+          </div>
+          <div class="cmp-row">
+            <label for="cmp-to">To</label>
+            @if (replyTo(); as r) {
+              <span class="cmp-chip"><strong>{{ senderName(r.direction === 'out' ? r.to : r.from) }}</strong></span>
+            } @else {
+              <input id="cmp-to" type="email" inputmode="email" autocomplete="off" placeholder="name@example.com" [value]="to()" (input)="input(to, $event)" [disabled]="sending()" />
+            }
+          </div>
+          <div class="cmp-row">
+            <label for="cmp-subject">Subject</label>
+            <input id="cmp-subject" type="text" placeholder="What is this about?" maxlength="300" [value]="subject()" (input)="input(subject, $event)" [disabled]="sending()" />
+          </div>
+
+          <textarea #bodyBox class="cmp-body" rows="8" placeholder="Write your message…" aria-label="Message" [value]="text()" (input)="input(text, $event)" (keydown)="onBodyKey($event)" (paste)="onPaste($event)" [disabled]="sending()"></textarea>
+
+          @if (replyTo(); as r) {
+            <blockquote class="cmp-quote">
+              <span>{{ senderName(r.from) }} wrote:</span>
+              {{ (r.text || '') | slice: 0 : 280 }}{{ (r.text || '').length > 280 ? '…' : '' }}
+            </blockquote>
+          }
+
+          @if (files().length) {
+            <ul class="cmp-files">
+              @for (f of files(); track $index) {
+                <li class="cmp-file">
+                  @if (f.isImage) {
+                    <img [src]="f.dataUrl" [alt]="f.name" />
+                  } @else {
+                    <span class="ico"><ion-icon [name]="fileIcon(f.name, f.type)" aria-hidden="true"></ion-icon></span>
+                  }
+                  <span class="meta"><strong>{{ f.name }}</strong><small>{{ fileSize(f.size) }}</small></span>
+                  <button type="button" class="rm" (click)="removeFile($index)" [attr.aria-label]="'Remove ' + f.name" [disabled]="sending()"><ion-icon name="close-outline" aria-hidden="true"></ion-icon></button>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+
+        @if (dragging()) {
+          <div class="cmp-drop"><ion-icon name="cloud-upload-outline" aria-hidden="true"></ion-icon> Drop files to attach</div>
+        }
+
+        <footer class="cmp-foot">
+          <label class="cmp-attach" [class.disabled]="files().length >= maxFiles || sending()">
+            <ion-icon name="attach-outline" aria-hidden="true"></ion-icon>
+            <span>Attach</span>
+            <input type="file" multiple hidden accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.rtf,.zip" (change)="onPick($event)" [disabled]="files().length >= maxFiles || sending()" />
+          </label>
+          <span class="cmp-count">{{ files().length }}/{{ maxFiles }} · {{ fileSize(totalSize()) }} of 10 MB</span>
+          <span class="spacer"></span>
+          <button type="button" class="cmp-send" (click)="send()" [disabled]="sending()">
+            @if (sending()) {
+              <ion-spinner name="dots"></ion-spinner>
+            } @else {
+              <ion-icon name="send-outline" aria-hidden="true"></ion-icon> Send
+            }
+          </button>
+        </footer>
+        <p class="cmp-hint">Photos, PDF, Word, Excel, PowerPoint, text or zip · Ctrl + Enter to send</p>
+
+        @if (confirmingDiscard()) {
+          <div class="cmp-confirm" (click)="keepWriting()">
+            <div class="cmp-confirm-card" role="alertdialog" aria-modal="true" aria-labelledby="cmp-confirm-title" (click)="$event.stopPropagation()">
+              <span class="cmp-confirm-ico" aria-hidden="true"><ion-icon name="trash-outline"></ion-icon></span>
+              <h3 id="cmp-confirm-title">Discard this email?</h3>
+              <p>It has not been sent. If you close now, what you wrote and any files you added will be lost.</p>
+              <div class="cmp-confirm-actions">
+                <button type="button" class="cmp-keep" (click)="keepWriting()">Keep writing</button>
+                <button type="button" class="cmp-discard" (click)="closeComposer(true)">Discard</button>
+              </div>
+            </div>
+          </div>
+        }
+      </section>
+    </div>
+  }
+
   @if (!id()) {
-    <header>
-      <span class="eyebrow">Shopping email</span>
-      <h1 class="page-title">Inbox</h1>
+    <header class="inbox-head">
+      <div>
+        <span class="eyebrow">Shopping email</span>
+        <h1 class="page-title">Inbox</h1>
+      </div>
+      <button type="button" class="new-email" (click)="compose()">
+        <ion-icon name="create-outline" aria-hidden="true"></ion-icon>
+        <span>New email</span>
+      </button>
     </header>
 
     <!-- The address to use at any shop's checkout -->
@@ -31,16 +133,20 @@
     </section>
 
     <div class="toolbar">
-      <button type="button" class="chip" [class.on]="unreadOnly()" (click)="toggleUnread()" [attr.aria-pressed]="unreadOnly()">
-        Unread
-        @if (unread() > 0) {
-          <span class="count">{{ unread() }}</span>
-        }
-      </button>
+      <button type="button" class="chip" [class.on]="!sentOnly()" (click)="showSent(false)" [attr.aria-pressed]="!sentOnly()">Inbox</button>
+      <button type="button" class="chip" [class.on]="sentOnly()" (click)="showSent(true)" [attr.aria-pressed]="sentOnly()">Sent</button>
+      @if (!sentOnly()) {
+        <button type="button" class="chip" [class.on]="unreadOnly()" (click)="toggleUnread()" [attr.aria-pressed]="unreadOnly()">
+          Unread
+          @if (unread() > 0) {
+            <span class="count">{{ unread() }}</span>
+          }
+        </button>
+      }
       <span class="spacer"></span>
-      @if (unread() > 0) {
-        <button type="button" class="btn btn-ghost btn-sm" (click)="markAllRead()">
-          <ion-icon name="checkmark-done-outline" aria-hidden="true"></ion-icon> Mark all read
+      @if (unread() > 0 && !sentOnly()) {
+        <button type="button" class="mark-read" (click)="markAllRead()" aria-label="Mark all as read" title="Mark all as read">
+          <ion-icon name="checkmark-done-outline" aria-hidden="true"></ion-icon>
         </button>
       }
     </div>
@@ -52,8 +158,8 @@
     } @else if (!rows().length) {
       <app-empty-state
         icon="mail-outline"
-        [title]="unreadOnly() ? 'No unread emails' : 'Nothing here yet'"
-        [message]="unreadOnly() ? 'You are all caught up.' : 'Emails from the shops you order from will appear here.'"
+        [title]="sentOnly() ? 'Nothing sent yet' : unreadOnly() ? 'No unread emails' : 'Nothing here yet'"
+        [message]="sentOnly() ? 'Emails you send from here will appear here.' : unreadOnly() ? 'You are all caught up.' : 'Emails from the shops you order from will appear here.'"
       />
     } @else {
       <ul class="mail-list">
@@ -63,12 +169,18 @@
               <span class="avatar" aria-hidden="true">{{ senderName(r.from).charAt(0).toUpperCase() }}<i class="dot"></i></span>
               <div class="body">
                 <div class="top">
-                  <strong class="from">{{ senderName(r.from) }}</strong>
+                  <strong class="from">@if (r.direction === 'out') {To: }{{ senderName(r.from) }}</strong>
                   <time class="when">{{ r.received_at | timeAgo }}</time>
                 </div>
-                <div class="subject">{{ r.subject || '(no subject)' }}</div>
+                <div class="subject">@if (r.has_attachments) {<ion-icon name="attach-outline" aria-hidden="true"></ion-icon> }{{ r.subject || '(no subject)' }}</div>
                 <div class="preview">{{ r.preview }}</div>
-                @if (r.draft) {
+                @if (r.match; as m) {
+                  @if (m.status === 'matched') {
+                    <span class="tag tag-brand"><ion-icon name="checkmark-circle-outline" aria-hidden="true"></ion-icon> Added to order {{ m.order_reference }}</span>
+                  } @else {
+                    <span class="tag tag-warn"><ion-icon name="alert-circle-outline" aria-hidden="true"></ion-icon> Needs your check</span>
+                  }
+                } @else if (r.draft) {
                   @switch (r.draft.status) {
                     @case ('processing') {
                       <span class="tag tag-wait"><ion-spinner name="dots"></ion-spinner> Reading order…</span>
@@ -116,8 +228,24 @@
           <time class="text-muted">{{ e.received_at | timeAgo }}</time>
         </div>
 
-        <!-- The order read from this email -->
-        @if (e.draft; as d) {
+        <!-- A shipping / tracking email: it updated an existing order, or needs a person to check it -->
+        @if (e.match; as m) {
+          <section class="draft" [class.ready]="m.status === 'matched'" [class.review]="m.status === 'review'">
+            @if (m.status === 'matched') {
+              <div class="draft-head"><ion-icon name="checkmark-circle-outline" aria-hidden="true"></ion-icon><strong>This email updated order {{ m.order_reference }}</strong></div>
+              @if (m.note) {
+                <p class="text-muted">{{ m.note }}</p>
+              }
+              @if (m.order_id) {
+                <a class="btn btn-outline btn-sm" [routerLink]="['/app/orders', m.order_id]">Open order</a>
+              }
+            } @else {
+              <div class="draft-head"><ion-icon name="alert-circle-outline" aria-hidden="true"></ion-icon><strong>Please check this email</strong></div>
+              <p class="text-muted">{{ m.note }}</p>
+              <a class="btn btn-outline btn-sm" routerLink="/app/orders">Go to my orders</a>
+            }
+          </section>
+        } @else if (e.draft; as d) {
           <section class="draft" [class.ready]="d.status === 'ready'">
             @switch (d.status) {
               @case ('processing') {
@@ -168,12 +296,29 @@
 
         <!-- The email itself -->
         @if (frame(); as f) {
-          <iframe class="frame" title="Email content" sandbox="allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer" [srcdoc]="f"></iframe>
+          <iframe #mailFrame class="frame" title="Email content" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer" [srcdoc]="f" (load)="fitFrame(mailFrame)"></iframe>
         } @else {
           <pre class="plain">{{ e.text || '(This email has no content.)' }}</pre>
         }
 
+        @if (e.attachments.length) {
+          <ul class="cmp-files saved">
+            @for (a of e.attachments; track $index) {
+              <li>
+                @if (a.url && a.type.startsWith('image/')) {
+                  <a [href]="a.url" target="_blank" rel="noopener"><img [src]="a.url" [alt]="a.name" loading="lazy" /></a>
+                } @else if (a.url) {
+                  <a class="file-link" [href]="a.url" target="_blank" rel="noopener"><ion-icon [name]="fileIcon(a.name, a.type)" aria-hidden="true"></ion-icon> <span>{{ a.name }}<small>{{ fileSize(a.size) }}</small></span></a>
+                } @else {
+                  <span class="file-link gone"><ion-icon [name]="fileIcon(a.name, a.type)" aria-hidden="true"></ion-icon> <span>{{ a.name }}<small>{{ fileSize(a.size) }}</small></span></span>
+                }
+              </li>
+            }
+          </ul>
+        }
+
         <div class="btn-row">
+          <button type="button" class="btn btn-outline btn-sm" (click)="compose(e)"><ion-icon name="arrow-undo-outline" aria-hidden="true"></ion-icon> Reply</button>
           <button type="button" class="btn btn-ghost btn-sm danger" (click)="remove()" [disabled]="deleting()">
             <ion-icon name="trash-outline" aria-hidden="true"></ion-icon> Delete
           </button>

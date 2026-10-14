@@ -1,0 +1,101 @@
+<div class="page">
+  <header>
+    <span class="eyebrow">Your outfits</span>
+    <h1 class="page-title">Approve / Reject</h1>
+    <p class="lead">Each order shows its articles and where they stand. Approve a finished article, or reject it and tell us what to change.</p>
+  </header>
+
+  @if (svc.loading()) {
+    <app-skeleton variant="cards" [count]="2" />
+  } @else if (svc.error()) {
+    <app-error-state title="We couldn't load your approvals" [message]="svc.error()!" (retry)="svc.refresh(true)" />
+  } @else if (!svc.list().length) {
+    <app-empty-state
+      icon="checkmark-circle-outline"
+      title="Nothing to approve yet"
+      message="When your tailor sends photos of a finished article, its order will show up here."
+    />
+  } @else {
+    <div class="filters" role="tablist" aria-label="Filter articles">
+      <button type="button" class="chip" role="tab" [class.on]="filter() === 'all'" [attr.aria-selected]="filter() === 'all'" (click)="filter.set('all')">All <span class="n">{{ totals().all }}</span></button>
+      <button type="button" class="chip" role="tab" [class.on]="filter() === 'pending'" [attr.aria-selected]="filter() === 'pending'" (click)="filter.set('pending')">Waiting <span class="n warn">{{ totals().pending }}</span></button>
+      <button type="button" class="chip" role="tab" [class.on]="filter() === 'approved'" [attr.aria-selected]="filter() === 'approved'" (click)="filter.set('approved')">Approved <span class="n">{{ totals().approved }}</span></button>
+      <button type="button" class="chip" role="tab" [class.on]="filter() === 'rejected'" [attr.aria-selected]="filter() === 'rejected'" (click)="filter.set('rejected')">Rejected <span class="n">{{ totals().rejected }}</span></button>
+    </div>
+
+    @if (!shown().length) {
+      <app-empty-state icon="funnel-outline" title="Nothing here" message="No articles match this filter." />
+    }
+
+    <ul class="orders">
+      @for (o of shown(); track o.order_id) {
+        <li class="card order">
+          <button type="button" class="order-head" (click)="toggle(o)" [attr.aria-expanded]="isOpen(o)" [attr.aria-controls]="'ord-' + o.order_id">
+            <span class="o-names">
+              <strong>{{ o.reference }}</strong>
+              <small>@if (o.brand) { {{ o.brand }} · }{{ summary(o) }}</small>
+            </span>
+            @if (waiting(o) > 0) { <span class="waiting-chip">{{ waiting(o) }} waiting</span> }
+            <ion-icon class="chev" [class.open]="isOpen(o)" name="chevron-down-outline" aria-hidden="true"></ion-icon>
+          </button>
+
+          @if (isOpen(o)) {
+          <ul class="articles" [id]="'ord-' + o.order_id">
+            @for (a of o.visible; track a.unit_id) {
+              <li class="article" [class.busy]="busyKey() === k(o, a)" [attr.data-state]="a.status">
+                <div class="a-top">
+                  <span class="a-title">{{ a.title || 'Article' }}</span>
+                  <span class="state" [attr.data-state]="a.status">{{ label[a.status] }}</span>
+                </div>
+
+                @if (a.status !== 'in_progress' && a.photos.length) {
+                  <div class="photos">
+                    @for (p of a.photos; track $index) {
+                      <a [href]="p.url" target="_blank" rel="noopener"><img [src]="p.url" [alt]="'Photo of ' + (a.title || 'article')" loading="lazy" /></a>
+                    }
+                  </div>
+                }
+
+                @switch (a.status) {
+                  @case ('pending') {
+                    @if (a.requested_at) {
+                      <p class="a-meta">Photos sent <time>{{ a.requested_at | timeAgo }}</time></p>
+                    }
+                    @if (rejectingKey() === k(o, a)) {
+                      <textarea class="note" rows="3" maxlength="500" placeholder="What should be changed?" aria-label="What should be changed" [value]="note()" (input)="onNote($event)" [disabled]="busyKey() === k(o, a)"></textarea>
+                      <div class="actions">
+                        <button type="button" class="ap-btn ghost" (click)="cancelReject()" [disabled]="busyKey() === k(o, a)">Cancel</button>
+                        <button type="button" class="ap-btn reject" (click)="sendReject(o, a)" [disabled]="busyKey() === k(o, a)">Send to tailor</button>
+                      </div>
+                    } @else {
+                      <div class="actions">
+                        <button type="button" class="ap-btn reject-o" (click)="startReject(o, a)" [disabled]="!!busyKey()"><ion-icon name="close-outline" aria-hidden="true"></ion-icon> Reject</button>
+                        <button type="button" class="ap-btn approve" (click)="approve(o, a)" [disabled]="!!busyKey()"><ion-icon name="checkmark-outline" aria-hidden="true"></ion-icon> Approve</button>
+                      </div>
+                    }
+                  }
+                  @case ('approved') {
+                    @if (a.decided_at) {
+                      <p class="a-meta">You approved this <time>{{ a.decided_at | timeAgo }}</time></p>
+                    }
+                  }
+                  @case ('rejected') {
+                    @if (a.change_request) {
+                      <p class="a-note"><b>You asked:</b> {{ a.change_request }}</p>
+                    }
+                    <p class="a-meta">Sent back to the tailor@if (a.decided_at) { <time> {{ a.decided_at | timeAgo }}</time> }. You will be told when new photos are ready.</p>
+                  }
+                  @case ('in_progress') {
+                    <p class="a-meta">Still being made. Photos will come here when it is ready.</p>
+                  }
+                }
+              </li>
+            }
+          </ul>
+          <a class="order-link" [routerLink]="['/app/orders', o.order_id]">View order details <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon></a>
+          }
+        </li>
+      }
+    </ul>
+  }
+</div>

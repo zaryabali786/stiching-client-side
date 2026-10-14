@@ -180,6 +180,18 @@ let nextId = 0;
                 (mousemove)="activeIndex.set(i)"
                 (click)="choose(item)"
               >
+                @if (imageOf(item); as img) {
+                  <!-- the picture comes first; tapping it opens it full size without choosing the option -->
+                  <button
+                    type="button"
+                    class="ss-thumb-btn"
+                    tabindex="-1"
+                    [attr.aria-label]="'Preview image of ' + labelOf(item)"
+                    (click)="openPreview($event, img, labelOf(item))"
+                  >
+                    <img class="ss-thumb" [src]="img" alt="" loading="lazy" referrerpolicy="no-referrer" (error)="$any($event.target).hidden = true" />
+                  </button>
+                }
                 <span class="ss-opt-text">
                   <span class="ss-name">{{ labelOf(item) }}</span>
                   @if (subtitleOf(item); as sub) {
@@ -190,16 +202,12 @@ let nextId = 0;
                   <ion-icon name="checkmark-outline" class="ss-check" aria-hidden="true"></ion-icon>
                   <span class="sr-only">(selected)</span>
                 }
-                @if (imageOf(item); as img) {
-                  <button
-                    type="button"
-                    class="ss-eye"
-                    [attr.aria-label]="'Preview image of ' + labelOf(item)"
-                    (click)="openPreview($event, img, labelOf(item))"
-                  >
-                    <ion-icon name="eye-outline" aria-hidden="true"></ion-icon>
-                  </button>
-                }
+              </li>
+            }
+            @if (otherLabel()) {
+              <li role="option" class="ss-opt create" [attr.aria-selected]="false" (mousedown)="$event.preventDefault()" (click)="doOther()">
+                <span class="ss-thumb ph add" aria-hidden="true"><ion-icon name="ellipsis-horizontal-outline"></ion-icon></span>
+                <span class="ss-opt-text"><span class="ss-name">{{ otherLabel() }}</span><span class="ss-sub">Not in the list? Type its name</span></span>
               </li>
             }
             @if (showCreate()) {
@@ -307,6 +315,8 @@ let nextId = 0;
     }
     .ss-msg.err { color: var(--t-red-fg); flex-wrap: wrap; }
     .ss-msg ion-spinner { width: 18px; height: 18px; color: var(--c-brand); }
+    .ss-thumb-btn { flex: none; padding: 0; border: 0; background: none; border-radius: 8px; cursor: zoom-in; display: flex; }
+    .ss-thumb-btn:focus-visible { outline: 2px solid var(--c-focus); outline-offset: 1px; }
     .ss-eye {
       flex: none; width: 40px; height: 40px; margin: -4px -6px -4px 0; border: 0; border-radius: 50%; background: none;
       color: var(--c-muted); font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer;
@@ -342,6 +352,8 @@ export class SearchSelectComponent<T extends { id: string }> implements OnDestro
   readonly itemImage = input<((item: T) => string | null | undefined) | null>(null);
   readonly itemSubtitle = input<((item: T) => string | null | undefined) | null>(null);
   readonly allowCreate = input(false);
+  /** When set, the list ends with this row (e.g. "Other"); choosing it emits `other`. */
+  readonly otherLabel = input('');
   /** Noun used in the create row: Add “text” as {{ createLabel }}. */
   readonly createLabel = input('new item');
   readonly required = input(false);
@@ -357,6 +369,7 @@ export class SearchSelectComponent<T extends { id: string }> implements OnDestro
   readonly selected = output<T>();
   readonly cleared = output<void>();
   readonly create = output<string>();
+  readonly other = output<void>();
   /** The panel was closed (use it to show validation after the first visit). */
   readonly touched = output<void>();
 
@@ -556,6 +569,11 @@ export class SearchSelectComponent<T extends { id: string }> implements OnDestro
     const text = this.trimmedQuery();
     if (!text) return;
     this.create.emit(text);
+    this.close(true);
+  }
+
+  protected doOther(): void {
+    this.other.emit();
     this.close(true);
   }
 

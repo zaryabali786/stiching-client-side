@@ -4,13 +4,16 @@ import { DatePipe, DecimalPipe, formatNumber } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { IonIcon, IonSpinner } from '@ionic/angular';
+import { QrCodeComponent } from '../../../shared/qr-code.component';
 import { Observable, Subject, Subscription, debounceTime, filter } from 'rxjs';
 import { ShellUiService } from '../../../core/services/shell-ui.service';
 import { OrderService } from '../../../core/services/order.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { compressImage, copyText } from '../../../core/utils/image';
 import { NotificationService } from '../../../core/services/notification.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { OrderEventsService } from '../../../core/services/order-events.service';
-import { ApiResult, InvoiceLine, OrderDetail, OrderUnit } from '../../../core/models/api.models';
+import { ApiResult, InvoiceLine, OrderDetail, OrderUnit, ReturnShipping } from '../../../core/models/api.models';
 import { PROGRESS_STEPS, humanizeStatus, progressIndex, statusHint } from '../../../core/utils/order-status';
 import { StatusBadgeComponent } from '../../../shared/status-badge.component';
 import { ShipToCardComponent } from '../../../shared/ship-to-card.component';
@@ -26,8 +29,9 @@ import { VoiceNoteFieldComponent } from '../../../shared/voice-note-field.compon
 import { VoiceNote } from '../../../core/models/api.models';
 import { isStoredVoice, toVoiceRef } from '../../../core/utils/voice-note';
 import { PaymentSheetComponent } from '../../../shared/payment-sheet.component';
+import { SheetComponent } from '../../../shared/sheet.component';
 
-type Action = 'cancel' | 'approve' | 'changes' | 'pay' | 'discard';
+type Action = 'cancel' | 'approve' | 'changes' | 'pay' | 'discard' | 'parcel' | 'review' | 'return';
 
 /** Key of the single order-level approval card used by old orders (no per-article approval data). */
 export const LEGACY_KEY = '__order';
@@ -35,6 +39,7 @@ export const LEGACY_KEY = '__order';
 @Component({
   selector: 'app-order-detail',
   imports: [
+    QrCodeComponent,
     RouterLink,
     FormsModule,
     DatePipe,
@@ -47,6 +52,7 @@ export const LEGACY_KEY = '__order';
     ErrorStateComponent,
     SizeSummaryComponent,
     PaymentSheetComponent,
+    SheetComponent,
     VoicePlayerComponent,
     VoiceNoteFieldComponent,
   ],
@@ -60,6 +66,7 @@ export class OrderDetailPage {
   private toast = inject(ToastService);
   private notif = inject(NotificationService);
   private events = inject(OrderEventsService);
+  private auth = inject(AuthService);
   private chatApi = inject(ChatService);
   private socket = inject(ChatSocketService);
   private chatUi = inject(ChatUiService);
@@ -108,6 +115,9 @@ export class OrderDetailPage {
   /** Articles whose own timeline was toggled by hand (otherwise: open when it has 3 steps or fewer). */
   private unitTimelineToggled = signal<ReadonlyMap<string, boolean>>(new Map());
   /** Expanded unit IDs for article accordion (first unit open by default). */
+  /** The "Order details" section (info, every article, cancel) is closed until the customer opens it. */
+  detailsOpen = signal(false);
+  private detailsAutoOpened = false;
   expandedUnits = signal<ReadonlySet<string>>(new Set());
 
   allUnitsExpanded = computed(() => {
@@ -216,6 +226,7 @@ export class OrderDetailPage {
     if (!o) return false;
     if (this.isAwaitingPayment() && o.invoice) return true;
     if (o.status === 'draft') return !this.confirmDiscard();
+    if (o.status === 'received' && o.details_pending && o.order_source === 'website') return true;
     return o.status === 'submitted' && !this.confirmCancel();
   });
 
@@ -371,14 +382,19 @@ export class OrderDetailPage {
       .subscribe({
         next: (o) => {
           this.order.set(o);
+          // an article waiting for the customer's decision lives in the details: open them once so it is not missed
+          if (!this.detailsAutoOpened && this.reviewWaiting() > 0) {
+            this.detailsAutoOpened = true;
+            this.detailsOpen.set(true);
+          }
           this.loading.set(false);
           this.error.set(null);
+          // everything starts closed; a link to one article opens the details and that article
           if (this.expandedUnits().size === 0 && o.units?.length) {
             const target = this.unit();
             if (target && o.units.some((u) => u.id === target)) {
               this.expandedUnits.set(new Set([target]));
-            } else {
-              this.expandedUnits.set(new Set([o.units[0].id]));
+              this.detailsOpen.set(true);
             }
           }
           this.openChatLinkIfReady();
@@ -435,6 +451,162 @@ export class OrderDetailPage {
       },
       error: (err) => {
         this.pending.set(null);
+        this.toast.error(err);
+      },
+    });
+  }
+
+  /** Approve every article that is waiting for you. */
+  approveParcel(): void {
+    this.run('parcel', this.orders.approveParcel(this.id()));
+  }
+
+  /** Articles waiting for the customer's decision, the ones they approved, and the ones held back. */
+  reviewWaiting = computed(() => this.order()?.units.filter((u) => u.review_status === 'pending').length ?? 0);
+  /** Articles with a problem our team reported: the customer decides Hold or Return (never Approve). */
+  issuePending = computed(() => this.order()?.units.filter((u) => u.status === 'issue' && u.review_status === 'pending').length ?? 0);
+  /** Articles with no reported problem that wait for the customer: they can only be approved. */
+  approvableCount = computed(() => this.order()?.units.filter((u) => u.review_status === 'pending' && u.status !== 'issue').length ?? 0);
+  isIssue(u: OrderUnit): boolean {
+    return u.status === 'issue' && u.review_status === 'pending';
+  }
+  approvedCount = computed(() => this.order()?.units.filter((u) => u.review_status === 'approved').length ?? 0);
+  /** True once the parcel arrived and the articles are being reviewed (or were). */
+  reviewing = computed(() => !!this.order()?.units.some((u) => u.review_status && u.review_status !== 'none'));
+
+  approveArticle(u: OrderUnit): void {
+    this.run('review', this.orders.reviewArticle(this.id(), u.id, { decision: 'approve' }), undefined, u.id);
+  }
+
+  // Rejecting one article: a reason is required, photos help us see what is wrong
+  /** One article, or `'parcel'` = every article that is waiting. */
+  rejectFor = signal<OrderUnit | 'parcel' | null>(null);
+  returnTo = signal<'brand' | 'customer' | null>(null);
+  /** A customer's own parcel only goes back to them; a website or email order lets them choose the brand or themselves. */
+  returnTargets = computed<('brand' | 'customer')[]>(() => (this.order()?.order_source === 'customer' ? ['customer'] : ['brand', 'customer']));
+  rejectTitle = computed(() => {
+    const r = this.rejectFor();
+    return r === 'parcel' ? 'Reject the whole parcel' : r ? r.unit_title : '';
+  });
+  /** The customer's own parcel: no articles step, approved articles go straight to production. */
+  ownParcel = computed(() => this.order()?.order_source === 'customer');
+  returnLabel(to: 'brand' | 'customer' | null | undefined): string {
+    return to === 'brand' ? 'the brand' : 'you';
+  }
+  /** Where the customer's return stands: steps, destination, and the courier + tracking number it was posted with. */
+  returnInfo = computed(() => {
+    const o = this.order();
+    const rows = (o?.units ?? []).filter((u) => u.return_status && u.return_status !== 'none' && u.return_status !== 'held');
+    if (!o || !rows.length) return null;
+    // where each article is: 0 requested · 1 CN booked · 2 with the courier (handed over / in transit) · 3 delivered
+    const stepOf = (u: (typeof rows)[number]): number => {
+      if (u.return_status === 'returned') return 3;
+      if (u.return_status === 'sent_back') return 2;
+      return u.return_shipment ? 1 : 0;
+    };
+    const step = Math.min(...rows.map(stepOf));
+    const targets = [...new Set(rows.map((u) => u.return_to).filter(Boolean))] as ('brand' | 'customer')[];
+    const seen = new Set<string>();
+    const shipments: { courier: string | null; tracking: string | null; status: string | null; last: string | null }[] = [];
+    for (const u of rows) {
+      const sh = u.return_shipment;
+      const courier = sh?.courier_name || u.return_courier || null;
+      const tracking = sh?.cn_number || u.return_tracking || null;
+      const key = `${courier}|${tracking}`;
+      if ((courier || tracking) && !seen.has(key)) {
+        seen.add(key);
+        const last = sh?.events?.length ? sh.events[sh.events.length - 1] : null;
+        shipments.push({ courier, tracking, status: sh?.status_label ?? null, last: last ? `${last.status === 'delivered' ? 'Delivered' : last.status === 'in_transit' ? 'In transit' : last.status === 'handed_over' ? 'Handed over' : 'CN booked'} · ${new Date(last.occurred_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}` : null });
+      }
+    }
+    return { step, stepOf, to: targets.length === 1 ? targets[0] : null, rows, shipments, whole: rows.length === o.units.length };
+  });
+  readonly returnSteps = ['Return requested', 'CN booked', 'With the courier', 'Delivered'];
+  copied = signal<string | null>(null);
+  async copyTracking(text: string): Promise<void> {
+    if (await copyText(text)) {
+      this.copied.set(text);
+      setTimeout(() => this.copied.set(null), 1800);
+    }
+  }
+  /** Reject = ask for a return (notes, photos, where to) or put the article on hold (one text). */
+  rejectMode = signal<'return' | 'hold'>('return');
+  /** Where the article is posted back to: starts from the order's delivery address, the customer can change it. */
+  rejectShip = signal<ReturnShipping>({ name: '', phone: '', address: '', city: '', country: '' });
+  setShip(patch: Partial<ReturnShipping>): void {
+    this.rejectShip.update((s) => ({ ...s, ...patch }));
+  }
+  /** The return goes to the customer (not the brand): the shipping details are asked. */
+  needsShipping = computed(() => this.rejectMode() === 'return' && this.returnTo() === 'customer');
+  rejectNote = signal('');
+  rejectPhotos = signal<{ name: string; dataUrl: string }[]>([]);
+  rejectTouched = signal(false);
+  rejectBusy = signal(false);
+
+  openReject(u: OrderUnit | 'parcel', mode: 'return' | 'hold' = 'return'): void {
+    this.returnTo.set(this.returnTargets().length === 1 ? this.returnTargets()[0] : null);
+    this.rejectNote.set('');
+    this.rejectPhotos.set([]);
+    this.rejectTouched.set(false);
+    this.rejectMode.set(mode);
+    const o = this.order();
+    const me = this.auth.user();
+    this.rejectShip.set({
+      name: me?.full_name ?? o?.customer_name ?? '',
+      phone: o?.destination_phone ?? me?.phone ?? '',
+      address: o?.destination_address ?? me?.address ?? '',
+      city: o?.destination_city ?? me?.city ?? '',
+      country: o?.destination_country ?? me?.country ?? '',
+    });
+    this.rejectFor.set(u);
+  }
+
+  closeReject(): void {
+    if (!this.rejectBusy()) this.rejectFor.set(null);
+  }
+
+  async onRejectPhotos(input: HTMLInputElement): Promise<void> {
+    const files = Array.from(input.files ?? []);
+    input.value = '';
+    if (!files.length) return;
+    const room = 4 - this.rejectPhotos().length;
+    this.rejectBusy.set(true);
+    try {
+      const added = await Promise.all(files.slice(0, room).map((f) => compressImage(f)));
+      this.rejectPhotos.update((l) => [...l, ...added].slice(0, 4));
+    } catch (err) {
+      this.toast.error(err);
+    } finally {
+      this.rejectBusy.set(false);
+    }
+  }
+
+  removeRejectPhoto(i: number): void {
+    this.rejectPhotos.update((l) => l.filter((_, n) => n !== i));
+  }
+
+  submitReject(): void {
+    const target = this.rejectFor();
+    if (!target || this.rejectBusy()) return;
+    this.rejectTouched.set(true);
+    const hold = this.rejectMode() === 'hold';
+    if (this.rejectNote().trim().length < 3 || (!hold && !this.returnTo())) return;
+    const ship = this.rejectShip();
+    if (this.needsShipping() && (!ship.address.trim() || !ship.city.trim() || ship.phone.replace(/\D/g, '').length < 7)) return;
+    this.rejectBusy.set(true);
+    const body = hold
+      ? { action: 'hold' as const, note: this.rejectNote().trim() }
+      : { action: 'return' as const, note: this.rejectNote().trim(), return_to: this.returnTo() ?? undefined, media: this.rejectPhotos(), ...(this.needsShipping() ? { shipping: ship } : {}) };
+    const req$ = target === 'parcel' ? this.orders.rejectParcel(this.id(), body) : this.orders.reviewArticle(this.id(), target.id, { decision: 'reject', ...body });
+    req$.subscribe({
+      next: ({ message }) => {
+        this.rejectBusy.set(false);
+        this.rejectFor.set(null);
+        this.toast.success(message || 'Rejected.');
+        this.load(this.id(), true);
+      },
+      error: (err) => {
+        this.rejectBusy.set(false);
         this.toast.error(err);
       },
     });

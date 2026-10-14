@@ -5,38 +5,56 @@
   </header>
 
   @if (user(); as u) {
-    <section class="card profile-card">
-      <div class="avatar">{{ initial() }}</div>
-      <h2>{{ u.full_name || u.email }}</h2>
-      <p class="member">Member since {{ u.created_at | date: 'MMMM y' }}</p>
-      <button type="button" class="code" (click)="copyCode()" title="Copy your customer code">
-        <span class="code-k">Customer code</span>
-        <span class="mono">{{ u.customer_code }}</span>
-        <ion-icon name="copy-outline" aria-hidden="true"></ion-icon>
-      </button>
+    <!-- Who you are -->
+    <section class="card hero">
+      <div class="avatar" aria-hidden="true">{{ initial() }}</div>
+      <div class="hero-text">
+        <h2>{{ u.full_name || u.email }}</h2>
+        <p class="hero-mail">{{ u.email }}</p>
+        <p class="member">Member since {{ u.created_at | date: 'MMMM y' }}</p>
+      </div>
     </section>
 
-    <!-- Shopping email: use it at any shop's checkout -->
-    <section class="card shopping-mail">
-      <div class="card-head">
-        <h3 class="card-title"><span class="head-ico" aria-hidden="true"><ion-icon name="mail-outline"></ion-icon></span>Your shopping email</h3>
-        <a class="btn btn-ghost btn-sm" routerLink="/app/inbox">
-          <ion-icon name="mail-outline" aria-hidden="true"></ion-icon> Inbox
+    <!-- The two things you give to others: your code (parcels) and your shopping email (checkouts) -->
+    <section class="tiles" aria-label="Your code and shopping email">
+      <button type="button" class="tile" (click)="copyCode()" [attr.aria-label]="'Copy your customer code ' + u.customer_code">
+        <span class="tile-top">
+          <span class="tile-ico" aria-hidden="true"><ion-icon name="pricetag-outline"></ion-icon></span>
+          <span class="tile-k">Customer code</span>
+          <span class="tile-copy"><ion-icon [name]="codeCopied() ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon>{{ codeCopied() ? 'Copied' : 'Copy' }}</span>
+        </span>
+        <span class="tile-v code mono">{{ u.customer_code }}</span>
+        <span class="tile-note">Write this code on your parcel when you send it.</span>
+      </button>
+
+      <div class="tile as-box">
+        <span class="tile-top">
+          <span class="tile-ico" aria-hidden="true"><ion-icon name="mail-outline"></ion-icon></span>
+          <span class="tile-k">Shopping email</span>
+          @if (shoppingEmail()) {
+            <button type="button" class="tile-copy" (click)="copyShoppingEmail()" aria-label="Copy your shopping email">
+              <ion-icon [name]="mailCopied() ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon>{{ mailCopied() ? 'Copied' : 'Copy' }}
+            </button>
+          }
+        </span>
+        @if (shoppingEmail(); as mail) {
+          <span class="tile-v mono">{{ mail }}</span>
+          <span class="tile-note">Type it at any shop's checkout. Their order emails arrive in your Inbox and become a draft order.</span>
+        } @else {
+          <span class="tile-note">Your shopping email isn't ready yet. Open your Inbox to create it.</span>
+        }
+        <a class="tile-link" routerLink="/app/inbox">
+          Open Inbox
           @if (mailbox.unread() > 0) {
             <span class="mail-count">{{ mailbox.unread() }}</span>
           }
+          <ion-icon name="chevron-forward-outline" aria-hidden="true"></ion-icon>
         </a>
       </div>
-      @if (shoppingEmail(); as mail) {
-        <button type="button" class="mail-address" (click)="copyShoppingEmail()" aria-label="Copy your shopping email">
-          <span class="mono">{{ mail }}</span>
-          <ion-icon [name]="mailCopied() ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon>
-        </button>
-        <p class="mail-note">Type this email when you check out at any online shop. Their order emails arrive in your Inbox, and we turn them into a draft order for you.</p>
-      } @else {
-        <p class="mail-note">Your shopping email isn't ready yet. Open your Inbox to create it.</p>
-      }
     </section>
+
+    <!-- Where to send it -->
+    <app-ship-to-card [showEmail]="true" />
 
     <!-- Details / edit -->
     <section class="card">
@@ -121,8 +139,6 @@
         </form>
       }
     </section>
-
-    <app-ship-to-card [chooser]="true" />
 
     <!-- Password -->
     <section class="card">

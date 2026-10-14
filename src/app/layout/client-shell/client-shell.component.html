@@ -1,23 +1,28 @@
 <header class="shell-header">
-  <a class="brand" routerLink="/app/overview" [attr.aria-label]="(config.brandName() || 'Home') + ' — home'">
-    <span class="monogram" aria-hidden="true">{{ (config.brandName() || '·').charAt(0) }}</span>
+  <button
+    type="button"
+    class="menu-btn"
+    (click)="openMenu()"
+    aria-haspopup="dialog"
+    aria-controls="side-menu"
+    [attr.aria-label]="menuBadge() > 0 ? 'Menu, ' + menuBadge() + ' things need your attention' : 'Menu'"
+  >
+    <ion-icon name="menu-outline" aria-hidden="true"></ion-icon>
+    @if (menuBadge() > 0) {
+      <span class="dot" aria-hidden="true">{{ menuBadgeText() }}</span>
+    }
+  </button>
+
+  <a class="brand" routerLink="/app/overview" [attr.aria-label]="(config.brandName() || 'Home') + ', home'">
+    @if (!logoFailed()) {
+      <img class="logo" src="assets/logo.png" alt="" (error)="logoFailed.set(true)" />
+    } @else {
+      <span class="monogram" aria-hidden="true">{{ (config.brandName() || '·').charAt(0) }}</span>
+    }
     <span class="brand-title">{{ config.brandName() }}</span>
   </a>
 
   <div class="header-actions">
-    @if (auth.user()?.customer_code; as code) {
-      <button
-        type="button"
-        class="code-pill"
-        (click)="copyCode(code)"
-        [attr.aria-label]="'Your customer code ' + code + '. Tap to copy.'"
-        title="Your customer code — write it on every parcel. Tap to copy."
-      >
-        <span class="code-k" aria-hidden="true">Code</span>
-        <span class="mono">{{ code }}</span>
-        <ion-icon [name]="copied() ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon>
-      </button>
-    }
     <a
       class="bell"
       routerLink="/app/inbox"
@@ -56,16 +61,16 @@
   <a class="tab" routerLink="/app/orders" [class.active]="activeTab() === 'orders'" [attr.aria-current]="activeTab() === 'orders' ? 'page' : null">
     <span class="ind">
       <ion-icon [name]="tabIcon('cube', activeTab() === 'orders')" aria-hidden="true"></ion-icon>
-      @if (draftCount() > 0) {
-        <span class="tab-badge" [attr.aria-label]="draftCount() + ' draft orders'">{{ draftBadge() }}</span>
+      @if (ordersBadge() > 0) {
+        <span class="tab-badge" [attr.aria-label]="ordersBadge() + ' updates on your orders'">{{ ordersBadgeText() }}</span>
       }
     </span>
     <span class="lbl">Orders</span>
   </a>
-  <a class="tab tab-new" routerLink="/app/orders/new" [class.active]="activeTab() === 'new'" [attr.aria-current]="activeTab() === 'new' ? 'page' : null">
+  <button type="button" class="tab tab-new" (click)="newOrder.open()" aria-haspopup="dialog" [class.active]="activeTab() === 'new'">
     <span class="plus"><ion-icon name="add-outline" aria-hidden="true"></ion-icon></span>
     <span class="lbl">New order</span>
-  </a>
+  </button>
   <a class="tab" routerLink="/app/sizes" [class.active]="activeTab() === 'sizes'" [attr.aria-current]="activeTab() === 'sizes' ? 'page' : null">
     <span class="ind"><ion-icon [name]="tabIcon('options', activeTab() === 'sizes')" aria-hidden="true"></ion-icon></span>
     <span class="lbl">Sizes</span>
@@ -77,5 +82,36 @@
 </nav>
 }
 
+<!-- Side menu: the tabs. A dot shows where something changed. -->
+@if (menuOpen()) {
+  <div class="drawer-backdrop" (click)="closeMenu()"></div>
+  <aside class="drawer" id="side-menu" role="dialog" aria-modal="true" aria-label="Menu">
+    <div class="drawer-head">
+      <span class="monogram" aria-hidden="true">{{ (config.brandName() || '·').charAt(0) }}</span>
+      <div class="who">
+        <strong>{{ config.brandName() }}</strong>
+        <small>{{ auth.user()?.full_name || auth.user()?.email }}</small>
+      </div>
+      <button type="button" class="drawer-x" (click)="closeMenu()" aria-label="Close menu"><ion-icon name="close-outline" aria-hidden="true"></ion-icon></button>
+    </div>
+
+    <nav class="drawer-nav" aria-label="Menu">
+      <a class="d-item" routerLink="/app/approvals" [class.active]="activeTab() === 'approvals'">
+        <ion-icon name="checkmark-done-outline" aria-hidden="true"></ion-icon><span>Approve / Reject</span>
+        @if (approvals.count() > 0) {
+          <span class="d-badge">{{ approvals.count() }}</span>
+        }
+      </a>
+    </nav>
+
+    <div class="drawer-foot">
+      <button type="button" class="d-item signout" (click)="signOut()">
+        <ion-icon name="log-out-outline" aria-hidden="true"></ion-icon><span>Sign out</span>
+      </button>
+    </div>
+  </aside>
+}
+
 <app-notification-modal />
+<app-new-order-choice />
 <app-chat-dock [layoutKey]="dockLayout()" />

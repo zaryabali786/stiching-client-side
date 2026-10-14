@@ -22,6 +22,8 @@ export class ChatUiService {
   /** The order whose page is on screen: the floating button opens its General chat. */
   readonly pageOrder = signal<{ id: string; reference: string } | null>(null);
   readonly listOpen = signal(false);
+  /** The general chat with the admin team (not about an order). */
+  readonly supportOpen = signal(false);
   readonly target = signal<ChatTarget | null>(null);
   /** A chat was marked read (order id): pages refresh their unread badges. */
   readonly read$ = new Subject<string>();
@@ -31,12 +33,20 @@ export class ChatUiService {
     this.listOpen.set(false);
   }
 
+  openSupport(): void {
+    this.target.set(null);
+    this.listOpen.set(false);
+    this.supportOpen.set(true);
+  }
+
   openList(): void {
+    this.supportOpen.set(false);
     this.target.set(null);
     this.listOpen.set(true);
   }
 
   close(): void {
+    this.supportOpen.set(false);
     this.target.set(null);
     this.listOpen.set(false);
   }

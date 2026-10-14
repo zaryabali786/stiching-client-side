@@ -205,10 +205,10 @@
   }
 }
 
-/* Journey: four dots joined by a line */
+/* Journey: seven dots joined by a line */
 .oc-progress {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(7, 1fr);
 }
 
 .oc-step {
@@ -245,10 +245,12 @@
   }
 
   .lbl {
-    font-size: 10.5px;
+    font-size: 9px;
     font-weight: 600;
+    line-height: 1.15;
+    text-align: center;
     color: var(--c-faint);
-    white-space: nowrap;
+    overflow-wrap: anywhere;
   }
 
   &.done {
@@ -339,3 +341,33 @@
     box-shadow: 0 0 0 2px var(--c-bg, #f8f9fa);
   }
 }
+
+.oc-head { flex-wrap: wrap; }
+.oc-badges { display: inline-flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.oc-pill.return {
+  display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px;
+  font-size: var(--fs-2xs); font-weight: 700; white-space: nowrap;
+  ion-icon { font-size: 13px; }
+  &[data-tone='warn'] { background: #fdeede; color: #9a4a06; }
+  &[data-tone='info'] { background: #e6efff; color: #1e4fb3; }
+  &[data-tone='ok'] { background: #e3f6ea; color: #17703d; }
+}
+.oc-return {
+  display: flex; align-items: center; gap: 8px; margin: 0; padding: 9px 12px; border-radius: 12px;
+  font-size: var(--fs-xs); font-weight: 600; line-height: 1.35;
+  ion-icon { flex: none; font-size: 16px; }
+  &[data-tone='warn'] { background: #fff6ea; color: #8a4505; }
+  &[data-tone='info'] { background: #eff5ff; color: #1b459f; }
+  &[data-tone='ok'] { background: #effaf3; color: #17703d; }
+}
+
+.oc-return > span { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.oc-return-ship { display: inline-flex; align-items: center; gap: 5px; font-weight: 500; opacity: 0.9; overflow-wrap: anywhere;
+  ion-icon { font-size: 13px; flex: none; } }
+
+.oc-groups { display: flex; flex-wrap: wrap; gap: 6px; }
+.oc-group { padding: 4px 10px; border-radius: 999px; font-size: var(--fs-2xs); background: var(--c-surface-3); color: var(--c-muted); white-space: nowrap;
+  b { color: var(--c-ink); letter-spacing: 0.02em; }
+  &[data-g='hold'] { background: #fff4e0; color: #8a4505; b { color: #8a4505; } }
+  &[data-g='return'] { background: #fdeede; color: #9a4a06; b { color: #9a4a06; } }
+  &[data-g='resolved'] { background: #e3f6ea; color: #17703d; b { color: #17703d; } } }
