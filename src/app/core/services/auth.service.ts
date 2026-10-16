@@ -1,9 +1,10 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, Injector, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiService, ApiError } from './api.service';
 import { TokenStorage } from './token-storage.service';
 import { ToastService } from './toast.service';
+import { PushService } from './push.service';
 import { AuthPayload, Profile, ProfilePatch, RegisterBody } from '../models/api.models';
 
 export const STAFF_ACCOUNT_MESSAGE = 'This is a staff account — use the admin/partner portal.';
@@ -14,6 +15,7 @@ export class AuthService {
   private store = inject(TokenStorage);
   private router = inject(Router);
   private toast = inject(ToastService);
+  private injector = inject(Injector);
 
   /** The signed-in customer (restored from storage, then refreshed from GET /auth/me). */
   readonly user = signal<Profile | null>(this.store.readUser());
@@ -92,6 +94,8 @@ export class AuthService {
 
   async logout(): Promise<void> {
     if (this.store.tokens()) {
+      // this device stops getting the customer's pushes (needs the login, so before the session is cleared)
+      await this.injector.get(PushService).unregister();
       try {
         await firstValueFrom(this.api.post('/auth/logout'));
       } catch {

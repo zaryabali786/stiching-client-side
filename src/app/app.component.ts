@@ -5,6 +5,7 @@ import { ToastHostComponent } from './shared/toast-host.component';
 import { NotificationService } from './core/services/notification.service';
 import { ConfigService } from './core/services/config.service';
 import { ThemeService } from './core/services/theme.service';
+import { PushService } from './core/services/push.service';
 
 @Component({
   selector: 'app-root',
@@ -18,6 +19,8 @@ export class AppComponent {
   // Fetch the admin's colours and fonts as soon as the app opens (also on the login pages).
   private readonly theme = inject(ThemeService);
   private readonly config = inject(ConfigService);
+  // Registers this device for push notifications while a customer is signed in.
+  private readonly push = inject(PushService);
 
   constructor() {
     this.config.load();
