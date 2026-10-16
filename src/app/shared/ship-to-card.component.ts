@@ -7,8 +7,7 @@ import { copyText } from '../core/utils/image';
 import { ClientPartner } from '../core/models/api.models';
 
 /**
- * "Ship your parcel to" card: our receiving address (GET /config) + the customer's name and code
- * to write on the parcel label, with a Copy button.
+ * "Ship your parcel to" card: our receiving address (GET /config) with Copy buttons.
  */
 @Component({
   selector: 'app-ship-to-card',
@@ -22,7 +21,7 @@ import { ClientPartner } from '../core/models/api.models';
           <h3>{{ heading() }}</h3>
         </div>
         @if (addr()) {
-          <button type="button" class="copy-btn" (click)="copy()" aria-label="Copy address and your customer code">
+          <button type="button" class="copy-btn" (click)="copy()" aria-label="Copy the whole address">
             <ion-icon [name]="copied() ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon>
             <span>{{ copied() ? 'Copied' : 'Copy all' }}</span>
           </button>
@@ -48,16 +47,6 @@ import { ClientPartner } from '../core/models/api.models';
           <div class="row"><dt>City</dt><dd>{{ c.city }}</dd>
               <button type="button" class="mini" (click)="copyOne('city', c.city)" aria-label="Copy city"><ion-icon [name]="done() === 'city' ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon></button></div>
         </dl>
-        <div class="label-note">
-          <span class="label-k">Write this on the parcel label</span>
-          <span class="label-row">
-            <span class="label-v">
-              <span class="who">{{ customerName() }}</span>
-              <b class="mono">{{ labelCode() }}</b>
-            </span>
-            <button type="button" class="mini" (click)="copyOne('label', customerName() + ' ' + labelCode())" aria-label="Copy the label text"><ion-icon [name]="done() === 'label' ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon></button>
-          </span>
-        </div>
         @if (!compact()) {
           <p class="explain">Use this as the delivery address when you buy from a brand's website.</p>
         }
@@ -116,18 +105,9 @@ import { ClientPartner } from '../core/models/api.models';
     .mini ion-icon { font-size: 16px; color: inherit; }
     .mini:hover { background: rgba(255, 255, 255, 0.22); }
     .mini:focus-visible { outline-color: #fff; }
-    .label-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
     .address { display: flex; flex-direction: column; gap: 2px; font-style: normal; font-size: var(--fs-body); line-height: 1.45; color: var(--c-on-dark); }
     .address strong { font-size: var(--fs-body); color: #fff; }
     .phone { display: inline-flex; align-items: center; gap: 6px; margin-top: 2px; }
-    .label-note {
-      margin-top: 14px; padding: 12px 14px; border-radius: 14px;
-      background: rgba(255, 255, 255, 0.06); border: 1.5px dashed rgba(255, 255, 255, 0.25);
-      display: flex; flex-direction: column; gap: 4px;
-    }
-    .label-k { font-size: var(--fs-2xs); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-on-brand, #fff); opacity: 0.7; font-weight: 600; }
-    .label-v { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: var(--fs-body); color: #fff; }
-    .label-v b { font-size: 18px; color: #fff; letter-spacing: 0.06em; }
     .explain { margin: 12px 0 0; font-size: var(--fs-sm); line-height: 1.5; color: var(--c-on-brand, #fff); opacity: 0.8; }
     .sk { display: flex; flex-direction: column; gap: 8px; }
     .sk .skeleton { opacity: 0.25; }
@@ -163,10 +143,6 @@ export class ShipToCardComponent {
     if (p && p.receiving.address) return p.receiving;
     const c = this.cfg();
     return c ? { name: c.shipToName, address: c.shipToAddress, city: c.shipToCity, phone: c.shipToPhone } : p ? p.receiving : null;
-  });
-  protected labelCode = computed(() => {
-    const p = this.selected();
-    return p?.short_code ? `${this.code()} · ${p.short_code}` : this.code();
   });
 
   /** The generic "admin" login name is not a receiver name: only a real name (a partner's) is printed. */
@@ -206,12 +182,11 @@ export class ShipToCardComponent {
       c.phone ? `Number: ${c.phone}` : '',
       `Address: ${c.address}`,
       `City: ${c.city}`,
-      `Label: ${this.customerName()} ${this.labelCode()}`,
     ]
       .filter(Boolean)
       .join('\n');
     if (await copyText(text)) {
-      this.toast.success('Address and your customer code copied.');
+      this.toast.success('Address copied.');
       this.copied.set(true);
       clearTimeout(this.copiedTimer);
       this.copiedTimer = setTimeout(() => this.copied.set(false), 2000);

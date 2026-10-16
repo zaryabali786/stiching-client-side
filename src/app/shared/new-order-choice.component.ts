@@ -1,10 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { IonIcon } from '@ionic/angular';
-import { AuthService } from '../core/services/auth.service';
 import { NewOrderService } from '../core/services/new-order.service';
-import { ToastService } from '../core/services/toast.service';
-import { copyText } from '../core/utils/image';
 import { SheetComponent } from './sheet.component';
 import { ShipToCardComponent } from './ship-to-card.component';
 
@@ -38,18 +35,7 @@ import { ShipToCardComponent } from './ship-to-card.component';
         </div>
       } @else {
         <p class="lead">When you checkout on any website, use this <b>email</b> and <b>shipping address</b>. Pay online at the brand's checkout: <b>Cash on Delivery is not supported</b> for these orders.</p>
-        <div class="mail">
-          <span class="k">Your email</span>
-          <div class="row">
-            <strong>{{ email() || 'Not available yet' }}</strong>
-            @if (email()) {
-              <button type="button" class="link-btn" (click)="copyEmail()">
-                <ion-icon [name]="copied() ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon> {{ copied() ? 'Copied' : 'Copy' }}
-              </button>
-            }
-          </div>
-        </div>
-        <app-ship-to-card eyebrow="Shipping address" heading="Deliver to" [compact]="true" />
+        <app-ship-to-card eyebrow="Shipping address" heading="Deliver to" [compact]="true" [showEmail]="true" />
         <p class="after" role="note"><ion-icon name="information-circle-outline" aria-hidden="true"></ion-icon> After you place the order, <b>check your customer portal</b>. Your order arrives there as a draft, where you complete the sizes and customization details.</p>
       }
       @if (ui.view() === 'website') {
@@ -77,10 +63,6 @@ import { ShipToCardComponent } from './ship-to-card.component';
     .txt strong { font-size: 16px; }
     .txt small { color: var(--c-muted); }
     .lead { margin: 0 0 12px; line-height: 1.5; }
-    .mail { margin-bottom: 12px; padding: 12px 14px; border: 1.5px dashed var(--c-line-strong); border-radius: 14px; display: flex; flex-direction: column; gap: 4px; }
-    .k { font-size: var(--fs-2xs); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-muted); font-weight: 600; }
-    .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .row strong { min-width: 0; overflow-wrap: anywhere; }
     .after { display: flex; gap: 8px; align-items: flex-start; margin: 12px 0 0; padding: 12px 14px; border-radius: 14px; background: var(--c-surface-3); line-height: 1.45; }
     .after ion-icon { flex: none; font-size: 20px; color: var(--c-brand); margin-top: 1px; }
     .foot { display: flex; gap: 10px; }
@@ -89,25 +71,10 @@ import { ShipToCardComponent } from './ship-to-card.component';
 })
 export class NewOrderChoiceComponent {
   protected ui = inject(NewOrderService);
-  private auth = inject(AuthService);
   private router = inject(Router);
-  private toast = inject(ToastService);
-
-  protected email = computed(() => this.auth.user()?.mailbox_address ?? null);
-  protected copied = signal(false);
 
   protected direct(): void {
     this.ui.close();
     void this.router.navigate(['/app/orders/new']);
-  }
-
-  protected async copyEmail(): Promise<void> {
-    const mail = this.email();
-    if (!mail) return;
-    if (await copyText(mail)) {
-      this.copied.set(true);
-      this.toast.success('Email copied.');
-      setTimeout(() => this.copied.set(false), 2000);
-    } else this.toast.error('Could not copy — please select the email manually.');
   }
 }
