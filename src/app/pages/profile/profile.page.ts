@@ -9,11 +9,12 @@ import { ToastService } from '../../core/services/toast.service';
 import { errorMessage } from '../../core/services/api.service';
 import { copyText } from '../../core/utils/image';
 import { ShipToCardComponent } from '../../shared/ship-to-card.component';
-import { COUNTRIES, passwordStrength } from '../auth/register/register.data';
+import { GeoPickerComponent } from '../../shared/geo-picker.component';
+import { passwordStrength } from '../auth/register/register.data';
 
 @Component({
   selector: 'app-profile',
-  imports: [DatePipe, RouterLink, FormsModule, IonIcon, IonSpinner, ShipToCardComponent],
+  imports: [DatePipe, RouterLink, FormsModule, IonIcon, IonSpinner, ShipToCardComponent, GeoPickerComponent],
   templateUrl: './profile.page.html',
   styleUrl: './profile.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -23,7 +24,6 @@ export class ProfilePage {
   private toast = inject(ToastService);
   protected mailbox = inject(MailboxService);
 
-  readonly countries = COUNTRIES;
   user = this.auth.user;
   initial = computed(() => (this.user()?.full_name || this.user()?.email || '?').charAt(0).toUpperCase());
 
@@ -34,7 +34,8 @@ export class ProfilePage {
   fullName = signal('');
   phone = signal('');
   country = signal('');
-  otherCountry = signal('');
+  /** Only used to choose the city (found again from the saved city when the form opens). */
+  state = signal('');
   city = signal('');
   address = signal('');
   postalCode = signal('');
@@ -54,11 +55,10 @@ export class ProfilePage {
   startEdit(): void {
     const u = this.user();
     if (!u) return;
-    const knownCountry = !u.country || (COUNTRIES as readonly string[]).includes(u.country);
     this.fullName.set(u.full_name ?? '');
     this.phone.set(u.phone ?? '');
-    this.country.set(knownCountry ? (u.country ?? '') : 'Other');
-    this.otherCountry.set(knownCountry ? '' : (u.country ?? ''));
+    this.country.set(u.country ?? '');
+    this.state.set('');
     this.city.set(u.city ?? '');
     this.address.set(u.address ?? '');
     this.postalCode.set(u.postal_code ?? '');
@@ -67,7 +67,7 @@ export class ProfilePage {
   }
 
   async saveProfile(): Promise<void> {
-    const country = this.country() === 'Other' ? this.otherCountry().trim() : this.country();
+    const country = this.country().trim();
     if (this.fullName().trim().length < 2) {
       this.profileError.set('Enter your full name.');
       return;

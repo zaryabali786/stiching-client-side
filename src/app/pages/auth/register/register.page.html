@@ -38,27 +38,7 @@
 
       <h3 class="form-section-title">Delivery address</h3>
 
-      <div class="field">
-        <label for="country">Country</label>
-        <select id="country" class="select" name="country" autocomplete="country-name"
-          [class.invalid]="err('country')" [(ngModel)]="country">
-          <option value="" disabled>Choose your country</option>
-          @for (c of countries; track c) {
-            <option [value]="c">{{ c }}</option>
-          }
-        </select>
-        @if (country() === 'Other') {
-          <input class="input" name="otherCountry" placeholder="Type your country" [(ngModel)]="otherCountry" />
-        }
-        @if (err('country'); as m) { <span class="field-error">{{ m }}</span> }
-      </div>
-
-      <div class="field">
-        <label for="city">City</label>
-        <input id="city" class="input" name="city" autocomplete="address-level2" placeholder="e.g. London"
-          [class.invalid]="err('city')" [(ngModel)]="city" />
-        @if (err('city'); as m) { <span class="field-error">{{ m }}</span> }
-      </div>
+      <app-geo-picker idPrefix="reg" [(country)]="country" [(state)]="state" [(city)]="city" [countryError]="err('country')" [cityError]="err('city')" />
 
       <div class="field">
         <label for="address">Street address &amp; postcode</label>

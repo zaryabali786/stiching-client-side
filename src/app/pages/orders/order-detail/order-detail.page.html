@@ -32,7 +32,11 @@
         <button type="button" class="close" (click)="dismissCreated()" aria-label="Dismiss"><ion-icon name="close-outline" aria-hidden="true"></ion-icon></button>
         <span class="check" aria-hidden="true"><ion-icon name="checkmark-outline"></ion-icon></span>
         <h2>Order {{ o.reference }} created</h2>
-        <p>Now have the brand deliver your parcel to our atelier — use the address below and write your code on the label.</p>
+        @if (o.import_source === 'email' || o.order_source === 'email') {
+          <p>You confirmed that your parcel was sent to our receiving address. We will start as soon as it arrives.</p>
+        } @else {
+          <p>Now have the brand deliver your parcel to our atelier — use the address below and write your code on the label.</p>
+        }
       </section>
     }
 
@@ -112,7 +116,8 @@
 
     <!-- ───────── Status-specific panels (primary actions live in the sticky bar below) ───────── -->
 
-    @if (o.status === 'submitted') {
+    <!-- An order made from the brand's confirmation email was already shipped to our address and confirmed when it was submitted -->
+    @if (o.status === 'submitted' && o.import_source !== 'email' && o.order_source !== 'email') {
       <app-ship-to-card [compact]="!showCreated()" [partner]="partners.fromOrder(o.partner)" />
     }
 
@@ -450,7 +455,7 @@
           @if (o.express_shipping) {
             <div class="od-row">
               <span class="od-ico" aria-hidden="true"><ion-icon name="airplane-outline"></ion-icon></span>
-              <dt>Express shipping</dt>
+              <dt>Fast shipping</dt>
               <dd>Yes@if (o.express_shipping_days) { · {{ o.express_shipping_days }} days }</dd>
             </div>
           }
@@ -892,6 +897,16 @@
           We made this order from your email{{ o.brand_order_number ? ' (order ' + o.brand_order_number + ')' : '' }}. Nothing has been sent to us yet.
           Choose Create Order to add the sizes and stitching details, or Cancel Draft.
         </p>
+        @if (o.brand_payment_method) {
+          <div class="pay-box" [class.is-cod]="o.payment_cod" role="group" aria-label="Payment method">
+            <span class="pay-k">Payment method</span>
+            <strong>{{ o.brand_payment_method }}</strong>
+            @if (o.payment_cod) {
+              <p class="pay-warn" role="alert"><ion-icon name="warning-outline" aria-hidden="true"></ion-icon> COD is not allowed. This order cannot be created.</p>
+              <span class="muted small">You can cancel this draft, or wait for an email that confirms a different payment method.</span>
+            }
+          </div>
+        }
         @if (confirmDiscard()) {
           <div class="confirm-panel" role="alertdialog" aria-label="Confirm discarding the draft">
             <p>Cancel this draft? The email stays in your Inbox, so you can create the order again later.</p>
@@ -910,9 +925,15 @@
             <button type="button" class="btn btn-danger-outline" (click)="confirmDiscard.set(true)">
               <ion-icon name="close-circle-outline" aria-hidden="true"></ion-icon> Cancel Draft
             </button>
-            <a class="btn btn-primary" [routerLink]="['/app/orders', o.id, 'edit']">
-              <ion-icon name="create-outline" aria-hidden="true"></ion-icon> Create Order
-            </a>
+            @if (o.payment_cod) {
+              <button type="button" class="btn btn-primary" disabled title="COD is not allowed. This order cannot be created.">
+                <ion-icon name="create-outline" aria-hidden="true"></ion-icon> Create Order
+              </button>
+            } @else {
+              <a class="btn btn-primary" [routerLink]="['/app/orders', o.id, 'edit']">
+                <ion-icon name="create-outline" aria-hidden="true"></ion-icon> Create Order
+              </a>
+            }
           </div>
         }
       </section>
@@ -976,7 +997,7 @@
           <div class="ab-text"><span class="ab-k">A problem was found</span><span class="ab-sub">Open the article and choose Hold or Return</span></div>
         } @else if (approvedCount() > 0) {
           <div class="ab-text"><span class="ab-k">Approved</span><span class="ab-sub">Add sizes, then it goes to production</span></div>
-          <a class="btn btn-primary" [routerLink]="['/app/orders', o.id, 'edit']"><ion-icon name="create-outline" aria-hidden="true"></ion-icon> Add size</a>
+          @if (!o.payment_cod) { <a class="btn btn-primary" [routerLink]="['/app/orders', o.id, 'edit']"><ion-icon name="create-outline" aria-hidden="true"></ion-icon> Add size</a> }
         } @else {
           <div class="ab-text"><span class="ab-k">Parcel being returned</span><span class="ab-sub">We will tell you here</span></div>
         }
@@ -997,7 +1018,7 @@
             <span class="ab-k">Approved</span>
             <span class="ab-sub">Add sizes, then submit</span>
           </div>
-          <a class="btn btn-primary" [routerLink]="['/app/orders', o.id, 'edit']"><ion-icon name="create-outline" aria-hidden="true"></ion-icon> Add size</a>
+          @if (!o.payment_cod) { <a class="btn btn-primary" [routerLink]="['/app/orders', o.id, 'edit']"><ion-icon name="create-outline" aria-hidden="true"></ion-icon> Add size</a> }
         } @else if (reviewing()) {
           <div class="ab-text">
             <span class="ab-k">Waiting for the corrected article</span>
@@ -1094,11 +1115,8 @@
       </div>
       <div class="field"><label for="rs-addr">Address</label><textarea id="rs-addr" class="textarea" rows="2" autocomplete="street-address" placeholder="House, street, area" [ngModel]="rejectShip().address" (ngModelChange)="setShip({ address: $event })"></textarea>
         @if (rejectTouched() && !rejectShip().address.trim()) { <span class="field-error">Enter the address.</span> }</div>
-      <div class="ship-grid">
-        <div class="field"><label for="rs-city">City</label><input id="rs-city" class="input" autocomplete="address-level2" [ngModel]="rejectShip().city" (ngModelChange)="setShip({ city: $event })" />
-          @if (rejectTouched() && !rejectShip().city.trim()) { <span class="field-error">Enter the city.</span> }</div>
-        <div class="field"><label for="rs-country">Country</label><input id="rs-country" class="input" autocomplete="country-name" [ngModel]="rejectShip().country" (ngModelChange)="setShip({ country: $event })" /></div>
-      </div>
+      <app-geo-picker idPrefix="rs" [country]="rejectShip().country" (countryChange)="setShip({ country: $event })" [(state)]="rejectState" [city]="rejectShip().city" (cityChange)="setShip({ city: $event })"
+        [cityError]="rejectTouched() && !rejectShip().city.trim() ? 'Choose the city.' : null" />
     </div>
     }
 

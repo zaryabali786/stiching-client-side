@@ -98,10 +98,10 @@ export interface PlatformConfig {
   shipToCity: string;
   shipToPhone: string;
   partnerName: string;
-  /** Express stitching as the admin decided it: offered or not, and how many days it takes. */
+  /** Priority stitching as the admin decided it: offered or not, how many days it takes, and its price. */
   expressStitching?: { enabled: boolean; days: number; price_pkr?: number };
-  /** Express shipping as the admin decided it: offered or not, and how many days the delivery takes. */
-  expressShipping?: { enabled: boolean; days: number; price_pkr?: number };
+  /** Fast shipping as the admin decided it: offered or not, and how many days the delivery takes. It has no price. */
+  expressShipping?: { enabled: boolean; days: number };
   /** Card payments: the publishable key is public by design; the secret key never leaves the server. */
   payments?: { stripe: { enabled: boolean; publishableKey: string | null } };
   /** Google sign-in: the OAuth client id is public by design; the client secret stays on the server. */
@@ -430,6 +430,8 @@ export interface Order {
   /** How the brand order was paid, read from its confirmation email (never guessed). */
   brand_payment_method?: string | null;
   brand_payment_status?: 'paid' | 'pending' | null;
+  /** The email says cash on delivery: a draft like this cannot be created. */
+  payment_cod?: boolean;
   tracking_number: string | null;
   courier_id?: string | null;
   international_shipping?: boolean | null;
@@ -437,9 +439,8 @@ export interface Order {
   express_days?: number | null;
   express_shipping?: boolean;
   express_shipping_days?: number | null;
-  /** The prices saved on the order when express was chosen (PKR). */
+  /** The priority stitching price saved on the order when it was chosen (PKR). Fast shipping has none. */
   express_stitching_price?: number | null;
-  express_shipping_price?: number | null;
   status: OrderStatus;
   has_issue: boolean;
   customer_notes: string | null;
@@ -512,6 +513,8 @@ export interface OrderDetail extends Order {
 export interface UnitInput {
   /** The brand this article was bought from (direct-from-customer orders). */
   brand_id?: string | null;
+  /** A brand typed for this article only ("Other"); not in the brand list. */
+  brand_name?: string;
   /** Existing article id when editing (updated in place). */
   id?: string;
   /** Saved reference photos to keep when editing. */

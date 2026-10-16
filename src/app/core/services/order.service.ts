@@ -58,6 +58,11 @@ export class OrderService {
   }
 
   /** Throws away a draft made from an email (the email's order stays available in the Inbox). */
+  /** Confirm how an email draft was paid when the email did not say (never cash on delivery). */
+  confirmPaymentMethod(id: string, method: string): Observable<ApiResult<{ brand_payment_method: string }>> {
+    return this.api.post<{ brand_payment_method: string }>(`/client/orders/${encodeURIComponent(id)}/payment-method`, { method });
+  }
+
   discardDraft(id: string): Observable<ApiResult<null>> {
     return this.api.delete(`/client/orders/${encodeURIComponent(id)}`);
   }

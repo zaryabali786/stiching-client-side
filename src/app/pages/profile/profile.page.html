@@ -101,27 +101,10 @@
             <label for="p-phone">Phone</label>
             <input id="p-phone" class="input" type="tel" name="phone" autocomplete="tel" [(ngModel)]="phone" />
           </div>
+          <app-geo-picker idPrefix="p" [(country)]="country" [(state)]="state" [(city)]="city" />
           <div class="field">
-            <label for="p-country">Country</label>
-            <select id="p-country" class="select" name="country" [(ngModel)]="country">
-              <option value="" disabled>Choose your country</option>
-              @for (c of countries; track c) {
-                <option [value]="c">{{ c }}</option>
-              }
-            </select>
-            @if (country() === 'Other') {
-              <input class="input" name="otherCountry" placeholder="Type your country" [(ngModel)]="otherCountry" />
-            }
-          </div>
-          <div class="grid-2">
-            <div class="field">
-              <label for="p-city">City</label>
-              <input id="p-city" class="input" name="city" autocomplete="address-level2" [(ngModel)]="city" />
-            </div>
-            <div class="field">
-              <label for="p-postal">Postcode</label>
-              <input id="p-postal" class="input" name="postalCode" autocomplete="postal-code" [(ngModel)]="postalCode" />
-            </div>
+            <label for="p-postal">Postcode</label>
+            <input id="p-postal" class="input" name="postalCode" autocomplete="postal-code" [(ngModel)]="postalCode" />
           </div>
           <div class="field">
             <label for="p-address">Street address</label>

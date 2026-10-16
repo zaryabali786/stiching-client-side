@@ -505,7 +505,7 @@
         @if (courier()?.name) { <div class="kv"><span class="k">Courier</span><span class="v">{{ courier()?.name }}</span></div> }
         @if (trackingNumber().trim()) { <div class="kv"><span class="k">Tracking ID</span><span class="v mono">{{ trackingNumber() }}</span></div> }
         }
-        @if (shippingExpressInfo() && expressShipping()) { <div class="kv"><span class="k">Express shipping</span><span class="v">Yes · {{ shippingExpressInfo()!.days }} days</span></div> }
+        @if (shippingExpressInfo() && expressShipping()) { <div class="kv"><span class="k">Fast shipping</span><span class="v">Yes · {{ shippingExpressInfo()!.days }} days</span></div> }
       </section>
 
       <section class="card">
@@ -571,14 +571,14 @@
       @if (expressInfo(); as ex) {
       <section class="card stack-lg">
         <div class="field">
-          <span class="field-label" id="express-label">Express stitching <span class="opt">optional</span></span>
+          <span class="field-label" id="express-label">Priority stitching <span class="opt">optional</span></span>
           <div class="segmented block" role="radiogroup" aria-labelledby="express-label">
             <button type="button" role="radio" [attr.aria-checked]="expressStitching()" [class.active]="expressStitching()" (click)="expressStitching.set(true)">Yes</button>
             <button type="button" role="radio" [attr.aria-checked]="!expressStitching()" [class.active]="!expressStitching()" (click)="expressStitching.set(false)">No</button>
           </div>
           @if (expressStitching()) {
             <div class="ship-type" role="status">
-              <span class="tag"><ion-icon name="flash-outline" aria-hidden="true"></ion-icon> Express stitching · {{ ex.days }} day{{ ex.days === 1 ? '' : 's' }}@if (stitchingCharge()) { · +{{ money(stitchingCharge()) }} }</span>
+              <span class="tag"><ion-icon name="flash-outline" aria-hidden="true"></ion-icon> Priority stitching · {{ ex.days }} day{{ ex.days === 1 ? '' : 's' }}@if (stitchingCharge()) { · +{{ money(stitchingCharge()) }} }</span>
               <span class="ship-type-text">Your order is stitched with priority and is ready in about {{ ex.days }} day{{ ex.days === 1 ? '' : 's' }} after you create it.</span>
             </div>
           } @else {
@@ -591,31 +591,41 @@
       @if (shippingExpressInfo(); as sx) {
       <section class="card stack-lg">
         <div class="field">
-          <span class="field-label" id="express-ship-label">Express shipping <span class="opt">optional</span></span>
+          <span class="field-label" id="express-ship-label">Fast shipping <span class="opt">optional</span></span>
           <div class="segmented block" role="radiogroup" aria-labelledby="express-ship-label">
             <button type="button" role="radio" [attr.aria-checked]="expressShipping()" [class.active]="expressShipping()" (click)="expressShipping.set(true)">Yes</button>
             <button type="button" role="radio" [attr.aria-checked]="!expressShipping()" [class.active]="!expressShipping()" (click)="expressShipping.set(false)">No</button>
           </div>
           @if (expressShipping()) {
             <div class="ship-type" role="status">
-              <span class="tag"><ion-icon name="airplane-outline" aria-hidden="true"></ion-icon> Express shipping · {{ sx.days }} day{{ sx.days === 1 ? '' : 's' }}@if (shippingCharge()) { · +{{ money(shippingCharge()) }} }</span>
+              <span class="tag"><ion-icon name="airplane-outline" aria-hidden="true"></ion-icon> Fast shipping · {{ sx.days }} day{{ sx.days === 1 ? '' : 's' }}</span>
               <span class="ship-type-text">Your finished order is sent by the fast courier and is delivered in about {{ sx.days }} day{{ sx.days === 1 ? '' : 's' }} after it is dispatched.</span>
             </div>
           } @else {
-            <span class="hint">Choose Yes to have your finished order delivered in {{ sx.days }} day{{ sx.days === 1 ? '' : 's' }} instead of the usual time.@if (sx.price_pkr) { Extra charge: <b>{{ money(sx.price_pkr) }}</b>. }</span>
+            <span class="hint">Choose Yes to have your finished order delivered in {{ sx.days }} day{{ sx.days === 1 ? '' : 's' }} instead of the usual time. There is no extra charge.</span>
           }
         </div>
       </section>
       }
 
-      <app-ship-to-card [eyebrow]="isEdit() ? 'Receiving address' : 'Next step'" [heading]="isEdit() ? 'Ship your parcel to us' : 'Then ship your parcel to us'" [compact]="true" [showEmail]="true" [partner]="null" />
+      @if (!emailOrder() || needsAddressConfirm()) {
+      <app-ship-to-card [eyebrow]="isEdit() ? 'Receiving address' : 'Next step'" [heading]="isEdit() ? 'Ship your parcel to us' : 'Then ship your parcel to us'" [compact]="true" [showEmail]="true" [partner]="emailOrder() ? shipPartner() : null" />
+      }
 
-      @if (stitchingCharge() > 0 || shippingCharge() > 0) {
+      @if (needsAddressConfirm()) {
+        <section class="card address-confirm" aria-label="Confirm the receiving address">
+          <p class="confirm-msg"><ion-icon name="location-outline" aria-hidden="true"></ion-icon> Your parcel was sent to our receiving address. Please confirm that you shipped this order to the address shown above, then press Submit.</p>
+          @if (!receivingAddress()) {
+            <span class="field-error" role="alert">Our receiving address is not available right now, so it cannot be confirmed. Please try again later or contact us.</span>
+          }
+        </section>
+      }
+
+      @if (stitchingCharge() > 0) {
       <section class="card price-summary" aria-label="Price breakdown">
         <h3 class="card-title">Price breakdown</h3>
         @if (hasPrices()) { <div class="price-row"><span>Articles &amp; customization</span><strong>{{ money(total()) }}</strong></div> }
-        @if (stitchingCharge() > 0) { <div class="price-row"><span>Express stitching</span><strong>+ {{ money(stitchingCharge()) }}</strong></div> }
-        @if (shippingCharge() > 0) { <div class="price-row"><span>Express shipping</span><strong>+ {{ money(shippingCharge()) }}</strong></div> }
+        @if (stitchingCharge() > 0) { <div class="price-row"><span>Priority stitching</span><strong>+ {{ money(stitchingCharge()) }}</strong></div> }
         <div class="price-row total" aria-live="polite"><span>Total payable</span><strong>{{ money(grandTotal()) }}</strong></div>
         <span class="hint">Courier shipping is added when your invoice is issued.</span>
       </section>
@@ -645,7 +655,7 @@
           Next <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon>
         </button>
       } @else {
-        <button type="button" class="btn btn-primary" (click)="simple() ? openAddress() : submit()" [disabled]="submitting() || anyUploading()">
+        <button type="button" class="btn btn-primary" (click)="simple() || emailOrder() ? openAddress() : submit()" [disabled]="submitting() || anyUploading()">
           @if (submitting()) {
             <ion-spinner name="crescent"></ion-spinner> {{ isEdit() && !isDraft() ? 'Saving…' : 'Sending…' }}
           } @else {
@@ -672,6 +682,7 @@
       <span class="addr-k">Your delivery address</span>
       <address>{{ addressText() }}</address>
       @if (addrPhone()) { <span class="addr-phone"><ion-icon name="call-outline" aria-hidden="true"></ion-icon> {{ addrPhone() }}</span> }
+      @if (addrPhone().replace('\D', '').length < 7) { <span class="hint">Add a phone number we can reach: press Change address.</span> }
       <button type="button" class="link-btn" (click)="addressEditing.set(true)"><ion-icon name="create-outline" aria-hidden="true"></ion-icon> Change address</button>
     </div>
   } @else {
@@ -679,18 +690,11 @@
       <label for="addr-line">Address</label>
       <textarea id="addr-line" class="textarea" rows="2" placeholder="House, street, area" [ngModel]="addrAddress()" (ngModelChange)="addrAddress.set($event)"></textarea>
     </div>
-    <div class="field">
-      <label for="addr-city">City</label>
-      <input id="addr-city" class="input" autocomplete="address-level2" [ngModel]="addrCity()" (ngModelChange)="addrCity.set($event)" />
-    </div>
+    <app-geo-picker idPrefix="addr" [(country)]="addrCountry" [(state)]="addrState" [(city)]="addrCity" />
     <div class="field">
       <label for="addr-phone">Phone number</label>
       <input id="addr-phone" class="input" type="tel" inputmode="tel" autocomplete="tel" placeholder="+92 3xx xxxxxxx" [ngModel]="addrPhone()" (ngModelChange)="addrPhone.set($event)" />
       <span class="hint">Used for this order's delivery only. Your profile stays as it is.</span>
-    </div>
-    <div class="field">
-      <label for="addr-country">Country</label>
-      <input id="addr-country" class="input" autocomplete="country-name" [ngModel]="addrCountry()" (ngModelChange)="addrCountry.set($event)" />
     </div>
   }
   <div sheet-footer class="addr-foot">

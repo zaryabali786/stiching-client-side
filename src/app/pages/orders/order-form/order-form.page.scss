@@ -685,3 +685,13 @@ fieldset.article-body:disabled { opacity: 0.6; }
 .readonly-text { font-size: 16px; line-height: 1.35; overflow-wrap: anywhere; }
 
 .addr-phone { display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; font-weight: 600; ion-icon { font-size: 15px; } }
+
+.address-confirm {
+  display: flex; flex-direction: column; gap: 10px;
+  .confirm-msg { display: flex; gap: 8px; align-items: flex-start; margin: 0; font-size: var(--fs-body); line-height: 1.45; }
+  .confirm-msg ion-icon { flex: none; margin-top: 2px; font-size: 18px; }
+  .confirm-check { display: flex; gap: 10px; align-items: flex-start; font-size: var(--fs-sm); line-height: 1.45; cursor: pointer; }
+  .confirm-check input { flex: none; width: 20px; height: 20px; margin-top: 1px; }
+  .field-error { color: var(--c-danger, #a3301f); font-size: var(--fs-sm); }
+  &.bad { border-color: var(--c-danger, #a3301f); }
+}

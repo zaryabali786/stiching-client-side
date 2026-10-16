@@ -20,6 +20,7 @@ import { ImageUpload, compressImage } from '../../../core/utils/image';
 import { PageFetch } from '../../../core/utils/search-pager';
 import { SheetComponent } from '../../../shared/sheet.component';
 import { ShipToCardComponent } from '../../../shared/ship-to-card.component';
+import { GeoPickerComponent } from '../../../shared/geo-picker.component';
 import { EmptyStateComponent, ErrorStateComponent, SkeletonComponent } from '../../../shared/ui-states';
 import { SearchSelectComponent } from '../../../shared/search-select.component';
 import { SizeSummaryComponent } from '../../../shared/size-summary.component';
@@ -43,7 +44,7 @@ interface ArticleDraft {
   /** Reference photos already saved on the server (kept unless removed). */
   existingImages: NonNullable<OrderDetail['units'][number]['reference_images']>;
   open: boolean;
-  /** An article of an email order that is not received and approved yet: it cannot be edited. */
+  /** An article that was received but is not approved yet: the customer reviews it first, so it cannot be edited. */
   locked: boolean;
   /** The brand this article was bought from (direct-from-customer orders). */
   brand: Brand | null;
@@ -94,6 +95,7 @@ const courierSub = (c: Courier): string | null => (c.requires_tracking ? 'Tracki
     IonIcon,
     IonSpinner,
     ShipToCardComponent,
+    GeoPickerComponent,
     SheetComponent,
     SkeletonComponent,
     EmptyStateComponent,
@@ -198,20 +200,26 @@ export class OrderFormPage {
   shipPartner = computed(() => this.partnerChoice.fromOrder(this.partner()));
   /** Orders made from an email already know their products, so the product link field is hidden. */
   emailOrder = signal(false);
+  /** The parcel of the order being edited is already with us, so there is nothing left to confirm. */
+  private parcelIn = signal(false);
+  /** The email order was not confirmed yet (new, or a draft): an order already submitted had its address confirmed then. */
+  needsAddressConfirm = computed(() => this.emailOrder() && !this.parcelIn() && (!this.isEdit() || this.isDraft()));
+  /** The receiving address of this order: its partner's when assigned, else the platform's one. */
+  receivingAddress = computed(() => (this.shipPartner()?.receiving.address || this.configService.config()?.shipToAddress || '').trim());
   /** Courier name an email gave that is not in the courier list. */
   emailCourierName = signal<string | null>(null);
   brand = signal<Brand | null>(null);
   brandOrderNumber = signal('');
   courier = signal<Courier | null>(null);
   trackingNumber = signal('');
-  /** Express stitching: the order is stitched faster. The admin decides how many days it takes. */
+  /** Priority stitching: the order is stitched faster. The admin decides how many days it takes (and its price). */
   expressStitching = signal(false);
-  /** The admin's express stitching setting (null while loading or when it is switched off for customers). */
+  /** The admin's priority stitching setting (null while loading or when it is switched off for customers). */
   expressInfo = computed(() => {
     const e = this.configService.config()?.expressStitching;
     return e && e.enabled ? e : null;
   });
-  /** Express shipping: the finished order is delivered faster. The admin decides how many days it takes. */
+  /** Fast shipping: the finished order is delivered faster. The admin decides how many days it takes. It has no price. */
   expressShipping = signal(false);
   shippingExpressInfo = computed(() => {
     const e = this.configService.config()?.expressShipping;
@@ -240,13 +248,11 @@ export class OrderFormPage {
     return Object.values(a.picks).reduce((sum, p) => sum + (Number(p.customer_price) || 0), 0) * (a.quantity || 1);
   }
   total = computed(() => this.articles().reduce((sum, a) => sum + this.priceOf(a), 0));
-  /** Prices an edited order already carries (its own, saved when express was chosen); a new choice uses the admin's current price. */
+  /** The priority stitching price an edited order already carries (saved when it was chosen); a new choice uses the admin's current price. */
   private savedStitchingPrice = signal<number | null>(null);
-  private savedShippingPrice = signal<number | null>(null);
   stitchingCharge = computed(() => (this.expressStitching() ? Number(this.savedStitchingPrice() ?? this.expressInfo()?.price_pkr ?? 0) || 0 : 0));
-  shippingCharge = computed(() => (this.expressShipping() ? Number(this.savedShippingPrice() ?? this.shippingExpressInfo()?.price_pkr ?? 0) || 0 : 0));
-  /** Articles and customization plus the express charges that were chosen. */
-  grandTotal = computed(() => this.total() + this.stitchingCharge() + this.shippingCharge());
+  /** Articles and customization plus the priority stitching charge when it was chosen. Fast shipping adds nothing. */
+  grandTotal = computed(() => this.total() + this.stitchingCharge());
   hasPrices = computed(() => this.articles().some((a) => Object.values(a.picks).some((p) => p.customer_price != null)));
 
   /** The article whose "Other" brand name is being typed, and what was typed. */
@@ -269,19 +275,9 @@ export class OrderFormPage {
     this.onArticleBrandCreate(a, name);
   }
 
+  /** "Other": the typed name belongs to this article only. It is NOT added to the brand list. */
   onArticleBrandCreate(a: ArticleDraft, name: string): void {
-    this.creatingBrand.set(true);
-    this.catalog.createBrand(name).subscribe({
-      next: ({ data }) => {
-        this.patchArticle(a.key, { brand: data });
-        this.creatingBrand.set(false);
-        this.toast.success('Brand added');
-      },
-      error: (err) => {
-        this.creatingBrand.set(false);
-        this.toast.error(err);
-      },
-    });
+    this.patchArticle(a.key, { brand: { id: '', name: name.trim() } as Brand });
   }
 
   // Delivery address asked when a new order is submitted: the profile address by default, changeable here
@@ -290,6 +286,8 @@ export class OrderFormPage {
   addressOpen = signal(false);
   addressEditing = signal(false);
   addrCountry = signal('');
+  /** Only used to choose the city: the order stores country and city. */
+  addrState = signal('');
   addrCity = signal('');
   addrAddress = signal('');
   /** The phone for this order's delivery (the profile's by default). Saved on the order only. */
@@ -301,11 +299,18 @@ export class OrderFormPage {
       this.goTo(3);
       return;
     }
-    const u = this.savedAddress ?? this.auth.user();
+    if (this.needsAddressConfirm() && !this.receivingAddress()) {
+      this.toast.error('Our receiving address is not available right now. Please try again later.');
+      return;
+    }
+    const u = this.savedAddress?.address.trim() ? this.savedAddress : this.auth.user();
     this.addrCountry.set(u?.country ?? '');
+    this.addrState.set('');
     this.addrCity.set(u?.city ?? '');
     this.addrAddress.set(u?.address ?? '');
-    this.addrPhone.set(u?.phone ?? '');
+    // an order saved without a phone takes the one on the customer's profile
+    this.addrPhone.set(u?.phone?.trim() || this.auth.user()?.phone?.trim() || '');
+    // always start on the saved address; the form opens with "Change address" (or when there is no address yet)
     this.addressEditing.set(!this.addressText());
     this.addressOpen.set(true);
   }
@@ -313,7 +318,7 @@ export class OrderFormPage {
   confirmAddress(): void {
     if (!this.addrAddress().trim() || !this.addrCity().trim()) {
       this.addressEditing.set(true);
-      this.toast.error('Enter the delivery address and city.');
+      this.toast.error('Enter the delivery address and choose the city.');
       return;
     }
     if (this.addrPhone().trim().replace(/\D/g, '').length < 7) {
@@ -387,7 +392,7 @@ export class OrderFormPage {
   private previewSubs = new Map<number, Subscription>();
 
   constructor() {
-    // the express prices are the admin's current ones: refresh the cached config instead of trusting an old copy
+    // the priority stitching price is the admin's current one: refresh the cached config instead of trusting an old copy
     this.configService.load(true);
     this.loadCharts();
 
@@ -653,6 +658,7 @@ export class OrderFormPage {
     this.step.set(this.importId() ? 1 : 2);
     this.partner.set(null);
     this.emailOrder.set(false);
+    this.parcelIn.set(false);
     this.customerEdit.set(false);
     this.savedAddress = null;
     this.emailCourierName.set(null);
@@ -663,7 +669,6 @@ export class OrderFormPage {
     this.expressStitching.set(false);
     this.expressShipping.set(false);
     this.savedStitchingPrice.set(null);
-    this.savedShippingPrice.set(null);
     this.note.set('');
     this.voice.set(null);
     this.articles.set([this.newArticle()]);
@@ -675,9 +680,10 @@ export class OrderFormPage {
     // an order made from an email, or a website order being completed after its parcel was checked: its articles are the ones that arrived
     this.emailOrder.set(o.order_source === 'email' || o.import_source === 'email' || (o.order_source === 'website' && o.status === 'received' && !!o.details_pending));
     this.emailCourierName.set(o.courier_name ?? null);
+    this.parcelIn.set(o.status !== 'submitted' && o.status !== 'draft');
     // a customer's own parcel is edited with the same two-step form it was created with (brand per article, address on submit)
     this.customerEdit.set(o.order_source === 'customer' && !this.emailOrder());
-    this.savedAddress = this.customerEdit()
+    this.savedAddress = this.customerEdit() || this.emailOrder()
       ? { country: o.destination_country ?? '', city: o.destination_city ?? '', address: o.destination_address ?? '', phone: o.destination_phone ?? '' }
       : null;
     this.brand.set(o.brand_ref ?? (o.brand_id ? { id: o.brand_id, name: o.brand } : null));
@@ -687,7 +693,6 @@ export class OrderFormPage {
     this.expressStitching.set(o.express_stitching === true);
     this.expressShipping.set(o.express_shipping === true);
     this.savedStitchingPrice.set(o.express_stitching === true && o.express_stitching_price != null ? Number(o.express_stitching_price) : null);
-    this.savedShippingPrice.set(o.express_shipping === true && o.express_shipping_price != null ? Number(o.express_shipping_price) : null);
     this.note.set(o.customer_notes ?? '');
     const names: Record<string, string> = {};
     this.articles.set(
@@ -702,8 +707,8 @@ export class OrderFormPage {
           id: u.id,
           existingImages: u.reference_images ?? [],
           open: i === 0,
-          locked: o.import_source === 'email' && !(u.status === 'received' && u.review_status === 'approved'),
-          brand: this.customerEdit() && u.brand_id ? ({ id: u.brand_id, name: u.brand ?? '' } as Brand) : null,
+          locked: (o.import_source === 'email' || o.order_source === 'email') && u.status === 'received' && u.review_status !== 'approved',
+          brand: this.customerEdit() && (u.brand_id || u.brand) ? ({ id: u.brand_id ?? '', name: u.brand ?? '' } as Brand) : null,
           product_link: u.product_link ?? '',
           unit_title: u.unit_title ?? '',
           product_image_url: u.product_image_url ?? '',
@@ -1054,8 +1059,11 @@ export class OrderFormPage {
   private buildBody(): OrderInput {
     const simple = this.simple();
     return {
-      ...(simple
+      ...(simple || this.emailOrder()
         ? { destination_country: this.addrCountry().trim() || null, destination_city: this.addrCity().trim() || null, destination_address: this.addrAddress().trim() || null, destination_phone: this.addrPhone().trim() || null }
+        : {}),
+      ...(simple
+        ? {}
         : { brand_id: this.brand()!.id, courier_id: this.courier()?.id ?? null, tracking_number: this.trackingNumber().trim() || null, brand_order_number: this.brandOrderNumber().trim() || null }),
       express_stitching: this.expressStitching(),
       express_shipping: this.expressShipping(),
@@ -1064,7 +1072,7 @@ export class OrderFormPage {
       units: this.articles().map((a): UnitInput => {
         const unit: UnitInput = {
           unit_title: a.unit_title.trim(),
-          ...(simple ? { brand_id: a.brand?.id ?? null } : {}),
+          ...(simple ? { brand_id: a.brand?.id || null, ...(a.brand && !a.brand.id ? { brand_name: a.brand.name } : {}) } : {}),
           product_link: simple ? null : a.product_link.trim() || null,
           product_image_url: a.product_image_url || null,
           size_chart_id: a.size_chart_id || null,

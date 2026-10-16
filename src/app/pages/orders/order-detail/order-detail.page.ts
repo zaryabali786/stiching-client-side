@@ -17,6 +17,7 @@ import { ApiResult, InvoiceLine, OrderDetail, OrderUnit, ReturnShipping } from '
 import { PROGRESS_STEPS, humanizeStatus, progressIndex, statusHint } from '../../../core/utils/order-status';
 import { StatusBadgeComponent } from '../../../shared/status-badge.component';
 import { ShipToCardComponent } from '../../../shared/ship-to-card.component';
+import { GeoPickerComponent } from '../../../shared/geo-picker.component';
 import { PartnerChoiceService } from '../../../core/services/partner-choice.service';
 import { ErrorStateComponent, SkeletonComponent } from '../../../shared/ui-states';
 import { ChatService } from '../../../core/services/chat.service';
@@ -31,7 +32,7 @@ import { isStoredVoice, toVoiceRef } from '../../../core/utils/voice-note';
 import { PaymentSheetComponent } from '../../../shared/payment-sheet.component';
 import { SheetComponent } from '../../../shared/sheet.component';
 
-type Action = 'cancel' | 'approve' | 'changes' | 'pay' | 'discard' | 'parcel' | 'review' | 'return';
+type Action = 'cancel' | 'approve' | 'changes' | 'pay' | 'discard' | 'payment' | 'parcel' | 'review' | 'return';
 
 /** Key of the single order-level approval card used by old orders (no per-article approval data). */
 export const LEGACY_KEY = '__order';
@@ -48,6 +49,7 @@ export const LEGACY_KEY = '__order';
     IonSpinner,
     StatusBadgeComponent,
     ShipToCardComponent,
+    GeoPickerComponent,
     SkeletonComponent,
     ErrorStateComponent,
     SizeSummaryComponent,
@@ -444,6 +446,27 @@ export class OrderDetailPage {
     return [o.brand_payment_method, status].filter(Boolean).join(' · ');
   }
 
+  readonly payChoice = signal('');
+  readonly payMethods = ['Card', 'Bank transfer', 'Online payment'];
+
+  /** The email did not say how the order was paid: the customer confirms it (cash on delivery is not offered). */
+  confirmPayment(): void {
+    const method = this.payChoice();
+    if (!method || this.pending()) return;
+    this.pending.set('payment');
+    this.orders.confirmPaymentMethod(this.id(), method).subscribe({
+      next: (res) => {
+        this.pending.set(null);
+        this.toast.success(res.message || 'Saved.');
+        this.load(this.id(), true);
+      },
+      error: (err) => {
+        this.pending.set(null);
+        this.toast.error(err);
+      },
+    });
+  }
+
   /** Throw a draft made from an email away; the email's order stays available in the Inbox. */
   discardDraft(): void {
     if (this.pending()) return;
@@ -539,6 +562,8 @@ export class OrderDetailPage {
   rejectMode = signal<'return' | 'hold'>('return');
   /** Where the article is posted back to: starts from the order's delivery address, the customer can change it. */
   rejectShip = signal<ReturnShipping>({ name: '', phone: '', address: '', city: '', country: '' });
+  /** Only used to choose the city of the return address. */
+  rejectState = signal('');
   setShip(patch: Partial<ReturnShipping>): void {
     this.rejectShip.update((s) => ({ ...s, ...patch }));
   }
@@ -557,6 +582,7 @@ export class OrderDetailPage {
     this.rejectMode.set(mode);
     const o = this.order();
     const me = this.auth.user();
+    this.rejectState.set('');
     this.rejectShip.set({
       name: me?.full_name ?? o?.customer_name ?? '',
       phone: o?.destination_phone ?? me?.phone ?? '',
