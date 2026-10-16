@@ -13,7 +13,7 @@ import { IonIcon } from '@ionic/angular';
   template: `
     @if (open()) {
       <div class="sheet-backdrop" (click)="dismiss()"></div>
-      <section class="sheet" [class.tall]="tall()" role="dialog" aria-modal="true" [attr.aria-label]="title()" tabindex="-1" #panel [style.bottom.px]="keyboard()" [style.max-height]="'calc(100% - 40px - env(safe-area-inset-top, 0px) - ' + keyboard() + 'px)'">
+      <section class="sheet" [class.tall]="tall()" role="dialog" aria-modal="true" [attr.aria-label]="title()" tabindex="-1" #panel [style.bottom.px]="keyboard()" [style.max-height]="'calc(100% - 40px - var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) - ' + keyboard() + 'px)'">
         <header class="sheet-head">
           <span class="grabber" aria-hidden="true"></span>
           <div class="sheet-titles">
@@ -45,14 +45,14 @@ import { IonIcon } from '@ionic/angular';
       position: fixed; z-index: 901; left: 50%; bottom: 0;
       transform: translate(-50%, 0);
       width: 100%; max-width: var(--shell-max, 480px);
-      max-height: calc(100% - 40px - env(safe-area-inset-top, 0px));
+      max-height: calc(100% - 40px - var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
       display: flex; flex-direction: column;
       background: var(--c-bg);
       border-radius: 24px 24px 0 0;
       box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.18);
       animation: sheet-up 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
     }
-    .sheet.tall { height: calc(100% - 24px - env(safe-area-inset-top, 0px)); }
+    .sheet.tall { height: calc(100% - 24px - var(--safe-area-inset-top, env(safe-area-inset-top, 0px))); }
     .sheet-head {
       position: relative; display: flex; align-items: flex-start; gap: 12px;
       padding: 22px 12px 12px 18px; border-bottom: 1px solid var(--c-line-soft);
@@ -67,7 +67,7 @@ import { IonIcon } from '@ionic/angular';
     .sheet-body { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 16px 18px; }
     .sheet-body.flush { padding-bottom: 0; }
     .sheet-foot {
-      padding: 12px 18px calc(12px + env(safe-area-inset-bottom, 0px));
+      padding: 12px 18px calc(12px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
       border-top: 1px solid var(--c-line-soft);
       background: var(--c-surface);
     }

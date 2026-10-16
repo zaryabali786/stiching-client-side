@@ -77,6 +77,12 @@ export class AuthService {
     return this.acceptSession(data);
   }
 
+  /** Phone app: native Google sign-in gives a signed id_token; the API verifies it and answers like a normal login. */
+  async googleLoginWithIdToken(idToken: string): Promise<Profile> {
+    const { data } = await firstValueFrom(this.api.post<AuthPayload>('/auth/google', { idToken, portal: 'customer' }));
+    return this.acceptSession(data);
+  }
+
   /** Returns the profile, or null when the account needs email verification before login. */
   async register(body: RegisterBody): Promise<{ user: Profile | null; message: string }> {
     const { data, message } = await firstValueFrom(

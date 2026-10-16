@@ -329,7 +329,7 @@ let nextId = 0;
     .ss-eye:focus-visible { outline: 2px solid var(--c-focus); outline-offset: -2px; }
     .ss-lightbox {
       position: fixed; inset: 0; z-index: 1500; display: flex; align-items: center; justify-content: center;
-      padding: calc(16px + env(safe-area-inset-top, 0px)) 16px calc(16px + env(safe-area-inset-bottom, 0px));
+      padding: calc(16px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) 16px calc(16px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
       background: rgba(10, 14, 12, 0.92); animation: ss-lb-in 0.2s ease both;
     }
     @keyframes ss-lb-in { from { opacity: 0; } to { opacity: 1; } }
@@ -337,7 +337,7 @@ let nextId = 0;
     .ss-lb-fig img { max-width: 100%; max-height: calc(100vh - 120px); border-radius: 12px; object-fit: contain; background: var(--c-surface-3); }
     .ss-lb-fig figcaption, .ss-lb-fail { margin: 0; color: #fff; font-size: var(--fs-md); text-align: center; overflow-wrap: anywhere; }
     .ss-lb-close {
-      position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); right: 12px; width: 44px; height: 44px;
+      position: absolute; top: calc(12px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))); right: 12px; width: 44px; height: 44px;
       border-radius: 50%; border: 0; background: rgba(255, 255, 255, 0.16); color: #fff; font-size: 22px;
       display: flex; align-items: center; justify-content: center; cursor: pointer;
     }

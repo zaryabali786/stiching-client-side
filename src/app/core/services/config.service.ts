@@ -14,6 +14,8 @@ export class ConfigService {
   readonly error = signal<string | null>(null);
   readonly brandName = computed(() => this.config()?.name || '');
 
+  private retries = 0;
+
   load(force = false): void {
     if ((this.config() && !force) || this.loading()) return;
     this.loading.set(true);
@@ -27,6 +29,8 @@ export class ConfigService {
       error: (err: Error) => {
         this.error.set(err.message);
         this.loading.set(false);
+        // a slow or dropped answer must not leave the app without its config (Google button, theme): try again a couple of times
+        if (this.retries < 3) setTimeout(() => this.load(), 1500 * ++this.retries);
       },
     });
   }

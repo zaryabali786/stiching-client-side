@@ -35,7 +35,8 @@ export function startGoogleSignIn(clientId: string, returnUrl?: string | null): 
     state,
     prompt: 'select_account',
   });
-  window.location.href = `${AUTH_URL}?${params.toString().replace(/\+/g, '%20')}`;
+  const url = `${AUTH_URL}?${params.toString().replace(/\+/g, '%20')}`;
+  window.location.href = url;
 }
 
 /** Reads and removes the stored pending auth (single use). */

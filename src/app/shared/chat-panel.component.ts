@@ -228,7 +228,7 @@ function dayLabel(iso: string): string {
 
     .composer-wrap { flex: none; display: flex; flex-direction: column; gap: 6px; }
     .chat.fill .composer-wrap {
-      margin: 0 -18px; padding: 8px 18px calc(10px + env(safe-area-inset-bottom, 0px));
+      margin: 0 -18px; padding: 8px 18px calc(10px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
       background: var(--c-bg); border-top: 1px solid var(--c-line-soft);
     }
     .voice-err { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }

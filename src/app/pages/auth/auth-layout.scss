@@ -33,7 +33,7 @@
 .auth-hero {
   position: relative;
   overflow: hidden;
-  padding: calc(34px + env(safe-area-inset-top, 0px)) 24px 46px;
+  padding: calc(34px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) 24px 46px;
   background: radial-gradient(120% 90% at 100% 0%, #1f5a47 0%, #0f392b 55%, #0b2b20 100%);
   color: #f3ede1;
 
@@ -138,7 +138,7 @@ form {
   text-align: center;
   font-size: 13px;
   color: var(--muted);
-  padding: 22px 16px calc(28px + env(safe-area-inset-bottom, 0px));
+  padding: 22px 16px calc(28px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
 
   a {
     font-weight: 700;

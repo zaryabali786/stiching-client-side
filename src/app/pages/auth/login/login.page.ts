@@ -13,6 +13,7 @@ import {
   takePendingGoogleAuth,
 } from '../../../core/services/google-oauth';
 import { GoogleButtonComponent } from '../../../shared/google-button.component';
+import { GoogleSignInCancelled, isNativeApp, nativeGoogleIdToken } from '../../../core/services/native-oauth';
 
 @Component({
   selector: 'app-login',
@@ -50,6 +51,7 @@ export class LoginPage {
   }
 
   startGoogle(): void {
+    if (this.busy()) return; // a second tap must not start a second sign-in
     this.error.set(null);
     this.info.set(null);
     const clientId = this.config.config()?.google?.clientId;
@@ -57,10 +59,29 @@ export class LoginPage {
       this.error.set('Google sign-in is not available right now.');
       return;
     }
+    // phone app: the phone's own Google account picker, no browser
+    if (isNativeApp()) {
+      void this.nativeGoogle(clientId, this.config.config()?.google?.iosClientId);
+      return;
+    }
     try {
       startGoogleSignIn(clientId, this.route.snapshot.queryParamMap.get('returnUrl'));
     } catch {
       this.error.set('Google sign-in could not be started. Please try again.');
+    }
+  }
+
+  private async nativeGoogle(clientId: string, iosClientId?: string | null): Promise<void> {
+    this.googleBusy.set(true);
+    try {
+      const idToken = await nativeGoogleIdToken(clientId, iosClientId);
+      const user = await this.auth.googleLoginWithIdToken(idToken);
+      this.toast.success(`Welcome back${user.full_name ? ', ' + user.full_name.split(' ')[0] : ''}!`);
+      await this.router.navigateByUrl(safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl')) ?? '/app/overview');
+    } catch (err) {
+      if (!(err instanceof GoogleSignInCancelled)) this.error.set(errorMessage(err));
+    } finally {
+      this.googleBusy.set(false);
     }
   }
 
@@ -75,13 +96,10 @@ export class LoginPage {
     // Busy immediately so the buttons are disabled while we verify and exchange the code.
     if (!googleError) this.googleBusy.set(true);
     const pending = takePendingGoogleAuth();
-    // Strip code/state/scope/error… from the address bar (keeping a safe returnUrl for retries).
+    // Strip code/state/scope/error… from the address bar (keeping a safe returnUrl for retries). This only edits the
+    // address, it does not wait for a router navigation, so the code goes to the server without delay.
     const keepReturn = pending?.returnUrl ?? safeReturnUrl(params.get('returnUrl'));
-    await this.router.navigate([], {
-      relativeTo: this.route,
-      replaceUrl: true,
-      queryParams: keepReturn ? { returnUrl: keepReturn } : {},
-    });
+    history.replaceState(history.state, '', location.pathname + (keepReturn ? `?returnUrl=${encodeURIComponent(keepReturn)}` : ''));
 
     if (googleError) {
       this.error.set('Google sign-in was cancelled.');

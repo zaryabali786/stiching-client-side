@@ -82,7 +82,7 @@
   --shell-max: 480px;
   --header-h: 60px;
   --tabbar-h: 64px;
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
   --focus-ring: 0 0 0 3px rgba(15, 23, 42, 0.18);
 
   /* ── Legacy aliases ── */

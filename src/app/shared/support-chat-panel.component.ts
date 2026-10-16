@@ -67,7 +67,7 @@ import { SupportChatService, SupportMessage } from '../core/services/support-cha
     .meta { font-size: 11px; opacity: 0.7; align-self: flex-end; }
     .failed { outline: 1.5px solid var(--t-red-dot); }
     .retry { color: inherit; text-decoration: underline; min-height: 0; padding: 0; }
-    .composer { flex: none; display: flex; align-items: flex-end; gap: 8px; padding: 10px 0 calc(6px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--c-line-soft); }
+    .composer { flex: none; display: flex; align-items: flex-end; gap: 8px; padding: 10px 0 calc(6px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))); border-top: 1px solid var(--c-line-soft); }
     .composer textarea { flex: 1; resize: none; max-height: 120px; min-height: 44px; }
     .send { flex: none; width: 46px; height: 46px; padding: 0; border-radius: 50%; }
   `,

@@ -105,7 +105,7 @@ export interface PlatformConfig {
   /** Card payments: the publishable key is public by design; the secret key never leaves the server. */
   payments?: { stripe: { enabled: boolean; publishableKey: string | null } };
   /** Google sign-in: the OAuth client id is public by design; the client secret stays on the server. */
-  google?: { enabled: boolean; clientId: string | null };
+  google?: { enabled: boolean; clientId: string | null; iosClientId?: string | null };
   /** Colours and fonts chosen by the admin. */
   theme?: ClientTheme;
 }

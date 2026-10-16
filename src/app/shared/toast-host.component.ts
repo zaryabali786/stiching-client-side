@@ -24,7 +24,7 @@ import { ToastService } from '../core/services/toast.service';
   styles: `
     .toast-stack {
       position: fixed; z-index: 2000; left: 50%; transform: translateX(-50%);
-      top: calc(10px + env(safe-area-inset-top, 0px));
+      top: calc(10px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
       width: calc(100% - 24px); max-width: 456px;
       display: flex; flex-direction: column; gap: 8px; pointer-events: none;
     }

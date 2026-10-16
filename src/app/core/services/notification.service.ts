@@ -1,7 +1,9 @@
 import { Injectable, effect, inject, signal, untracked } from '@angular/core';
+import { Router } from '@angular/router';
 import { Subscription, filter, switchMap, timer, catchError, EMPTY } from 'rxjs';
 import { ApiService } from './api.service';
 import { AuthService } from './auth.service';
+import { ToastService } from './toast.service';
 import { AppNotification, NotificationMeta } from '../models/api.models';
 
 const PAGE_SIZE = 15;
@@ -12,6 +14,8 @@ const POLL_MS = 30_000;
 export class NotificationService {
   private api = inject(ApiService);
   private auth = inject(AuthService);
+  private router = inject(Router);
+  private toast = inject(ToastService);
 
   readonly unreadCount = signal(0);
   /** Unread changes to the customer's orders: the badge on the Orders tab. */
@@ -138,8 +142,22 @@ export class NotificationService {
 
   /** A notification arrived over the websocket: add it to the open list at once and confirm the count with the server. */
   pushLive(n: AppNotification | null | undefined): void {
-    if (n?.id) this.items.update((list) => (list.some((x) => x.id === n.id) ? list : [n, ...list]));
+    if (n?.id) {
+      const isNew = !this.items().some((x) => x.id === n.id);
+      this.items.update((list) => (isNew ? [n, ...list] : list));
+      // foreground: the phone shows no tray notification while the app is open, so tell the customer in the app
+      // (once per notification: the live socket event and the push never both raise it)
+      if (isNew) this.alertInApp(n);
+    }
     this.refreshCount();
+  }
+
+  private alertInApp(n: AppNotification): void {
+    const link = n.link && n.link.startsWith('/app') ? n.link : null;
+    // already looking at that page (an open conversation): no banner on top of it
+    if (link && this.router.url.split('?')[0] === link.split('?')[0]) return;
+    if (link) this.toast.withAction(n.title, 'Open', () => void this.router.navigateByUrl(link));
+    else this.toast.info(n.title);
   }
 
   refreshCount(): void {

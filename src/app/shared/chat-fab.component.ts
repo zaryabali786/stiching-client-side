@@ -148,7 +148,7 @@ export class ChatFabComponent {
   private readSafeBottom(): number {
     if (this.safeBottom) return this.safeBottom;
     const probe = document.createElement('div');
-    probe.style.cssText = 'position:fixed;left:0;bottom:0;width:0;height:env(safe-area-inset-bottom,0px);visibility:hidden';
+    probe.style.cssText = 'position:fixed;left:0;bottom:0;width:0;height:var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));visibility:hidden';
     document.body.appendChild(probe);
     this.safeBottom = probe.offsetHeight;
     probe.remove();

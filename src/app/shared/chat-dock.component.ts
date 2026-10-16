@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink } from '@angular/router';
+import { filter } from 'rxjs';
 import { IonIcon } from '@ionic/angular';
 import { ChatInboxService, InboxChat } from '../core/services/chat-inbox.service';
 import { ChatUiService } from '../core/services/chat-ui.service';
@@ -108,6 +110,7 @@ export class ChatDockComponent {
   protected ui = inject(ChatUiService);
   protected inbox = inject(ChatInboxService);
   protected support = inject(SupportChatService);
+  private router = inject(Router);
 
   /** Anything that changes the bars at the bottom (tab bar, sticky action bar): the button re-clamps. */
   readonly layoutKey = input<unknown>(null);
@@ -125,6 +128,16 @@ export class ChatDockComponent {
   protected pulse = signal(0);
 
   constructor() {
+    // `?support=1` (push notification link for a message from our team): open the general chat, then drop the param
+    const openSupportFromUrl = () => {
+      const tree = this.router.parseUrl(this.router.url);
+      if (tree.queryParams['support'] !== '1') return;
+      this.ui.openSupport();
+      void this.router.navigate([], { queryParams: { support: null }, queryParamsHandling: 'merge', replaceUrl: true });
+    };
+    openSupportFromUrl();
+    this.router.events.pipe(filter((e) => e instanceof NavigationEnd), takeUntilDestroyed()).subscribe(openSupportFromUrl);
+
     let prev: number | null = null;
     effect(() => {
       const n = this.inbox.totalUnread() + this.support.unread();

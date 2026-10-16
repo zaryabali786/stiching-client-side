@@ -474,6 +474,7 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  padding-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)); // the popup starts below the phone's status bar
   background: rgba(20, 16, 8, 0.45);
   backdrop-filter: blur(3px);
   animation: cmp-fade 0.18s ease-out;

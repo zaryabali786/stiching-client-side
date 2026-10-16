@@ -883,7 +883,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: calc(16px + env(safe-area-inset-top, 0px)) 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  padding: calc(16px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) 16px calc(16px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
   animation: viewer-in 0.2s ease both;
 
   img {
@@ -895,7 +895,7 @@
 
   .viewer-close {
     position: absolute;
-    top: calc(12px + env(safe-area-inset-top, 0px));
+    top: calc(12px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
     right: 12px;
     width: 44px;
     height: 44px;
