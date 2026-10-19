@@ -13,11 +13,12 @@ import {
   takePendingGoogleAuth,
 } from '../../../core/services/google-oauth';
 import { GoogleButtonComponent } from '../../../shared/google-button.component';
+import { AppleButtonComponent } from '../../../shared/apple-button.component';
 import { GoogleSignInCancelled, isNativeApp, nativeGoogleIdToken } from '../../../core/services/native-oauth';
 
 @Component({
   selector: 'app-login',
-  imports: [FormsModule, RouterLink, IonIcon, IonSpinner, GoogleButtonComponent],
+  imports: [FormsModule, RouterLink, IonIcon, IonSpinner, GoogleButtonComponent, AppleButtonComponent],
   templateUrl: './login.page.html',
   styleUrl: '../auth-layout.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

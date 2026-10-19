@@ -82,6 +82,7 @@
     @if (googleEnabled()) {
       <app-google-button [busy]="googleBusy()" [disabled]="busy()" (pressed)="startGoogle()" />
     }
+    <app-apple-button [divider]="!googleEnabled()" [disabled]="busy()" (failed)="error.set($event)" />
   </section>
 
   <p class="auth-switch">

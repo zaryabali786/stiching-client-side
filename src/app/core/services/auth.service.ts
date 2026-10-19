@@ -83,6 +83,12 @@ export class AuthService {
     return this.acceptSession(data);
   }
 
+  /** Phone app (iPhone): native Sign in with Apple gives a signed identity token; the API verifies it and answers like a normal login. */
+  async appleLoginWithIdToken(idToken: string, name: string): Promise<Profile> {
+    const { data } = await firstValueFrom(this.api.post<AuthPayload>('/auth/apple', { idToken, name, portal: 'customer' }));
+    return this.acceptSession(data);
+  }
+
   /** Returns the profile, or null when the account needs email verification before login. */
   async register(body: RegisterBody): Promise<{ user: Profile | null; message: string }> {
     const { data, message } = await firstValueFrom(

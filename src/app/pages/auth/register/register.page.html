@@ -99,6 +99,7 @@
     @if (config.config()?.google?.enabled) {
       <app-google-button [disabled]="submitting()" (pressed)="startGoogle()" />
     }
+    <app-apple-button [divider]="!config.config()?.google?.enabled" [disabled]="submitting()" (failed)="error.set($event)" />
   </section>
 
   <p class="auth-switch">

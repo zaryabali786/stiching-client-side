@@ -6,6 +6,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { startGoogleSignIn } from '../../../core/services/google-oauth';
 import { GoogleButtonComponent } from '../../../shared/google-button.component';
+import { AppleButtonComponent } from '../../../shared/apple-button.component';
 import { ConfigService } from '../../../core/services/config.service';
 import { errorMessage } from '../../../core/services/api.service';
 import { GeoPickerComponent } from '../../../shared/geo-picker.component';
@@ -13,7 +14,7 @@ import { passwordStrength } from './register.data';
 
 @Component({
   selector: 'app-register',
-  imports: [FormsModule, RouterLink, IonIcon, IonSpinner, GoogleButtonComponent, GeoPickerComponent],
+  imports: [FormsModule, RouterLink, IonIcon, IonSpinner, GoogleButtonComponent, AppleButtonComponent, GeoPickerComponent],
   templateUrl: './register.page.html',
   styleUrl: '../auth-layout.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
