@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.stitchnship.app',
-  appName: 'StitchNShip',
+  appName: 'Stitch&Ship',
   webDir: 'www',
   plugins: {
     LiveUpdates: {
