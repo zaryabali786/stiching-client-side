@@ -89,6 +89,18 @@ export class AuthService {
     return this.acceptSession(data);
   }
 
+  /** Sends a 6-digit sign-in code to the email (the answer is the same for every address). */
+  async requestLoginCode(email: string): Promise<string> {
+    const { message } = await firstValueFrom(this.api.post('/auth/code/request', { email: email.trim().toLowerCase() }));
+    return message || 'If this email has a Stitch&Ship account, we sent a 6-digit code to it.';
+  }
+
+  /** Signs in with the typed code, or with the single-use token of the button in the email. */
+  async verifyLoginCode(body: { email: string; code?: string; token?: string }): Promise<Profile> {
+    const { data } = await firstValueFrom(this.api.post<AuthPayload>('/auth/code/verify', { ...body, email: body.email.trim().toLowerCase() }));
+    return this.acceptSession(data);
+  }
+
   /** Returns the profile, or null when the account needs email verification before login. */
   async register(body: RegisterBody): Promise<{ user: Profile | null; message: string }> {
     const { data, message } = await firstValueFrom(
@@ -114,6 +126,18 @@ export class AuthService {
         /* ignore – we clear locally anyway */
       }
     }
+    this.clearSession();
+    await this.router.navigateByUrl('/login');
+  }
+
+  /**
+   * Deletes the signed-in customer's account (the login and personal details; finished orders stay without personal details).
+   * The proof is the password, or a fresh Apple / Google sign-in token. Afterwards the device is signed out.
+   */
+  async deleteAccount(proof: { password?: string; idToken?: string; provider?: 'apple' | 'google'; name?: string }): Promise<void> {
+    await firstValueFrom(this.api.post('/auth/delete-account', { confirm: 'DELETE', ...proof }));
+    // the login no longer exists: only this device's leftovers are cleared (the server already removed the push token)
+    await this.injector.get(PushService).unregister();
     this.clearSession();
     await this.router.navigateByUrl('/login');
   }

@@ -7,7 +7,7 @@ import { SessionRefreshService } from '../services/session-refresh.service';
 import { AuthService } from '../services/auth.service';
 
 /** Endpoints that never carry or refresh a session. */
-const PUBLIC_AUTH = /\/auth\/(login|register|refresh|forgot-password)$/;
+const PUBLIC_AUTH = /\/auth\/(login|register|refresh|forgot-password|code\/request|code\/verify|google|apple)$/;
 
 const withToken = (req: HttpRequest<unknown>, token: string) =>
   req.clone({ setHeaders: { Authorization: `Bearer ${token}` } });

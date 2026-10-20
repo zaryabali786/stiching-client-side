@@ -10,10 +10,21 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/auth/login/login.page').then((m) => m.LoginPage),
   },
   {
+    path: 'sign-in',
+    title: 'Sign in with a code',
+    loadComponent: () => import('./pages/auth/sign-in-code/sign-in-code.page').then((m) => m.SignInCodePage),
+  },
+  {
     path: 'register',
     canActivate: [guestGuard],
     title: 'Create account',
     loadComponent: () => import('./pages/auth/register/register.page').then((m) => m.RegisterPage),
+  },
+  {
+    // where Stripe Checkout returns the customer (no sign-in needed: the page only reports, the server checks the payment)
+    path: 'pay-return',
+    title: 'Payment',
+    loadComponent: () => import('./pages/pay-return/pay-return.page').then((m) => m.PayReturnPage),
   },
   {
     path: 'app',

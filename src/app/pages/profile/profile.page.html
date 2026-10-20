@@ -178,6 +178,59 @@
       }
     </section>
 
+    @if (privacyUrl) {
+      <p class="muted"><a [href]="privacyUrl" target="_blank" rel="noopener">Privacy policy</a></p>
+    }
+
+    <!-- Delete account -->
+    <section class="card">
+      <div class="card-head">
+        <h3 class="card-title"><span class="head-ico" aria-hidden="true"><ion-icon name="trash-outline"></ion-icon></span>Delete account</h3>
+        @if (!delOpen()) {
+          <button type="button" class="btn btn-ghost btn-sm" (click)="openDelete()">Delete</button>
+        }
+      </div>
+      @if (delOpen()) {
+        <form class="edit-form" (ngSubmit)="deleteWithPassword()" novalidate>
+          <p class="muted">
+            This permanently deletes your login and personal details: your profile, size charts, notifications and inbox. Orders that are already delivered or cancelled are kept for our records, without your personal details. This cannot be undone.
+            You can only delete your account when none of your orders is still in progress.
+          </p>
+          @if (delError()) {
+            <div class="form-error" role="alert"><ion-icon name="alert-circle-outline"></ion-icon><span>{{ delError() }}</span></div>
+          }
+          <div class="field">
+            <label for="del-confirm">Type DELETE to confirm</label>
+            <input id="del-confirm" class="input" name="delConfirm" autocomplete="off" autocapitalize="characters" [(ngModel)]="delConfirm" />
+          </div>
+          <div class="field">
+            <label for="del-password">Your password</label>
+            <input id="del-password" class="input" type="password" name="delPassword" autocomplete="current-password" [(ngModel)]="delPassword" />
+          </div>
+          <div class="btn-row">
+            <button type="button" class="btn btn-outline btn-sm" (click)="delOpen.set(false)" [disabled]="delBusy()">Cancel</button>
+            <button type="submit" class="btn btn-danger btn-sm" [disabled]="delBusy() || !delConfirmed() || !delPassword()">
+              @if (delBusy()) {
+                <ion-spinner name="crescent"></ion-spinner>
+              }
+              Delete my account
+            </button>
+          </div>
+          @if (nativeApp) {
+            <p class="muted">No password? You signed up with Apple or Google: confirm with that instead.</p>
+            <div class="btn-row">
+              @if (iosApp) {
+                <button type="button" class="btn btn-outline btn-sm" (click)="deleteWithApple()" [disabled]="delBusy() || !delConfirmed()">Confirm with Apple</button>
+              }
+              <button type="button" class="btn btn-outline btn-sm" (click)="deleteWithGoogle()" [disabled]="delBusy() || !delConfirmed()">Confirm with Google</button>
+            </div>
+          }
+        </form>
+      } @else {
+        <p class="muted">Permanently delete your account and personal details.</p>
+      }
+    </section>
+
     <button type="button" class="btn btn-danger-outline btn-block" (click)="logout()" [disabled]="loggingOut()">
       @if (loggingOut()) {
         <ion-spinner name="crescent"></ion-spinner>

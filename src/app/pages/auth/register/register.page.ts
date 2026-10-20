@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { IonIcon, IonSpinner } from '@ionic/angular';
+import { environment } from '../../../../environments/environment';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { startGoogleSignIn } from '../../../core/services/google-oauth';
@@ -36,6 +37,7 @@ export class RegisterPage {
   password = signal('');
   confirm = signal('');
   terms = signal(false);
+  protected readonly privacyUrl = environment.privacyPolicyUrl;
   showPassword = signal(false);
 
   submitting = signal(false);

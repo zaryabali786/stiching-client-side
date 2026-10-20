@@ -640,7 +640,8 @@ export class OrderFormPage {
           this.loadingOrder.set(false);
           // a website order whose parcel was checked can be completed (articles, sizes, notes) even though the parcel is in
           const completing = order.status === 'received' && order.order_source === 'website' && !!order.details_pending;
-          if (order.status !== 'submitted' && order.status !== 'draft' && !completing) {
+          // cash on delivery and not paid yet: no editing until the payment is confirmed (the server enforces the same rule)
+          if ((order.status !== 'submitted' && order.status !== 'draft' && !completing) || order.cod?.locked) {
             this.notEditable.set(order);
             return;
           }

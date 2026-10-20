@@ -888,24 +888,106 @@
     }
 
 
+    <!-- Cash on delivery: the total, its status and Pay Now (one body, shown in the draft card or in its own card) -->
+    <ng-template #codBody let-c>
+      <dl class="cod-list">
+            <dt>Payment type</dt><dd>COD (cash on delivery)</dd>
+            <dt>Order total</dt><dd class="cod-total">{{ codMoney(c) }}</dd>
+            <dt>Currency</dt><dd>{{ c.currency || '—' }}</dd>
+            <dt>Payment status</dt><dd><span class="cod-status" [attr.data-s]="c.payment_status">{{ codStatusLabel(c.payment_status) }}</span></dd>
+          </dl>
+          @if (c.needs_verification) {
+            <p class="pay-warn" role="alert"><ion-icon name="warning-outline" aria-hidden="true"></ion-icon> We could not read the total from your email with certainty. Our team will confirm it; you can pay once it is confirmed.</p>
+            @if (c.amount_note) { <p class="muted small">{{ c.amount_note }}</p> }
+          } @else if (c.payment_status === 'PAID') {
+            <p class="muted small">Paid{{ c.paid_at ? ' on ' + (c.paid_at | date: 'MMM d, y, h:mm a') : '' }}. You can edit your order now.</p>
+          } @else if (c.can_pay) {
+            <p class="muted small">You pay this total with Stripe. Your order can be edited after the payment is confirmed.</p>
+            <div class="btn-row">
+              <button type="button" class="btn btn-primary" (click)="payNow()" [disabled]="!!pending()">
+                @if (pending() === 'codpay') {
+                  <ion-spinner name="crescent"></ion-spinner>
+                }
+                Pay Now · {{ codMoney(c) }}
+              </button>
+              @if (c.payment_status === 'PENDING') {
+                <button type="button" class="btn btn-outline" (click)="checkCodPayment()" [disabled]="!!pending()">I have paid: check</button>
+              }
+            </div>
+          }
+    </ng-template>
+    @if (o.cod; as c) {
+      @if (c.payment_type === 'COD' && o.status !== 'draft') {
+        <section class="card cod-card" [class.is-paid]="c.payment_status === 'PAID'" aria-label="Cash on delivery payment">
+          <h3 class="card-title">Cash on delivery payment</h3>
+          <ng-container *ngTemplateOutlet="codBody; context: { $implicit: c }" />
+        </section>
+      }
+    }
+
+    <!-- A brand-store order whose address is not our atelier: the brand is holding the shipment until the customer decides -->
+    @if (o.shopify?.address_mismatch) {
+      <section class="card address-card" role="alert" aria-label="Confirm the delivery address of the parcel">
+        <h3 class="card-title">Please confirm where your parcel goes</h3>
+        <p class="muted-note">
+          Your {{ o.brand }} order {{ o.brand_order_number }} is set up for customised stitching, but its shipping address is not our atelier.
+          The brand is holding it until you decide. To have it stitched, the parcel has to come to us first.
+        </p>
+        <div class="btn-row">
+          <button type="button" class="btn btn-primary" (click)="confirmAtelierAddress()" [disabled]="!!pending()">
+            @if (pending() === 'address') {
+              <ion-spinner name="crescent"></ion-spinner>
+            }
+            Yes, send it to the atelier
+          </button>
+        </div>
+        <p class="muted small">If you want something else, use the chat on this page to contact us.</p>
+      </section>
+    }
+
     <!-- A draft made automatically from an email: nothing has been sent to us yet -->
     @if (o.status === 'draft') {
       <section class="card draft-card">
         <span class="draft-tag"><ion-icon name="mail-outline" aria-hidden="true"></ion-icon> Draft · from mail</span>
         <h3 class="card-title">Finish your order</h3>
         <p class="muted-note">
-          We made this order from your email{{ o.brand_order_number ? ' (order ' + o.brand_order_number + ')' : '' }}. Nothing has been sent to us yet.
-          Choose Create Order to add the sizes and stitching details, or Cancel Draft.
+          We made this order from {{ o.external_source === 'shopify' ? 'your order on the brand\'s website' : 'your email' }}{{ o.brand_order_number ? ' (order ' + o.brand_order_number + ')' : '' }}. Nothing has been sent to us yet.
+          Choose how it is paid first. Then you can add the sizes and stitching details, or cancel the draft.
         </p>
         @if (o.brand_payment_method) {
-          <div class="pay-box" [class.is-cod]="o.payment_cod" role="group" aria-label="Payment method">
-            <span class="pay-k">Payment method</span>
+          <div class="pay-box" role="group" aria-label="Payment method in the email">
+            <span class="pay-k">Payment method in the email</span>
             <strong>{{ o.brand_payment_method }}</strong>
-            @if (o.payment_cod) {
-              <p class="pay-warn" role="alert"><ion-icon name="warning-outline" aria-hidden="true"></ion-icon> COD is not allowed. This order cannot be created.</p>
-              <span class="muted small">You can cancel this draft, or wait for an email that confirms a different payment method.</span>
-            }
           </div>
+        }
+        @if (o.cod; as c) {
+          @if (c.can_choose) {
+            <div class="cod-choice" role="group" aria-label="How is this order paid?">
+              <span class="pay-k">How is this order paid?</span>
+              <div class="cod-options">
+                <button type="button" class="cod-opt" (click)="choosePaymentType('COD')" [disabled]="!!pending()">
+                  <span class="radio" aria-hidden="true"></span>
+                  <span class="opt-text"><strong>COD</strong><small>Cash on delivery. You pay the total here first.</small></span>
+                </button>
+                <button type="button" class="cod-opt" (click)="choosePaymentType('NON_COD')" [disabled]="!!pending() || c.email_says_cod">
+                  <span class="radio" aria-hidden="true"></span>
+                  <span class="opt-text"><strong>Non-COD</strong><small>Already paid online. Nothing else to pay.</small></span>
+                </button>
+              </div>
+              @if (c.email_says_cod) {
+                <p class="cod-hint">The email says cash on delivery, so this order is COD. If that is wrong, ask our team to change it.</p>
+              } @else {
+                <p class="cod-hint">Choose one to continue.</p>
+              }
+            </div>
+          } @else if (c.payment_type === 'NON_COD') {
+            <div class="cod-chosen" role="status"><ion-icon name="checkmark-circle-outline" aria-hidden="true"></ion-icon><span>Payment type: <b>Non-COD</b></span></div>
+          } @else if (c.payment_type === 'COD') {
+            <div class="cod-box" [class.is-paid]="c.payment_status === 'PAID'" aria-label="Cash on delivery payment">
+              <span class="pay-k">Payment type: COD (cash on delivery)</span>
+              <ng-container *ngTemplateOutlet="codBody; context: { $implicit: c }" />
+            </div>
+          }
         }
         @if (confirmDiscard()) {
           <div class="confirm-panel" role="alertdialog" aria-label="Confirm discarding the draft">
@@ -925,11 +1007,7 @@
             <button type="button" class="btn btn-danger-outline" (click)="confirmDiscard.set(true)">
               <ion-icon name="close-circle-outline" aria-hidden="true"></ion-icon> Cancel Draft
             </button>
-            @if (o.payment_cod) {
-              <button type="button" class="btn btn-primary" disabled title="COD is not allowed. This order cannot be created.">
-                <ion-icon name="create-outline" aria-hidden="true"></ion-icon> Create Order
-              </button>
-            } @else {
+            @if (o.cod?.payment_type === 'NON_COD' || (o.cod?.payment_type === 'COD' && o.cod?.payment_status === 'PAID')) {
               <a class="btn btn-primary" [routerLink]="['/app/orders', o.id, 'edit']">
                 <ion-icon name="create-outline" aria-hidden="true"></ion-icon> Create Order
               </a>
@@ -997,7 +1075,7 @@
           <div class="ab-text"><span class="ab-k">A problem was found</span><span class="ab-sub">Open the article and choose Hold or Return</span></div>
         } @else if (approvedCount() > 0) {
           <div class="ab-text"><span class="ab-k">Approved</span><span class="ab-sub">Add sizes, then it goes to production</span></div>
-          @if (!o.payment_cod) { <a class="btn btn-primary" [routerLink]="['/app/orders', o.id, 'edit']"><ion-icon name="create-outline" aria-hidden="true"></ion-icon> Add size</a> }
+          @if (!o.cod?.locked) { <a class="btn btn-primary" [routerLink]="['/app/orders', o.id, 'edit']"><ion-icon name="create-outline" aria-hidden="true"></ion-icon> Add size</a> }
         } @else {
           <div class="ab-text"><span class="ab-k">Parcel being returned</span><span class="ab-sub">We will tell you here</span></div>
         }
@@ -1018,7 +1096,7 @@
             <span class="ab-k">Approved</span>
             <span class="ab-sub">Add sizes, then submit</span>
           </div>
-          @if (!o.payment_cod) { <a class="btn btn-primary" [routerLink]="['/app/orders', o.id, 'edit']"><ion-icon name="create-outline" aria-hidden="true"></ion-icon> Add size</a> }
+          @if (!o.cod?.locked) { <a class="btn btn-primary" [routerLink]="['/app/orders', o.id, 'edit']"><ion-icon name="create-outline" aria-hidden="true"></ion-icon> Add size</a> }
         } @else if (reviewing()) {
           <div class="ab-text">
             <span class="ab-k">Waiting for the corrected article</span>
@@ -1037,7 +1115,7 @@
           <span class="ab-k">Parcel not arrived yet</span>
           <span class="ab-sub">You can still edit it</span>
         </div>
-        <a class="btn btn-primary" [routerLink]="['/app/orders', o.id, 'edit']"><ion-icon name="create-outline" aria-hidden="true"></ion-icon> Edit order</a>
+        @if (!o.cod?.locked) { <a class="btn btn-primary" [routerLink]="['/app/orders', o.id, 'edit']"><ion-icon name="create-outline" aria-hidden="true"></ion-icon> Edit order</a> }
       </div>
     }
   }

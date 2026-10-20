@@ -81,5 +81,11 @@
 	<true/>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSCameraUsageDescription</key>
+	<string>The camera is used to take reference photos of your articles and of the problem you want to report.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>The microphone is used to record voice notes for your order and for chat messages.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Your photo library is used to choose reference photos for your articles and problem reports.</string>
 </dict>
 </plist>

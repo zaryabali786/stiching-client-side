@@ -430,8 +430,14 @@ export interface Order {
   /** How the brand order was paid, read from its confirmation email (never guessed). */
   brand_payment_method?: string | null;
   brand_payment_status?: 'paid' | 'pending' | null;
-  /** The email says cash on delivery: a draft like this cannot be created. */
+  /** Cash on delivery and not paid yet: editing stays blocked until the payment is confirmed. */
   payment_cod?: boolean;
+  /** COD / Non-COD, the verified total and the payment status of an email order (from the server). */
+  cod?: CodInfo;
+  /** Where an order that was not made in the app came from (a brand's Shopify store). */
+  external_source?: string | null;
+  /** Shopify orders: the shipment is on hold because its address is not our atelier and the customer must confirm. */
+  shopify?: { address_mismatch: boolean } | null;
   tracking_number: string | null;
   courier_id?: string | null;
   international_shipping?: boolean | null;
@@ -862,4 +868,24 @@ export interface Mailbox {
   /** false until outbound email (Postmark) is configured on the server */
   can_send?: boolean;
   unread: number;
+}
+
+/** What the server says about the cash on delivery payment of an order. */
+export interface CodInfo {
+  payment_type: 'COD' | 'NON_COD' | null;
+  /** The email states cash on delivery (a customer then cannot pick Non-COD). */
+  email_says_cod: boolean;
+  /** The two options are shown: an email order that is still open and nothing was chosen. */
+  can_choose: boolean;
+  amount: number | null;
+  currency: string | null;
+  amount_status: 'extracted' | 'needs_verification' | 'verified' | 'corrected' | null;
+  amount_note: string | null;
+  payment_status: 'UNPAID' | 'PENDING' | 'PAID' | null;
+  /** The total could not be read with certainty: staff must confirm it before it can be paid. */
+  needs_verification: boolean;
+  can_pay: boolean;
+  /** COD and not paid: editing is blocked. */
+  locked: boolean;
+  paid_at: string | null;
 }

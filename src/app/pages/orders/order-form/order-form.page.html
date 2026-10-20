@@ -23,7 +23,11 @@
     <div class="empty-state">
       <span class="state-icon" aria-hidden="true"><ion-icon name="lock-closed-outline"></ion-icon></span>
       <h3 class="state-title">This order can't be edited</h3>
-      <p class="state-text">{{ o.reference }} is “{{ o.status_label }}”. Orders can only be changed before the parcel reaches us.</p>
+      @if (o.cod?.locked) {
+        <p class="state-text">{{ o.reference }} is a cash on delivery order. Pay the total first; you can edit it once the payment is confirmed.</p>
+      } @else {
+        <p class="state-text">{{ o.reference }} is “{{ o.status_label }}”. Orders can only be changed before the parcel reaches us.</p>
+      }
       <div class="state-actions">
         <a class="btn btn-primary btn-sm" [routerLink]="['/app/orders', o.id]">View order</a>
       </div>

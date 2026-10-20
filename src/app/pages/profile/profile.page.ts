@@ -1,10 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { MailboxService } from '../../core/services/mailbox.service';
 import { FormsModule } from '@angular/forms';
 import { IonIcon, IonSpinner } from '@ionic/angular';
+import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/services/auth.service';
+import { ConfigService } from '../../core/services/config.service';
+import { AppleSignInCancelled, GoogleSignInCancelled, isIosApp, isNativeApp, nativeAppleIdToken, nativeGoogleIdToken } from '../../core/services/native-oauth';
 import { ToastService } from '../../core/services/toast.service';
 import { errorMessage } from '../../core/services/api.service';
 import { copyText } from '../../core/utils/image';
@@ -23,6 +26,7 @@ export class ProfilePage {
   protected auth = inject(AuthService);
   private toast = inject(ToastService);
   protected mailbox = inject(MailboxService);
+  private config = inject(ConfigService);
 
   user = this.auth.user;
   initial = computed(() => (this.user()?.full_name || this.user()?.email || '?').charAt(0).toUpperCase());
@@ -51,6 +55,75 @@ export class ProfilePage {
   strength = computed(() => passwordStrength(this.newPassword()));
 
   loggingOut = signal(false);
+  protected readonly privacyUrl = environment.privacyPolicyUrl;
+
+  // Delete account (App Store rule: an app that creates accounts must let the customer delete them inside the app)
+  delOpen = signal(false);
+  delPassword = signal('');
+  delConfirm = signal('');
+  delBusy = signal(false);
+  delError = signal<string | null>(null);
+  /** Apple and Google confirmation exist for people who signed up with them and have no password of their own. */
+  readonly nativeApp = isNativeApp();
+  readonly iosApp = isIosApp();
+  readonly delConfirmed = computed(() => this.delConfirm().trim().toUpperCase() === 'DELETE');
+
+  openDelete(): void {
+    this.delPassword.set('');
+    this.delConfirm.set('');
+    this.delError.set(null);
+    this.delOpen.set(true);
+  }
+
+  async deleteWithPassword(): Promise<void> {
+    if (!this.delPassword()) {
+      this.delError.set('Enter your password, or confirm with Apple or Google below.');
+      return;
+    }
+    await this.runDelete({ password: this.delPassword() });
+  }
+
+  async deleteWithApple(): Promise<void> {
+    if (!this.delConfirmed() || this.delBusy()) return;
+    try {
+      const { idToken, name } = await nativeAppleIdToken();
+      await this.runDelete({ idToken, provider: 'apple', name });
+    } catch (err) {
+      if (!(err instanceof AppleSignInCancelled)) this.delError.set(errorMessage(err));
+    }
+  }
+
+  async deleteWithGoogle(): Promise<void> {
+    if (!this.delConfirmed() || this.delBusy()) return;
+    const clientId = this.config.config()?.google?.clientId;
+    if (!clientId) {
+      this.delError.set('Google confirmation is not available right now.');
+      return;
+    }
+    try {
+      const idToken = await nativeGoogleIdToken(clientId, this.config.config()?.google?.iosClientId);
+      await this.runDelete({ idToken, provider: 'google' });
+    } catch (err) {
+      if (!(err instanceof GoogleSignInCancelled)) this.delError.set(errorMessage(err));
+    }
+  }
+
+  private async runDelete(proof: { password?: string; idToken?: string; provider?: 'apple' | 'google'; name?: string }): Promise<void> {
+    if (!this.delConfirmed()) {
+      this.delError.set('Type DELETE to confirm.');
+      return;
+    }
+    this.delBusy.set(true);
+    this.delError.set(null);
+    try {
+      await this.auth.deleteAccount(proof);
+      this.toast.success('Your account has been deleted.');
+    } catch (err) {
+      this.delError.set(errorMessage(err));
+    } finally {
+      this.delBusy.set(false);
+    }
+  }
 
   startEdit(): void {
     const u = this.user();

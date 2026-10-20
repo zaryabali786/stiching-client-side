@@ -13,6 +13,7 @@ import {
   PaymentStart,
   ApprovalsOverview,
   ReturnShipping,
+  CodInfo,
 } from '../models/api.models';
 
 export interface OrderListQuery {
@@ -61,6 +62,26 @@ export class OrderService {
   /** Confirm how an email draft was paid when the email did not say (never cash on delivery). */
   confirmPaymentMethod(id: string, method: string): Observable<ApiResult<{ brand_payment_method: string }>> {
     return this.api.post<{ brand_payment_method: string }>(`/client/orders/${encodeURIComponent(id)}/payment-method`, { method });
+  }
+
+  /** An order from a brand's store whose shipment is on hold: "yes, send it to your atelier". */
+  confirmShopifyAddress(id: string): Observable<ApiResult<{ changed: boolean }>> {
+    return this.api.post<{ changed: boolean }>(`/client/orders/${encodeURIComponent(id)}/shopify/confirm-address`);
+  }
+
+  /** Choose COD or Non-COD on an email order. COD reads the total from the original email. */
+  setPaymentType(id: string, type: 'COD' | 'NON_COD'): Observable<ApiResult<{ cod: CodInfo }>> {
+    return this.api.post<{ cod: CodInfo }>(`/client/orders/${encodeURIComponent(id)}/payment-type`, { type });
+  }
+
+  /** Pay Now: a Stripe Checkout page for the verified total (the amount is decided by the server). */
+  startCodCheckout(id: string): Observable<ApiResult<{ url: string; sessionId: string; amount: number; currency: string }>> {
+    return this.api.post<{ url: string; sessionId: string; amount: number; currency: string }>(`/client/orders/${encodeURIComponent(id)}/cod/checkout`);
+  }
+
+  /** Ask the server whether Stripe has confirmed the payment (the server asks Stripe; nothing is trusted from the app). */
+  confirmCodPayment(id: string): Observable<ApiResult<{ paid: boolean; status: string; cod: CodInfo }>> {
+    return this.api.post<{ paid: boolean; status: string; cod: CodInfo }>(`/client/orders/${encodeURIComponent(id)}/cod/confirm`);
   }
 
   discardDraft(id: string): Observable<ApiResult<null>> {

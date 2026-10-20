@@ -34,9 +34,13 @@ import { ShipToCardComponent } from './ship-to-card.component';
           </button>
         </div>
       } @else {
-        <p class="lead">When you checkout on any website, use this <b>email</b> and <b>shipping address</b>. Pay online at the brand's checkout: <b>Cash on Delivery is not supported</b> for these orders.</p>
+        <ul class="steps">
+          <li>Use this <b>email</b> and <b>shipping address</b> at the brand's website checkout.</li>
+          <li>Pay online at the brand's checkout, or choose <b>Cash on Delivery</b>: it is <b>allowed</b> for these orders.</li>
+          <li>For a <b>Cash on Delivery</b> order you <b>pay the order total to us first</b>, here in your customer portal with Stripe. After the payment is confirmed you can create and edit the order.</li>
+          <li>After you place the order, <b>check your customer portal</b>. Your order arrives there as a draft: choose <b>COD</b> or <b>Non-COD</b>, then complete the sizes and customization details.</li>
+        </ul>
         <app-ship-to-card eyebrow="Shipping address" heading="Deliver to" [compact]="true" [showEmail]="true" />
-        <p class="after" role="note"><ion-icon name="information-circle-outline" aria-hidden="true"></ion-icon> After you place the order, <b>check your customer portal</b>. Your order arrives there as a draft, where you complete the sizes and customization details.</p>
       }
       @if (ui.view() === 'website') {
         <div sheet-footer class="foot">
@@ -62,9 +66,8 @@ import { ShipToCardComponent } from './ship-to-card.component';
     .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
     .txt strong { font-size: 16px; }
     .txt small { color: var(--c-muted); }
-    .lead { margin: 0 0 12px; line-height: 1.5; }
-    .after { display: flex; gap: 8px; align-items: flex-start; margin: 12px 0 0; padding: 12px 14px; border-radius: 14px; background: var(--c-surface-3); line-height: 1.45; }
-    .after ion-icon { flex: none; font-size: 20px; color: var(--c-brand); margin-top: 1px; }
+    .steps { margin: 0 0 14px; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; line-height: 1.5; }
+    .steps li::marker { color: var(--c-brand); }
     .foot { display: flex; gap: 10px; }
     .foot .btn { flex: 1; }
   `,

@@ -83,7 +83,10 @@
 
       <label class="terms">
         <input type="checkbox" name="terms" [(ngModel)]="terms" />
-        <span>I agree to the terms of service and privacy policy, and confirm my delivery details are correct.</span>
+        <span>
+          I agree to the terms of service and
+          @if (privacyUrl) { <a [href]="privacyUrl" target="_blank" rel="noopener">privacy policy</a> } @else { privacy policy }, and confirm my delivery details are correct.
+        </span>
       </label>
       @if (err('terms'); as m) { <span class="field-error">{{ m }}</span> }
 

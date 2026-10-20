@@ -1,6 +1,7 @@
+import { Capacitor } from '@capacitor/core';
 import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, LOCALE_ID, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { DatePipe, DecimalPipe, formatNumber } from '@angular/common';
+import { DatePipe, DecimalPipe, NgTemplateOutlet, formatNumber } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { IonIcon, IonSpinner } from '@ionic/angular';
@@ -32,7 +33,7 @@ import { isStoredVoice, toVoiceRef } from '../../../core/utils/voice-note';
 import { PaymentSheetComponent } from '../../../shared/payment-sheet.component';
 import { SheetComponent } from '../../../shared/sheet.component';
 
-type Action = 'cancel' | 'approve' | 'changes' | 'pay' | 'discard' | 'payment' | 'parcel' | 'review' | 'return';
+type Action = 'cancel' | 'approve' | 'changes' | 'pay' | 'discard' | 'payment' | 'parcel' | 'review' | 'return' | 'paytype' | 'codpay' | 'address';
 
 /** Key of the single order-level approval card used by old orders (no per-article approval data). */
 export const LEGACY_KEY = '__order';
@@ -44,6 +45,7 @@ export const LEGACY_KEY = '__order';
     RouterLink,
     FormsModule,
     DatePipe,
+    NgTemplateOutlet,
     DecimalPipe,
     IonIcon,
     IonSpinner,
@@ -270,6 +272,12 @@ export class OrderDetailPage {
         if (path === `/app/orders/${this.id()}` && Date.now() - this.lastLoadAt > 1000) this.load(this.id(), true);
       });
     this.destroyRef.onDestroy(() => clearTimeout(this.flashTimer));
+    // back from the Stripe page (phone browser or another tab): the server checks the payment, nothing is trusted from the page
+    const onVisible = (): void => {
+      if (document.visibilityState === 'visible' && this.order()?.cod?.payment_status === 'PENDING') this.checkCodPayment(true);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    this.destroyRef.onDestroy(() => document.removeEventListener('visibilitychange', onVisible));
 
     // Chats: join the order's room (all its chats), keep the unread badges fresh.
     effect(() => {
@@ -458,6 +466,95 @@ export class OrderDetailPage {
       next: (res) => {
         this.pending.set(null);
         this.toast.success(res.message || 'Saved.');
+        this.load(this.id(), true);
+      },
+      error: (err) => {
+        this.pending.set(null);
+        this.toast.error(err);
+      },
+    });
+  }
+
+  // ───────── Cash on delivery (COD) ─────────
+
+  /** "PKR 4,200.00": the verified total of a COD order. */
+  codMoney(c: { amount: number | null; currency: string | null } | undefined | null): string {
+    if (!c || c.amount == null || !c.currency) return '—';
+    try {
+      return new Intl.NumberFormat(undefined, { style: 'currency', currency: c.currency }).format(c.amount);
+    } catch {
+      return `${c.currency} ${c.amount.toFixed(2)}`;
+    }
+  }
+
+  codStatusLabel(status: string | null | undefined): string {
+    return status === 'PAID' ? 'Paid' : status === 'PENDING' ? 'Payment pending' : 'Unpaid';
+  }
+
+  /** The email order is COD or Non-COD. Saved on the order, so it is still there after a refresh or a new login. */
+  choosePaymentType(type: 'COD' | 'NON_COD'): void {
+    if (this.pending()) return;
+    this.pending.set('paytype');
+    this.orders.setPaymentType(this.id(), type).subscribe({
+      next: (res) => {
+        this.pending.set(null);
+        this.toast.success(res.message || 'Saved.');
+        this.load(this.id(), true);
+      },
+      error: (err) => {
+        this.pending.set(null);
+        this.toast.error(err);
+      },
+    });
+  }
+
+  /** Pay Now: opens Stripe Checkout for the total saved on the order. The order is marked paid only after the server confirms it with Stripe. */
+  payNow(): void {
+    if (this.pending()) return;
+    this.pending.set('codpay');
+    this.orders.startCodCheckout(this.id()).subscribe({
+      next: ({ data }) => {
+        this.pending.set(null);
+        // in the phone app the payment page opens in the phone's browser; on the website the same tab goes to Stripe
+        if (Capacitor.isNativePlatform()) window.open(data.url, '_blank');
+        else window.location.href = data.url;
+        this.load(this.id(), true);
+      },
+      error: (err) => {
+        this.pending.set(null);
+        this.toast.error(err);
+        this.load(this.id(), true);
+      },
+    });
+  }
+
+  /** Ask the server whether Stripe has confirmed the payment (used when the customer comes back to the app). */
+  checkCodPayment(quiet = false): void {
+    const c = this.order()?.cod;
+    if (!c || c.payment_type !== 'COD' || c.payment_status === 'PAID' || this.pending()) return;
+    this.pending.set('codpay');
+    this.orders.confirmCodPayment(this.id()).subscribe({
+      next: ({ data }) => {
+        this.pending.set(null);
+        if (data.paid) this.toast.success('Payment received. You can edit your order now.');
+        else if (!quiet) this.toast.info('The payment has not been confirmed yet.');
+        this.load(this.id(), true);
+      },
+      error: (err) => {
+        this.pending.set(null);
+        if (!quiet) this.toast.error(err);
+      },
+    });
+  }
+
+  /** The customer agrees that this order goes to the atelier: only now is the address on the brand's order changed. */
+  confirmAtelierAddress(): void {
+    if (this.pending()) return;
+    this.pending.set('address');
+    this.orders.confirmShopifyAddress(this.id()).subscribe({
+      next: (res) => {
+        this.pending.set(null);
+        this.toast.success(res.message || 'Confirmed.');
         this.load(this.id(), true);
       },
       error: (err) => {
