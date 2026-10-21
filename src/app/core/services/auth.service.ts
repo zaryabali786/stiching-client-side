@@ -162,6 +162,12 @@ export class AuthService {
     return message;
   }
 
+  /** Sets the new password with the one-time token from the reset email. */
+  async resetPassword(token: string, password: string): Promise<string> {
+    const { message } = await firstValueFrom(this.api.post('/auth/reset-password', { token, password }));
+    return message;
+  }
+
   /** Called by the interceptor when the refresh token is no longer valid. */
   handleSessionExpired(): void {
     if (this.expiring) return;
@@ -169,7 +175,7 @@ export class AuthService {
     const hadSession = !!this.user();
     this.clearSession();
     const current = this.router.url;
-    const onAuthPage = current.startsWith('/login') || current.startsWith('/register');
+    const onAuthPage = current.startsWith('/login') || current.startsWith('/register') || current.startsWith('/reset-password');
     if (hadSession) this.toast.info('Your session expired. Please sign in again.');
     const nav = onAuthPage
       ? Promise.resolve(true)

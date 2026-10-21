@@ -10,6 +10,11 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/auth/login/login.page').then((m) => m.LoginPage),
   },
   {
+    path: 'reset-password',
+    title: 'Choose a new password',
+    loadComponent: () => import('./pages/auth/reset-password/reset-password.page').then((m) => m.ResetPasswordPage),
+  },
+  {
     path: 'sign-in',
     title: 'Sign in with a code',
     loadComponent: () => import('./pages/auth/sign-in-code/sign-in-code.page').then((m) => m.SignInCodePage),
