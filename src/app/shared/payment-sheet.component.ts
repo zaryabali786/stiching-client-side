@@ -20,7 +20,7 @@ type Phase = 'starting' | 'ready' | 'paying' | 'checking' | 'failed';
   imports: [IonIcon, IonSpinner, SheetComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-sheet [open]="open()" title="Pay by card" [eyebrow]="invoiceNumber() ? 'Invoice ' + invoiceNumber() : 'Secure payment'" [locked]="phase() === 'paying' || phase() === 'checking'" (closed)="close()">
+    <app-sheet [open]="open()" title="Pay by card" [eyebrow]="kind() === 'cod' ? 'Order ' + reference() : invoiceNumber() ? 'Invoice ' + invoiceNumber() : 'Secure payment'" [locked]="phase() === 'paying' || phase() === 'checking'" (closed)="close()">
       <div class="pay">
         <div class="amount" aria-live="polite">
           <span class="k">Amount due</span>
@@ -98,6 +98,10 @@ export class PaymentSheetComponent {
   /** "GBP 70.99" — already formatted by the page. */
   readonly amountLabel = input('');
   readonly invoiceNumber = input('');
+  /** 'invoice': the issued invoice. 'cod': the total of a cash on delivery order (same card form, same page, no redirect). */
+  readonly kind = input<'invoice' | 'cod'>('invoice');
+  /** The order number shown above the amount (COD). */
+  readonly reference = input('');
 
   readonly paid = output<void>();
   readonly closed = output<void>();
@@ -132,7 +136,8 @@ export class PaymentSheetComponent {
     this.complete.set(false);
     this.start.set(null);
 
-    this.orders.startPayment(this.orderId()).subscribe({
+    const started$ = this.kind() === 'cod' ? this.orders.startCodPayment(this.orderId()) : this.orders.startPayment(this.orderId());
+    started$.subscribe({
       next: async ({ data }) => {
         if (run !== this.runId) return;
         const stripe = await this.stripeSvc.load(data.publishableKey);
@@ -202,8 +207,11 @@ export class PaymentSheetComponent {
   private async verify(paymentIntentId: string, attempt = 0): Promise<void> {
     this.phase.set('checking');
     try {
+      // the server asks Stripe itself (never the app's word) in both cases; "check" only reads, it never charges
       const result = await new Promise<{ paid: boolean; status: string; error?: string | null }>((resolve, reject) =>
-        this.orders.confirmPayment(this.orderId(), paymentIntentId).subscribe({ next: (r) => resolve(r.data), error: reject }),
+        this.kind() === 'cod'
+          ? this.orders.confirmCodPayment(this.orderId()).subscribe({ next: (r) => resolve({ paid: r.data.paid, status: r.data.stripe_status ?? r.data.status }), error: reject })
+          : this.orders.confirmPayment(this.orderId(), paymentIntentId).subscribe({ next: (r) => resolve(r.data), error: reject }),
       );
       if (result.paid) {
         this.toast.success('Payment received. Thank you!');

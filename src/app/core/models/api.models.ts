@@ -112,6 +112,7 @@ export interface PlatformConfig {
 
 /** POST /client/orders/:id/payment-intent */
 export interface PaymentStart {
+  reused?: boolean;
   clientSecret: string;
   paymentIntentId: string;
   amount: number;
@@ -888,4 +889,13 @@ export interface CodInfo {
   /** COD and not paid: editing is blocked. */
   locked: boolean;
   paid_at: string | null;
+  /** Where the order came from: the brand's Shopify store, a forwarded email, or made by hand. */
+  source?: 'shopify' | 'email' | 'manual';
+  /** One readable payment state, kept apart from the order's workflow status. */
+  payment_state?: 'not_required' | 'payment_required' | 'processing' | 'verification_pending' | 'paid';
+  /** The parcel cannot be received (and so not approved or produced) until the payment is confirmed. */
+  receive_blocked?: boolean;
+  receive_block_reason?: string | null;
+  /** What Shopify itself says about the brand order's payment. */
+  shopify?: { financial_status: string; amount_paid: number | null; outstanding: number | null } | null;
 }

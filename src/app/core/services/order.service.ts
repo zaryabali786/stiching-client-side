@@ -79,9 +79,14 @@ export class OrderService {
     return this.api.post<{ url: string; sessionId: string; amount: number; currency: string }>(`/client/orders/${encodeURIComponent(id)}/cod/checkout`);
   }
 
-  /** Ask the server whether Stripe has confirmed the payment (the server asks Stripe; nothing is trusted from the app). */
-  confirmCodPayment(id: string): Observable<ApiResult<{ paid: boolean; status: string; cod: CodInfo }>> {
-    return this.api.post<{ paid: boolean; status: string; cod: CodInfo }>(`/client/orders/${encodeURIComponent(id)}/cod/confirm`);
+  /** Pay Now inside the app: the PaymentIntent the Payment Element pays (the amount is decided by the server). */
+  startCodPayment(id: string): Observable<ApiResult<PaymentStart>> {
+    return this.api.post<PaymentStart>(`/client/orders/${encodeURIComponent(id)}/cod/payment-intent`);
+  }
+
+  /** Ask the server whether Stripe has confirmed the payment (the server asks Stripe; nothing is trusted from the app). It never charges. */
+  confirmCodPayment(id: string): Observable<ApiResult<{ paid: boolean; status: string; stripe_status?: string; cod: CodInfo }>> {
+    return this.api.post<{ paid: boolean; status: string; stripe_status?: string; cod: CodInfo }>(`/client/orders/${encodeURIComponent(id)}/cod/confirm`);
   }
 
   discardDraft(id: string): Observable<ApiResult<null>> {

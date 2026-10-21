@@ -891,28 +891,35 @@
     <!-- Cash on delivery: the total, its status and Pay Now (one body, shown in the draft card or in its own card) -->
     <ng-template #codBody let-c>
       <dl class="cod-list">
+            <dt>Order number</dt><dd>{{ order()?.reference }}</dd>
+            <dt>Order source</dt><dd>{{ sourceLabel({ cod: c, external_source: order()?.external_source, order_source: order()?.order_source }) }}</dd>
             <dt>Payment type</dt><dd>COD (cash on delivery)</dd>
-            <dt>Order total</dt><dd class="cod-total">{{ codMoney(c) }}</dd>
+            <dt>Amount due</dt><dd class="cod-total">{{ codMoney(c) }}</dd>
             <dt>Currency</dt><dd>{{ c.currency || '—' }}</dd>
-            <dt>Payment status</dt><dd><span class="cod-status" [attr.data-s]="c.payment_status">{{ codStatusLabel(c.payment_status) }}</span></dd>
+            @if (c.shopify) { <dt>Shopify says</dt><dd>{{ shopifyStatusLabel(c.shopify.financial_status) }}@if (c.shopify.amount_paid) { · {{ c.currency }} {{ c.shopify.amount_paid }} already paid } </dd> }
+            <dt>Payment status</dt><dd><span class="cod-status" [attr.data-s]="c.payment_status">{{ payStateLabel(c) }}</span></dd>
           </dl>
+          @if (c.payment_status !== 'PAID' && !c.needs_verification) {
+            <p class="pay-warn" role="status"><ion-icon name="information-circle-outline" aria-hidden="true"></ion-icon> Payment is required before we can receive your parcel. Your order cannot move on until the payment is confirmed.</p>
+          }
           @if (c.needs_verification) {
             <p class="pay-warn" role="alert"><ion-icon name="warning-outline" aria-hidden="true"></ion-icon> We could not read the total from your email with certainty. Our team will confirm it; you can pay once it is confirmed.</p>
             @if (c.amount_note) { <p class="muted small">{{ c.amount_note }}</p> }
           } @else if (c.payment_status === 'PAID') {
-            <p class="muted small">Paid{{ c.paid_at ? ' on ' + (c.paid_at | date: 'MMM d, y, h:mm a') : '' }}. You can edit your order now.</p>
+            <p class="muted small">Paid{{ c.paid_at ? ' on ' + (c.paid_at | date: 'MMM d, y, h:mm a') : '' }}. Thank you. Your parcel can now be received.</p>
           } @else if (c.can_pay) {
-            <p class="muted small">You pay this total with Stripe. Your order can be edited after the payment is confirmed.</p>
+            <p class="muted small">You pay this total by card, right here in the app. Payments are processed by Stripe; we never see your card number.</p>
             <div class="btn-row">
-              <button type="button" class="btn btn-primary" (click)="payNow()" [disabled]="!!pending()">
+              <button type="button" class="btn btn-primary" (click)="payNow()" [disabled]="!!pending() || codPayOpen()">
+                <ion-icon name="card-outline" aria-hidden="true"></ion-icon>
+                Pay Now · {{ codMoney(c) }}
+              </button>
+              <button type="button" class="btn btn-outline" (click)="checkCodPayment()" [disabled]="!!pending()">
                 @if (pending() === 'codpay') {
                   <ion-spinner name="crescent"></ion-spinner>
                 }
-                Pay Now · {{ codMoney(c) }}
+                Check Payment Again
               </button>
-              @if (c.payment_status === 'PENDING') {
-                <button type="button" class="btn btn-outline" (click)="checkCodPayment()" [disabled]="!!pending()">I have paid: check</button>
-              }
             </div>
           }
     </ng-template>
@@ -1136,6 +1143,16 @@
     [invoiceNumber]="o.invoice?.number ?? ''"
     (paid)="onPaid()"
     (closed)="payOpen.set(false)"
+  />
+  <!-- the total of a COD order: the same card form, on this page -->
+  <app-payment-sheet
+    kind="cod"
+    [open]="codPayOpen()"
+    [orderId]="o.id"
+    [reference]="o.reference"
+    [amountLabel]="codMoney(o.cod)"
+    (paid)="onCodPaid()"
+    (closed)="codPayOpen.set(false); checkCodPayment(true)"
   />
 }
 

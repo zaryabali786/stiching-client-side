@@ -1,4 +1,3 @@
-import { Capacitor } from '@capacitor/core';
 import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, LOCALE_ID, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe, DecimalPipe, NgTemplateOutlet, formatNumber } from '@angular/common';
@@ -14,7 +13,7 @@ import { compressImage, copyText } from '../../../core/utils/image';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { OrderEventsService } from '../../../core/services/order-events.service';
-import { ApiResult, InvoiceLine, OrderDetail, OrderUnit, ReturnShipping } from '../../../core/models/api.models';
+import { ApiResult, CodInfo, InvoiceLine, OrderDetail, OrderUnit, ReturnShipping } from '../../../core/models/api.models';
 import { PROGRESS_STEPS, humanizeStatus, progressIndex, statusHint } from '../../../core/utils/order-status';
 import { StatusBadgeComponent } from '../../../shared/status-badge.component';
 import { ShipToCardComponent } from '../../../shared/ship-to-card.component';
@@ -491,6 +490,22 @@ export class OrderDetailPage {
     return status === 'PAID' ? 'Paid' : status === 'PENDING' ? 'Payment pending' : 'Unpaid';
   }
 
+  /** The payment state in plain words: Payment required, Payment pending, Payment verification pending, Paid. */
+  payStateLabel(c: { payment_state?: string; payment_status: string | null } | null | undefined): string {
+    switch (c?.payment_state) {
+      case 'paid':
+        return 'Paid';
+      case 'processing':
+        return 'Payment pending';
+      case 'verification_pending':
+        return 'Verification pending';
+      case 'payment_required':
+        return 'Payment required';
+      default:
+        return this.codStatusLabel(c?.payment_status);
+    }
+  }
+
   /** The email order is COD or Non-COD. Saved on the order, so it is still there after a refresh or a new login. */
   choosePaymentType(type: 'COD' | 'NON_COD'): void {
     if (this.pending()) return;
@@ -508,24 +523,31 @@ export class OrderDetailPage {
     });
   }
 
-  /** Pay Now: opens Stripe Checkout for the total saved on the order. The order is marked paid only after the server confirms it with Stripe. */
+  /** The card form for a COD order opens in a sheet on this page (no new window, no redirect). */
+  codPayOpen = signal(false);
+
+  /** Pay Now: the same Payment Element as the invoice, for the total saved on the order. It is marked paid only after the server confirms it with Stripe. */
   payNow(): void {
-    if (this.pending()) return;
-    this.pending.set('codpay');
-    this.orders.startCodCheckout(this.id()).subscribe({
-      next: ({ data }) => {
-        this.pending.set(null);
-        // in the phone app the payment page opens in the phone's browser; on the website the same tab goes to Stripe
-        if (Capacitor.isNativePlatform()) window.open(data.url, '_blank');
-        else window.location.href = data.url;
-        this.load(this.id(), true);
-      },
-      error: (err) => {
-        this.pending.set(null);
-        this.toast.error(err);
-        this.load(this.id(), true);
-      },
-    });
+    if (this.pending() || !this.order()?.cod?.can_pay) return;
+    this.codPayOpen.set(true);
+  }
+
+  onCodPaid(): void {
+    this.codPayOpen.set(false);
+    this.load(this.id(), true);
+    this.notif.refreshCount();
+  }
+
+  /** Where the order came from, in the customer's words. */
+  sourceLabel(o: { cod?: CodInfo | null; external_source?: string | null; order_source?: string }): string {
+    if (o.cod?.source === 'shopify' || o.external_source === 'shopify') return 'Shopify store';
+    return o.order_source === 'email' ? 'Forwarded email' : 'Created in the app';
+  }
+
+  /** Shopify's own payment word, readable ("partially_paid" → "Partly paid"). */
+  shopifyStatusLabel(s: string | null | undefined): string {
+    const map: Record<string, string> = { paid: 'Paid', pending: 'Payment pending', authorized: 'Authorised, not collected', partially_paid: 'Partly paid', partially_refunded: 'Partly refunded', refunded: 'Refunded', voided: 'Voided' };
+    return (s && map[s]) || 'Unknown';
   }
 
   /** Ask the server whether Stripe has confirmed the payment (used when the customer comes back to the app). */
