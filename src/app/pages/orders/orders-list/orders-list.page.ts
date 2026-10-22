@@ -196,6 +196,13 @@ export class OrdersListPage {
     return (o.return_badge?.shipments ?? []).map((s) => [s.courier, s.tracking ? `Tracking ${s.tracking}` : ''].filter(Boolean).join(' · '));
   }
 
+  /** Under a draft's own number: the Shopify order number (Shopify drafts only) and the brand, each only when known. */
+  draftSubtitle(o: OrderListRow): string {
+    const shopify = o.external_source === 'shopify' && o.brand_order_number?.trim() ? `Shopify Order ${o.brand_order_number.trim().replace(/^(?=\d)/, '#')}` : '';
+    const brand = o.brand?.trim() ? `Brand: ${o.brand.trim()}` : '';
+    return [shopify, brand].filter(Boolean).join(' · ');
+  }
+
   kicker(o: OrderListRow): string {
     if (o.order_kind === 'return') return 'Return shipment';
     if (o.status === 'draft') return 'Draft Order';

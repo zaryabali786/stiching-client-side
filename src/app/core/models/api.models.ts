@@ -188,6 +188,7 @@ export interface OrderListRow {
   reference: string;
   brand: string;
   brand_order_number: string | null;
+  external_source?: string | null;
   tracking_number: string | null;
   status: OrderStatus;
   status_label: string;

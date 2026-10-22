@@ -81,9 +81,11 @@
           <div class="oc-main">
             <span [class]="'brand-swatch ' + swatch(o.brand).cls" aria-hidden="true">{{ swatch(o.brand).initial }}</span>
             <div class="oc-text">
-              <h3 class="oc-title">{{ o.brand }}</h3>
+              <h3 class="oc-title">{{ draft ? o.reference : o.brand }}</h3>
               <span class="oc-sub">
-                @if (draft && o.import_source === 'email') {
+                @if (draft && draftSubtitle(o); as sub) {
+                  {{ sub }}
+                } @else if (draft && o.import_source === 'email') {
                   <ion-icon name="mail-outline" aria-hidden="true"></ion-icon> Created from your email
                 } @else {
                   {{ o.created_at | date: 'd MMM y' }}
