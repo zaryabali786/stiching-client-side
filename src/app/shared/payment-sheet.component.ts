@@ -1,7 +1,9 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, input, output, signal, untracked, viewChild, ElementRef } from '@angular/core';
 import { IonIcon, IonSpinner } from '@ionic/angular';
+import { map } from 'rxjs';
 import type { Stripe, StripeElements, StripePaymentElement } from '@stripe/stripe-js';
 import { OrderService } from '../core/services/order.service';
+import { ShopService } from '../core/services/shop.service';
 import { StripeService } from '../core/services/stripe.service';
 import { ToastService } from '../core/services/toast.service';
 import { errorMessage } from '../core/services/api.service';
@@ -20,7 +22,7 @@ type Phase = 'starting' | 'ready' | 'paying' | 'checking' | 'failed';
   imports: [IonIcon, IonSpinner, SheetComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-sheet [open]="open()" title="Pay by card" [eyebrow]="kind() === 'cod' ? 'Order ' + reference() : invoiceNumber() ? 'Invoice ' + invoiceNumber() : 'Secure payment'" [locked]="phase() === 'paying' || phase() === 'checking'" (closed)="close()">
+    <app-sheet [open]="open()" title="Pay by card" [eyebrow]="kind() !== 'invoice' ? 'Order ' + reference() : invoiceNumber() ? 'Invoice ' + invoiceNumber() : 'Secure payment'" [locked]="phase() === 'paying' || phase() === 'checking'" (closed)="close()">
       <div class="pay">
         <div class="amount" aria-live="polite">
           <span class="k">Amount due</span>
@@ -89,6 +91,7 @@ type Phase = 'starting' | 'ready' | 'paying' | 'checking' | 'failed';
 })
 export class PaymentSheetComponent {
   private orders = inject(OrderService);
+  private shop = inject(ShopService);
   private stripeSvc = inject(StripeService);
   private toast = inject(ToastService);
   private destroyRef = inject(DestroyRef);
@@ -99,7 +102,7 @@ export class PaymentSheetComponent {
   readonly amountLabel = input('');
   readonly invoiceNumber = input('');
   /** 'invoice': the issued invoice. 'cod': the total of a cash on delivery order (same card form, same page, no redirect). */
-  readonly kind = input<'invoice' | 'cod'>('invoice');
+  readonly kind = input<'invoice' | 'cod' | 'shop'>('invoice');
   /** The order number shown above the amount (COD). */
   readonly reference = input('');
 
@@ -136,7 +139,13 @@ export class PaymentSheetComponent {
     this.complete.set(false);
     this.start.set(null);
 
-    const started$ = this.kind() === 'cod' ? this.orders.startCodPayment(this.orderId()) : this.orders.startPayment(this.orderId());
+    // 'shop': a Shop order (paid once for all brands); the server reuses the open payment when there is one
+    const started$ =
+      this.kind() === 'shop'
+        ? this.shop.startPayment(this.orderId()).pipe(map((p): { data: PaymentStart } => ({ data: { ...p, invoiceNumber: null } })))
+        : this.kind() === 'cod'
+          ? this.orders.startCodPayment(this.orderId())
+          : this.orders.startPayment(this.orderId());
     started$.subscribe({
       next: async ({ data }) => {
         if (run !== this.runId) return;
@@ -191,7 +200,7 @@ export class PaymentSheetComponent {
     const { error, paymentIntent } = await this.stripe.confirmPayment({
       elements: this.elements,
       redirect: 'if_required', // cards never leave the page; 3-D Secure opens in a Stripe dialog
-      confirmParams: { return_url: `${window.location.origin}/app/orders/${this.orderId()}` },
+      confirmParams: { return_url: `${window.location.origin}/app/${this.kind() === 'shop' ? 'shop/orders' : 'orders'}/${this.orderId()}` },
     });
 
     if (error) {
@@ -209,7 +218,9 @@ export class PaymentSheetComponent {
     try {
       // the server asks Stripe itself (never the app's word) in both cases; "check" only reads, it never charges
       const result = await new Promise<{ paid: boolean; status: string; error?: string | null }>((resolve, reject) =>
-        this.kind() === 'cod'
+        this.kind() === 'shop'
+          ? this.shop.confirmPayment(this.orderId(), paymentIntentId).subscribe({ next: (r) => resolve({ paid: r.data.payment_status === 'paid', status: r.data.payment_status === 'paid' ? 'succeeded' : 'processing' }), error: reject })
+          : this.kind() === 'cod'
           ? this.orders.confirmCodPayment(this.orderId()).subscribe({ next: (r) => resolve({ paid: r.data.paid, status: r.data.stripe_status ?? r.data.status }), error: reject })
           : this.orders.confirmPayment(this.orderId(), paymentIntentId).subscribe({ next: (r) => resolve(r.data), error: reject }),
       );

@@ -12,6 +12,7 @@ import { ChatSocketService } from '../../core/services/chat-socket.service';
 import { OrderEventsService } from '../../core/services/order-events.service';
 import { OrderService } from '../../core/services/order.service';
 import { ToastService } from '../../core/services/toast.service';
+import { ShopService } from '../../core/services/shop.service';
 import { ApprovalsService } from '../../core/services/approvals.service';
 import { ShellUiService } from '../../core/services/shell-ui.service';
 import { NotificationModalComponent } from '../../pages/components/notification-modal/notification-modal.component';
@@ -19,7 +20,7 @@ import { ChatDockComponent } from '../../shared/chat-dock.component';
 import { NewOrderChoiceComponent } from '../../shared/new-order-choice.component';
 import { NewOrderService } from '../../core/services/new-order.service';
 
-type TabKey = 'home' | 'orders' | 'new' | 'sizes' | 'profile' | 'inbox' | 'approvals';
+type TabKey = 'home' | 'orders' | 'shop' | 'new' | 'sizes' | 'profile' | 'inbox' | 'approvals';
 
 /**
  * Persistent chrome for every /app/* page: header (brand, customer code, bell), one scroll area
@@ -43,6 +44,8 @@ export class ClientShellComponent {
   /** Instantiated here so the Inbox badge stays live on every page. */
   protected mailbox = inject(MailboxService);
   private orders = inject(OrderService);
+  /** Its cart count is the badge on the Shop tab. */
+  protected shop = inject(ShopService);
   private router = inject(Router);
   private theme = inject(ThemeService);
   private shellUi = inject(ShellUiService);
@@ -83,6 +86,7 @@ export class ClientShellComponent {
     const path = this.url().split(/[?#]/)[0];
     if (path.startsWith('/app/orders/new') || /^\/app\/orders\/[^/]+\/edit/.test(path)) return 'new';
     if (path.startsWith('/app/orders')) return 'orders';
+    if (path.startsWith('/app/shop')) return 'shop';
     if (path.startsWith('/app/sizes')) return 'sizes';
     if (path.startsWith('/app/profile')) return 'profile';
     if (path.startsWith('/app/inbox')) return 'inbox';
@@ -144,6 +148,8 @@ export class ClientShellComponent {
   }
 
   constructor() {
+    // the cart count for the Shop tab (a missing or failing Shop never disturbs the rest of the app)
+    this.shop.loadCart().subscribe({ error: () => undefined });
     this.config.load();
     // keep the draft count fresh: on every page change and whenever an order changes live
     this.router.events

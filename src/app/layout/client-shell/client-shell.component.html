@@ -67,6 +67,15 @@
     </span>
     <span class="lbl">Orders</span>
   </a>
+  <a class="tab" routerLink="/app/shop" [class.active]="activeTab() === 'shop'" [attr.aria-current]="activeTab() === 'shop' ? 'page' : null">
+    <span class="ind">
+      <ion-icon [name]="tabIcon('storefront', activeTab() === 'shop')" aria-hidden="true"></ion-icon>
+      @if (shop.cartCount() > 0) {
+        <span class="tab-badge" [attr.aria-label]="shop.cartCount() + ' items in your cart'">{{ shop.cartCount() > 99 ? '99+' : shop.cartCount() }}</span>
+      }
+    </span>
+    <span class="lbl">Shop</span>
+  </a>
   <button type="button" class="tab tab-new" (click)="newOrder.open()" aria-haspopup="dialog" [class.active]="activeTab() === 'new'">
     <span class="plus"><ion-icon name="add-outline" aria-hidden="true"></ion-icon></span>
     <span class="lbl">New order</span>
@@ -96,6 +105,12 @@
     </div>
 
     <nav class="drawer-nav" aria-label="Menu">
+      <a class="d-item" routerLink="/app/shop" [class.active]="activeTab() === 'shop'">
+        <ion-icon name="storefront-outline" aria-hidden="true"></ion-icon><span>Shop</span>
+      </a>
+      <a class="d-item" routerLink="/app/shop/orders">
+        <ion-icon name="cube-outline" aria-hidden="true"></ion-icon><span>Shop orders</span>
+      </a>
       <a class="d-item" routerLink="/app/approvals" [class.active]="activeTab() === 'approvals'">
         <ion-icon name="checkmark-done-outline" aria-hidden="true"></ion-icon><span>Approve / Reject</span>
         @if (approvals.count() > 0) {
