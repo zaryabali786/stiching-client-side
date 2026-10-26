@@ -46,6 +46,8 @@ export class ClientShellComponent {
   private orders = inject(OrderService);
   /** Its cart count is the badge on the Shop tab. */
   protected shop = inject(ShopService);
+  /** The Shop (tab, menu entries) is hidden for now. Set to true to show it again; its pages and code are untouched. */
+  protected readonly showShop = false;
   private router = inject(Router);
   private theme = inject(ThemeService);
   private shellUi = inject(ShellUiService);
