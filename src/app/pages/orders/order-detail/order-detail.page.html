@@ -1,18 +1,18 @@
 <div class="page">
   <header class="top">
-    <a class="icon-btn" routerLink="/app/orders" aria-label="Back to orders">
+    <a class="round-btn" routerLink="/app/orders" aria-label="Back to orders">
       <ion-icon name="chevron-back-outline" aria-hidden="true"></ion-icon>
     </a>
     <div class="top-titles">
       @if (order(); as o) {
-        <span class="eyebrow mono-ref">{{ o.reference }}</span>
         <h1>{{ o.brand }}</h1>
+        <span class="ref-line">{{ o.reference }}</span>
       } @else {
         <span class="skeleton" style="width: 70px; height: 10px; margin-bottom: 6px"></span>
         <span class="skeleton" style="width: 140px; height: 20px"></span>
       }
     </div>
-    <button type="button" class="icon-btn" (click)="load()" [disabled]="loading()" aria-label="Refresh order">
+    <button type="button" class="round-btn" (click)="load()" [disabled]="loading()" aria-label="Refresh order">
       @if (loading() && order()) {
         <ion-spinner name="crescent"></ion-spinner>
       } @else {
@@ -42,13 +42,25 @@
 
     <!-- Status -->
     <section class="card status-card" id="status-card" tabindex="-1" aria-label="Order status">
-      <div class="status-row">
-        <app-status-badge [status]="o.status" [label]="o.status_label" />
-        @if (o.has_issue) {
-          <span class="issue-flag"><ion-icon name="alert-circle-outline" aria-hidden="true"></ion-icon>Issue</span>
-        }
+      <div class="hero">
+        <div class="hero-text">
+          @if (heroTitle()) { <h2 class="hero-title">{{ heroTitle() }}</h2> }
+          <div class="status-row">
+            <app-status-badge [status]="o.status" [label]="o.status_label" />
+            @if (o.has_issue) {
+              <span class="issue-flag"><ion-icon name="alert-circle-outline" aria-hidden="true"></ion-icon>Issue</span>
+            }
+          </div>
+          <p class="hint">{{ hint() }}</p>
+        </div>
+        <span class="hero-pic" aria-hidden="true">
+          @if (heroPicture(); as pic) {
+            <img [src]="pic" alt="" loading="lazy" referrerpolicy="no-referrer" />
+          } @else {
+            <ion-icon name="shirt-outline"></ion-icon>
+          }
+        </span>
       </div>
-      <p class="hint">{{ hint() }}</p>
 
       @if (o.status !== 'cancelled' && o.status !== 'draft') {
         <ol class="tracker" aria-label="Progress">
@@ -62,7 +74,7 @@
           @if (o.status === 'delivered') {
             <span><b>Delivered</b> · all {{ steps.length }} steps complete</span>
           } @else {
-            <span>Step {{ stepIndex() + 1 }} of {{ steps.length }} · <b>{{ steps[stepIndex()] }}</b></span>
+            <span>Step {{ stepIndex() + 1 }} of {{ steps.length }}</span>
             @if (nextStep(); as n) {
               <span class="next">Next: {{ n }}</span>
             }
@@ -1174,14 +1186,14 @@
     </p>
 
     <div class="field">
-      <label for="reject-note">{{ rejectMode() === 'hold' ? 'Why are you holding it?' : 'What is wrong?' }} <span class="req">required</span></label>
+      <label for="reject-note">{{ rejectMode() === 'hold' ? 'Why are you holding it?' : 'What is wrong?' }} <span class="req" aria-hidden="true">*</span><span class="sr-only"> required</span></label>
       <textarea id="reject-note" class="textarea" rows="4" maxlength="1000" [placeholder]="rejectMode() === 'hold' ? 'e.g. I will decide after checking the colour in daylight' : 'e.g. Wrong colour, torn at the hem'" [ngModel]="rejectNote()" (ngModelChange)="rejectNote.set($event)"></textarea>
       @if (rejectTouched() && rejectNote().trim().length < 3) { <span class="field-error">Please write a short note.</span> }
     </div>
 
     @if (rejectMode() === 'return') {
     <div class="field">
-      <span class="field-label" id="dest-label">Where should the parcel go back to?@if (returnTargets().length > 1) { <span class="req">required</span> }</span>
+      <span class="field-label" id="dest-label">Where should the parcel go back to?@if (returnTargets().length > 1) { <span class="req" aria-hidden="true">*</span><span class="sr-only"> required</span> }</span>
       @if (returnTargets().length > 1) {
         <div class="dest" role="radiogroup" aria-labelledby="dest-label">
           <button type="button" role="radio" class="dest-opt" [class.on]="returnTo() === 'brand'" [attr.aria-checked]="returnTo() === 'brand'" (click)="returnTo.set('brand')">
@@ -1201,7 +1213,7 @@
 
     @if (needsShipping()) {
     <div class="field ship-fields">
-      <span class="field-label">Shipping details for this return <span class="req">required</span></span>
+      <span class="field-label">Shipping details for this return <span class="req" aria-hidden="true">*</span><span class="sr-only"> required</span></span>
       <p class="ship-hint">We use your delivery address. Change anything that should be different for this return.</p>
       <div class="ship-grid">
         <div class="field"><label for="rs-name">Name</label><input id="rs-name" class="input" autocomplete="name" [ngModel]="rejectShip().name" (ngModelChange)="setShip({ name: $event })" /></div>

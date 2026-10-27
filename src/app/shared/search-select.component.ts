@@ -37,7 +37,7 @@ let nextId = 0;
       <label class="ss-label" [id]="labelId" [for]="triggerId">
         {{ label() }}
         @if (required()) {
-          <span class="req">required</span>
+          <span class="req" aria-hidden="true">*</span><span class="sr-only"> required</span>
         } @else if (optionalTag()) {
           <span class="opt">optional</span>
         }
@@ -253,8 +253,9 @@ let nextId = 0;
     :host { display: block; }
     .ss { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
     .ss-label { font-size: var(--fs-sm); font-weight: 600; color: var(--c-ink-2); }
-    .req, .opt { margin-left: 4px; font-size: var(--fs-2xs); font-weight: 500; letter-spacing: 0.04em; color: var(--c-faint); }
-    .req { color: var(--c-gold-dark); }
+    .opt { margin-left: 4px; font-size: var(--fs-2xs); font-weight: 500; letter-spacing: 0.04em; color: var(--c-faint); }
+    /* a red star after the name of a field you have to fill in */
+    .req { margin-left: 3px; font-size: 1.1em; font-weight: 700; line-height: 1; letter-spacing: 0; color: #DC2626; }
     .ss-hint { font-size: var(--fs-sm); line-height: 1.4; color: var(--c-faint); }
 
     .ss-control {

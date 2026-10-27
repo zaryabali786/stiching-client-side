@@ -14,11 +14,11 @@ import { ClientPartner } from '../core/models/api.models';
   imports: [IonIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <section class="ship-card" [class.compact]="compact()" [attr.aria-label]="heading()">
+    <section class="ship-card" [class.compact]="compact()" [class.light]="light()" [attr.aria-label]="heading() + (brandLine() ? ' ' + brandLine() : '')">
       <div class="ship-head">
         <div class="titles">
-          <span class="eyebrow">{{ eyebrow() }}</span>
-          <h3>{{ heading() }}</h3>
+          @if (!light()) { <span class="eyebrow">{{ eyebrow() }}</span> }
+          <h3>{{ heading() }}@if (brandLine()) { <span class="brand-line">{{ brandLine() }}</span> }</h3>
         </div>
         @if (addr()) {
           <button type="button" class="copy-btn" (click)="copy()" aria-label="Copy the whole address">
@@ -42,7 +42,7 @@ import { ClientPartner } from '../core/models/api.models';
             <div class="row"><dt>Number</dt><dd>{{ c.phone }}</dd>
               <button type="button" class="mini" (click)="copyOne('phone', c.phone)" aria-label="Copy phone number"><ion-icon [name]="done() === 'phone' ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon></button></div>
           }
-          <div class="row"><dt>Address</dt><dd>{{ c.address }}</dd>
+          <div class="row"><dt>{{ light() ? 'Article address' : 'Address' }}</dt><dd>{{ c.address }}</dd>
               <button type="button" class="mini" (click)="copyOne('address', c.address)" aria-label="Copy street address"><ion-icon [name]="done() === 'address' ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon></button></div>
           <div class="row"><dt>City</dt><dd>{{ c.city }}</dd>
               <button type="button" class="mini" (click)="copyOne('city', c.city)" aria-label="Copy city"><ion-icon [name]="done() === 'city' ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon></button></div>
@@ -114,6 +114,28 @@ import { ClientPartner } from '../core/models/api.models';
     .form-error { color: #fff; background: rgba(163, 48, 31, 0.35); border-color: rgba(255,255,255,0.2); align-items: center; }
     .form-error .btn { --btn-fg: #fff; margin-left: auto; }
     .compact { padding: 16px; }
+
+    /* ── light look (new order / edit order): white card, rows with a thin line, round outlined copy buttons ── */
+    .ship-card.light { background: #fff; color: #1f2937; border: 0; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 22px -10px rgba(15, 23, 42, 0.2); padding: 20px 18px 18px; }
+    .ship-card.light::after { display: none; }
+    .light .ship-head { align-items: center; margin-bottom: 14px; }
+    .light h3 { font-family: var(--font-sans); font-size: var(--fs-lg, 17px); font-weight: 500; line-height: 1.25; color: #1f2937; }
+    .light .brand-line { display: block; color: #62003E; font-weight: 600; }
+    .light .copy-btn { min-height: 38px; padding: 0 16px; border: 1px solid #E4E4E7; background: #fff; color: #27272a; font-weight: 500; }
+    .light .copy-btn:hover { background: #FBF3F8; border-color: #62003E; }
+    .light .copy-btn ion-icon { display: none; }
+    .light .copy-btn:focus-visible { outline: 2px solid #62003E; outline-offset: 2px; }
+    .light .rows { gap: 8px; }
+    .light .row { grid-template-columns: 92px 1fr auto; padding: 6px 7px 6px 14px; border: 1px solid #E8E8EC; background: #fff; border-radius: 14px; min-height: 48px; }
+    .light .row dt { font-size: var(--fs-xs); letter-spacing: 0; text-transform: none; font-weight: 500; opacity: 1; color: #6b7280; }
+    .light .row dd { color: #1f2937; font-size: var(--fs-md); font-weight: 500; }
+    .light .mini { width: 34px; height: 34px; border: 1px solid #D4D4D8; background: #fff; color: #3f3f46; }
+    .light .mini:hover { background: #FBF3F8; border-color: #62003E; color: #62003E; }
+    .light .mini:focus-visible { outline: 2px solid #62003E; outline-offset: 2px; }
+    .light .explain { color: #6b7280; opacity: 1; }
+    .light .form-error { color: #b42318; background: #fef3f2; border-color: #fecdca; }
+    .light .form-error .btn { --btn-fg: #b42318; }
+    .light .sk .skeleton { opacity: 0.6; }
   `,
 })
 export class ShipToCardComponent {
@@ -128,6 +150,10 @@ export class ShipToCardComponent {
 
   readonly eyebrow = input('Our receiving address');
   readonly heading = input('Ship your parcel to');
+  /** A second line under the heading, in the brand colour (the order form: "Stitch & Ship"). */
+  readonly brandLine = input('');
+  /** White card with dark text (the new order and edit order screens) instead of the dark brand card. */
+  readonly light = input(false);
   readonly compact = input(false);
   /** Also show the customer's assigned shopping email (the profile page does). */
   readonly showEmail = input(false);

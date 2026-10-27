@@ -12,7 +12,7 @@ import { StatusBadgeComponent, brandSwatch } from '../../../shared/status-badge.
 import { EmptyStateComponent, ErrorStateComponent, SkeletonComponent } from '../../../shared/ui-states';
 import { InfiniteScrollDirective } from '../../../shared/infinite-scroll.directive';
 
-type StatusFilter = 'all' | 'draft' | 'active' | 'completed';
+type StatusFilter = 'all' | 'draft' | 'placed' | 'received' | 'tailoring' | 'qc' | 'ready' | 'on_the_way' | 'delivered' | 'return' | 'hold' | 'cancelled';
 
 interface ListRequest {
   page: number;
@@ -54,8 +54,16 @@ export class OrdersListPage {
   readonly filters: { key: StatusFilter; label: string }[] = [
     { key: 'all', label: 'All' },
     { key: 'draft', label: 'Draft' },
-    { key: 'active', label: 'Active' },
-    { key: 'completed', label: 'Completed' },
+    { key: 'placed', label: 'Order placed' },
+    { key: 'received', label: 'Received' },
+    { key: 'tailoring', label: 'Tailoring' },
+    { key: 'qc', label: 'QC' },
+    { key: 'ready', label: 'Ready for dispatch' },
+    { key: 'on_the_way', label: 'On the way' },
+    { key: 'delivered', label: 'Delivered' },
+    { key: 'return', label: 'Return' },
+    { key: 'hold', label: 'Hold' },
+    { key: 'cancelled', label: 'Cancelled' },
   ];
 
   searchText = signal('');
@@ -201,6 +209,24 @@ export class OrdersListPage {
     const shopify = o.external_source === 'shopify' && o.brand_order_number?.trim() ? `Shopify Order ${o.brand_order_number.trim().replace(/^(?=\d)/, '#')}` : '';
     const brand = o.brand?.trim() ? `Brand: ${o.brand.trim()}` : '';
     return [shopify, brand].filter(Boolean).join(' · ');
+  }
+
+  /** The article on the card: the first one, and how many more the order has. */
+  articleTitle(o: OrderListRow): string {
+    const t = o.first_title?.trim() || 'Your order';
+    return o.units_count > 1 ? `${t} +${o.units_count - 1} more` : t;
+  }
+
+  /** "#1020": the order number the brand's Shopify store gave it (only on orders that came from Shopify). */
+  shopifyNo(o: OrderListRow): string {
+    return o.external_source === 'shopify' && o.brand_order_number?.trim() ? o.brand_order_number.trim().replace(/^(?=\d)/, '#') : '';
+  }
+
+  /** The one word in the pill on the card: where the order stands in short. */
+  pillLabel(o: OrderListRow): string {
+    if (o.status === 'delivered') return 'Completed';
+    if (o.status === 'cancelled') return 'Cancelled';
+    return 'Active';
   }
 
   kicker(o: OrderListRow): string {

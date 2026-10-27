@@ -14,6 +14,17 @@ import { registerIcons } from './app/core/icons';
 
 registerIcons();
 
+// The animated logo (index.html) stays over the app until the animation has played (about 4.4 s) and the app is ready; it only exists on a phone.
+const SPLASH_MIN_MS = 4400;
+const hideBootSplash = (): void => {
+  const el = document.getElementById('boot-splash');
+  if (!el) return;
+  window.setTimeout(() => {
+    el.classList.add('hide');
+    window.setTimeout(() => el.remove(), 600);
+  }, Math.max(0, SPLASH_MIN_MS - performance.now()));
+};
+
 // Live updates: confirm this bundle booted fine, then fetch any newer one in the background.
 if (Capacitor.isNativePlatform()) {
   LiveUpdate.ready()
@@ -33,4 +44,9 @@ bootstrapApplication(AppComponent, {
     ),
     provideAppInitializer(() => inject(AuthService).init()),
   ],
-}).catch((err) => console.error(err));
+})
+  .then(() => hideBootSplash())
+  .catch((err) => {
+    console.error(err);
+    hideBootSplash();
+  });

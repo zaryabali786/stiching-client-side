@@ -1,8 +1,7 @@
 <div class="page">
-  <header>
-    <span class="eyebrow">Your outfits</span>
-    <h1 class="page-title">Approve / Reject</h1>
-    <p class="lead">Each order shows its articles and where they stand. Approve a finished article, or reject it and tell us what to change.</p>
+  <header class="ap-head">
+    <h1 class="ap-title">Approve your outfits</h1>
+    <p class="ap-lead">Approve a finished article, or reject it (tell us what to change).</p>
   </header>
 
   @if (svc.loading()) {
@@ -27,27 +26,27 @@
       <app-empty-state icon="funnel-outline" title="Nothing here" message="No articles match this filter." />
     }
 
-    <ul class="orders">
+    <ul class="cards">
       @for (o of shown(); track o.order_id) {
-        <li class="card order">
-          <button type="button" class="order-head" (click)="toggle(o)" [attr.aria-expanded]="isOpen(o)" [attr.aria-controls]="'ord-' + o.order_id">
-            <span class="o-names">
-              <strong>{{ o.reference }}</strong>
-              <small>@if (o.brand) { {{ o.brand }} · }{{ summary(o) }}</small>
-            </span>
-            @if (waiting(o) > 0) { <span class="waiting-chip">{{ waiting(o) }} waiting</span> }
-            <ion-icon class="chev" [class.open]="isOpen(o)" name="chevron-down-outline" aria-hidden="true"></ion-icon>
-          </button>
+        @for (a of o.visible; track a.unit_id) {
+          <li class="card ap-card" [class.busy]="busyKey() === k(o, a)" [attr.data-state]="a.status">
+            <div class="ap-row">
+              <div class="ap-info">
+                <strong class="ap-ref">{{ o.reference }}</strong>
+                <span class="ap-name">{{ a.title || 'Article' }}@if (o.brand) { <span class="ap-brand"> · {{ o.brand }}</span> }</span>
+                <span class="state" [attr.data-state]="a.status">{{ label[a.status] }}</span>
+              </div>
+              <span class="ap-thumb" aria-hidden="true">
+                @if (a.status !== 'in_progress' && a.photos.length) {
+                  <img [src]="a.photos[0].url" alt="" loading="lazy" />
+                } @else {
+                  <ion-icon name="shirt-outline"></ion-icon>
+                }
+              </span>
+            </div>
 
-          @if (isOpen(o)) {
-          <ul class="articles" [id]="'ord-' + o.order_id">
-            @for (a of o.visible; track a.unit_id) {
-              <li class="article" [class.busy]="busyKey() === k(o, a)" [attr.data-state]="a.status">
-                <div class="a-top">
-                  <span class="a-title">{{ a.title || 'Article' }}</span>
-                  <span class="state" [attr.data-state]="a.status">{{ label[a.status] }}</span>
-                </div>
-
+            @if (isOpen(o, a)) {
+              <div class="ap-details" [id]="'ap-' + k(o, a)">
                 @if (a.status !== 'in_progress' && a.photos.length) {
                   <div class="photos">
                     @for (p of a.photos; track $index) {
@@ -89,12 +88,16 @@
                     <p class="a-meta">Still being made. Photos will come here when it is ready.</p>
                   }
                 }
-              </li>
+                <a class="ap-order" [routerLink]="['/app/orders', o.order_id]">Open the order <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon></a>
+              </div>
             }
-          </ul>
-          <a class="order-link" [routerLink]="['/app/orders', o.order_id]">View order details <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon></a>
-          }
-        </li>
+
+            <button type="button" class="ap-more" (click)="toggle(o, a)" [attr.aria-expanded]="isOpen(o, a)" [attr.aria-controls]="'ap-' + k(o, a)">
+              {{ isOpen(o, a) ? 'Hide details' : 'View more details' }}
+              <ion-icon [name]="isOpen(o, a) ? 'arrow-up-outline' : 'arrow-forward-outline'" aria-hidden="true"></ion-icon>
+            </button>
+          </li>
+        }
       }
     </ul>
   }

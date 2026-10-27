@@ -895,3 +895,177 @@
     background: rgba(0, 0, 0, 0.05);
   }
 }
+
+// ───────── Figma look: round back, maroon "New email", olive address and tabs ─────────
+$maroon: #62003E;
+$olive: #ECEBC9;
+$olive-line: #D4D2A0;
+
+.inbox-head {
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+  margin: 4px 0 16px;
+
+  .page-title { flex: 1; margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.015em; color: #1f2937; }
+}
+.back-btn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1.5px solid #52525b;
+  border-radius: 50%;
+  color: #27272a;
+  font-size: 20px;
+  text-decoration: none;
+}
+.new-email {
+  height: 36px;
+  padding: 0 16px;
+  gap: 6px;
+  background: $maroon;
+  font-size: 13px;
+  box-shadow: none;
+
+  ion-icon { font-size: 16px; }
+}
+
+.address-card {
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid #E4E4E7;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+.ac-head {
+  gap: 14px;
+  align-items: flex-start;
+  .ac-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .lead { margin: 0 0 8px; color: #52525b; font-size: 12.5px; line-height: 1.4; }
+}
+.ac-ico {
+  width: 34px;
+  height: 34px;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #27272a;
+  font-size: 32px;
+  margin-top: 0;
+}
+.ac-title { font-family: var(--font-sans); font-size: 16px; font-weight: 700; color: #111827; }
+.address {
+  padding: 8px 8px 8px 14px;
+  border: 1px solid $olive-line;
+  border-radius: 10px;
+  background: $olive;
+  font-size: 13px;
+
+  .mono { font-family: inherit; }
+}
+.copy-pill {
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  justify-content: center;
+  border: 1px solid #52525b;
+  border-radius: 8px;
+  background: transparent;
+  color: #27272a;
+  ion-icon { font-size: 16px; }
+}
+.ac-points {
+  gap: 14px;
+  li { gap: 14px; color: #52525b; font-size: 12.5px; line-height: 1.35; }
+  ion-icon {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #27272a;
+  }
+}
+
+.toolbar {
+  gap: 10px;
+  margin: 16px 0 14px;
+  padding-top: 6px;
+
+  .chip {
+    min-width: 76px;
+    min-height: 36px;
+    padding: 0 20px;
+    justify-content: center;
+    border: 1px solid #A1A1AA;
+    border-radius: 999px;
+    background: #fff;
+    color: #111827;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .chip.on { background: $olive; border-color: $olive-line; color: #111827; }
+  .count { top: -6px; right: -4px; min-width: 16px; height: 16px; font-size: 10px; background: $maroon; box-shadow: none; }
+}
+
+.mail-list { gap: 12px; }
+.mail-row {
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid #E4E4E7;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+
+  .avatar {
+    width: 66px;
+    height: 88px;
+    border-radius: 6px;
+    background: #E9E4DD;
+    color: $maroon;
+    font-size: 26px;
+    img { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
+  }
+  &.unread { background: #fff; border-color: #E4E4E7; }
+  &.unread .dot { background: $maroon; top: -4px; right: -4px; }
+  .from { font-size: 14px; font-weight: 700; color: #111827; }
+  .when { font-size: 11px; color: #6b7280; }
+  .subject { font-size: 12.5px; color: #1f2937; font-weight: 400; }
+  .preview { font-size: 12px; color: #52525b; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  &.unread .subject { font-weight: 600; }
+  .tag { margin-top: 4px; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 500; }
+  .tag-ok, .tag-brand { background: $olive; color: #3f3f46; border: 1px solid $olive-line; }
+}
+
+// ───────── Figma look: the "New email" popup ─────────
+.cmp-dialog { background: #fff; border-radius: 24px 24px 0 0; }
+.cmp-head {
+  padding: 22px 20px 10px 22px;
+  border-bottom: 0;
+
+  .cmp-ico { display: none; }
+  h2 { font-family: var(--font-sans); font-size: 22px; font-weight: 500; letter-spacing: -0.01em; color: #111827; }
+  .cmp-x { width: 34px; height: 34px; border: 1px solid #A1A1AA; background: #fff; color: #52525b; font-size: 18px; }
+}
+.cmp-scroll { padding: 4px 22px 12px; }
+.cmp-row {
+  min-height: 44px;
+  border-bottom: 1px solid #E4E4E7;
+
+  label { flex: 0 0 62px; font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; color: #52525b; }
+  input { font-size: 13px; color: #111827; &::placeholder { color: #6b7280; } }
+}
+.cmp-chip { padding: 5px 12px; background: #E4E4E7; font-size: 12.5px; color: #111827; }
+.cmp-body { margin-top: 14px; font-size: 13px; &::placeholder { color: #9ca3af; } }
+.cmp-foot {
+  border-top: 1px solid #E4E4E7;
+  padding: 12px 18px calc(14px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+
+  .cmp-count { display: none; }
+}
+.cmp-attach { padding: 7px 14px; border: 1px solid #A1A1AA; background: #fff; font-size: 13px; font-weight: 500; }
+.cmp-send { width: 100px; height: 36px; background: #62003E; font-size: 13px; font-weight: 600; }
+.cmp-hint { display: none; }

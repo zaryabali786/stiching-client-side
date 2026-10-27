@@ -97,10 +97,8 @@
 
   @if (!id()) {
     <header class="inbox-head">
-      <div>
-        <span class="eyebrow">Shopping email</span>
-        <h1 class="page-title">Inbox</h1>
-      </div>
+      <a class="back-btn" routerLink="/app/overview" aria-label="Back"><ion-icon name="chevron-back-outline" aria-hidden="true"></ion-icon></a>
+      <h1 class="page-title">Inbox</h1>
       <button type="button" class="new-email" (click)="compose()">
         <ion-icon name="create-outline" aria-hidden="true"></ion-icon>
         <span>New email</span>
@@ -112,17 +110,17 @@
       @if (address(); as a) {
         <div class="ac-head">
           <span class="ac-ico" aria-hidden="true"><ion-icon name="mail-outline"></ion-icon></span>
-          <div>
+          <div class="ac-main">
             <h2 class="ac-title">Your shopping email</h2>
-            <p class="lead">Use it at checkout in any online shop. Their order emails arrive here.</p>
+            <p class="lead">Use it at checkout in any online shop. Their order emails arrive here</p>
+            <button type="button" class="address" (click)="copyAddress()" aria-label="Copy your shopping email address">
+              <span class="mono">{{ a }}</span>
+              <span class="copy-pill" aria-hidden="true"><ion-icon [name]="copied() ? 'checkmark-outline' : 'copy-outline'"></ion-icon></span>
+            </button>
           </div>
         </div>
-        <button type="button" class="address" (click)="copyAddress()" aria-label="Copy your shopping email address">
-          <span class="mono">{{ a }}</span>
-          <span class="copy-pill"><ion-icon [name]="copied() ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon>{{ copied() ? 'Copied' : 'Copy' }}</span>
-        </button>
         <ul class="ac-points">
-          <li><ion-icon name="receipt-outline" aria-hidden="true"></ion-icon>Order confirmations become a draft order in one tap</li>
+          <li><ion-icon name="create-outline" aria-hidden="true"></ion-icon>Order confirmation become a draft order in one tap</li>
           <li><ion-icon name="key-outline" aria-hidden="true"></ion-icon>Verification codes and tracking emails show up here too</li>
         </ul>
       } @else if (box() && !box()!.enabled) {
@@ -166,7 +164,7 @@
         @for (r of rows(); track r.id) {
           <li>
             <a class="mail-row" [class.unread]="!r.is_read" [routerLink]="['/app/inbox', r.id]">
-              <span class="avatar" aria-hidden="true">{{ senderName(r.from).charAt(0).toUpperCase() }}<i class="dot"></i></span>
+              <span class="avatar" aria-hidden="true">@if (r.draft?.picture_url; as pic) {<img [src]="pic" alt="" loading="lazy" referrerpolicy="no-referrer" />} @else {{{ senderName(r.from).charAt(0).toUpperCase() }}}<i class="dot"></i></span>
               <div class="body">
                 <div class="top">
                   <strong class="from">@if (r.direction === 'out') {To: }{{ senderName(r.from) }}</strong>

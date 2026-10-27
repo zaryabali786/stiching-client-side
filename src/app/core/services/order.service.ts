@@ -41,8 +41,8 @@ export class OrderService {
     });
   }
 
-  /** Order totals per tab (all / draft / active / completed). */
-  counts(): Observable<Record<'all' | 'draft' | 'active' | 'completed', number>> {
+  /** Order totals per tab (all, draft, and each stage). */
+  counts(): Observable<Record<string, number>> {
     return this.api.get('/client/orders/counts');
   }
 

@@ -12,8 +12,8 @@ import { IonIcon } from '@ionic/angular';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (open()) {
-      <div class="sheet-backdrop" (click)="dismiss()"></div>
-      <section class="sheet" [class.tall]="tall()" role="dialog" aria-modal="true" [attr.aria-label]="title()" tabindex="-1" #panel [style.bottom.px]="keyboard()" [style.max-height]="'calc(100% - 40px - var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) - ' + keyboard() + 'px)'">
+      <div class="sheet-backdrop" [class.light]="look() === 'choice'" (click)="dismiss()"></div>
+      <section class="sheet" [class.tall]="tall()" [class.chat-look]="look() === 'chat'" [class.confirm-look]="look() === 'confirm'" [class.panel-look]="look() === 'panel'" [class.choice-look]="look() === 'choice'" role="dialog" aria-modal="true" [attr.aria-label]="title()" tabindex="-1" #panel [style.bottom.px]="keyboard()" [style.max-height]="'calc(100% - 40px - var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) - ' + keyboard() + 'px)'">
         <header class="sheet-head">
           <span class="grabber" aria-hidden="true"></span>
           <div class="sheet-titles">
@@ -40,6 +40,7 @@ import { IonIcon } from '@ionic/angular';
       background: rgba(18, 24, 20, 0.45);
       animation: fade-in 0.2s ease both;
     }
+    .sheet-backdrop.light { background: rgba(255, 255, 255, 0.82); backdrop-filter: blur(2px); }
     .sheet:focus { outline: none; }
     .sheet {
       position: fixed; z-index: 901; left: 50%; bottom: 0;
@@ -64,6 +65,32 @@ import { IonIcon } from '@ionic/angular';
     .sheet-titles { flex: 1; min-width: 0; }
     h3 { font-family: var(--font-serif); font-size: 24px; font-weight: 700; line-height: 1.15; color: var(--c-ink); }
     .sheet-titles .eyebrow { margin-bottom: 2px; }
+    /* the support chat: plain title in the chat colour, round outlined close button (the design of the chat sheet) */
+    .sheet.chat-look .sheet-head { padding: 20px 16px 10px 20px; border-bottom: 0; align-items: center; }
+    .sheet.chat-look h3 { font-family: var(--font-sans); font-size: var(--fs-body, 15px); font-weight: 500; letter-spacing: 0; color: #62003E; }
+    .sheet.chat-look .icon-btn { width: 30px; height: 30px; min-height: 30px; padding: 0; border: 1px solid var(--c-line-strong); border-radius: 50%; background: #fff; color: var(--c-muted); display: grid; place-items: center; }
+    .sheet.chat-look .icon-btn ion-icon { font-size: 16px; }
+    /* a plain confirmation (confirm an order): a short title, the details, then two buttons; closed with Cancel, the backdrop or Escape */
+    .sheet.confirm-look .grabber, .sheet.confirm-look .icon-btn { display: none; }
+    .sheet.confirm-look .sheet-head { padding: 24px 22px 6px; border-bottom: 0; }
+    .sheet.confirm-look h3 { font-family: var(--font-sans); font-size: 22px; font-weight: 500; line-height: 1.2; letter-spacing: -0.01em; color: #1f2937; }
+    .sheet.confirm-look .sheet-body { padding: 12px 22px 8px; }
+    .sheet.confirm-look .sheet-foot { border-top: 0; background: transparent; padding: 10px 22px calc(18px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))); }
+    /* a list sheet (notifications): a bold plain title, a round outlined close button */
+    .sheet.panel-look .sheet-head { padding: 22px 18px 8px 22px; border-bottom: 0; align-items: center; }
+    .sheet.panel-look h3 { font-family: var(--font-sans); font-size: 26px; font-weight: 600; letter-spacing: -0.015em; color: #1f2937; }
+    .sheet.panel-look .icon-btn { width: 34px; height: 34px; min-height: 34px; padding: 0; border: 1px solid #A1A1AA; border-radius: 50%; background: #fff; color: #52525b; display: grid; place-items: center; }
+    .sheet.panel-look .icon-btn ion-icon { font-size: 18px; }
+    .sheet.panel-look .sheet-body { padding: 8px 18px 20px; }
+    /* a short choice sheet (new order): white, a small maroon label, a plain title, a round outlined close button */
+    .sheet.choice-look { background: #fff; }
+    .sheet.choice-look .sheet-head { padding: 26px 18px 8px 22px; border-bottom: 0; align-items: center; }
+    .sheet.choice-look .grabber { top: 8px; width: 40px; background: #D4D4D8; }
+    .sheet.choice-look .eyebrow { font-size: 10px; letter-spacing: 0.02em; text-transform: uppercase; color: #62003E; }
+    .sheet.choice-look h3 { font-family: var(--font-sans); font-size: 22px; font-weight: 500; letter-spacing: -0.01em; color: #111827; }
+    .sheet.choice-look .icon-btn { width: 32px; height: 32px; min-height: 32px; padding: 0; border: 1px solid #A1A1AA; border-radius: 50%; background: #fff; color: #52525b; display: grid; place-items: center; align-self: flex-start; }
+    .sheet.choice-look .icon-btn ion-icon { font-size: 16px; }
+    .sheet.choice-look .sheet-body { padding: 8px 18px calc(24px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))); }
     .sheet-body { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 16px 18px; }
     .sheet-body.flush { padding-bottom: 0; }
     .sheet-foot {
@@ -84,6 +111,8 @@ export class SheetComponent {
   readonly tall = input(false);
   /** No padding under the content (it brings its own bottom bar, e.g. the chat composer). */
   readonly flush = input(false);
+  /** 'chat' = the look of the support chat sheet (plain title in the chat colour, round close button); 'confirm' = a plain confirmation sheet. */
+  readonly look = input<'default' | 'chat' | 'confirm' | 'panel' | 'choice'>('default');
   readonly closed = output<void>();
 
   private panel = viewChild<ElementRef<HTMLElement>>('panel');

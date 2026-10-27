@@ -25,7 +25,7 @@ import { TimeAgoPipe } from './time-ago.pipe';
   template: `
     <app-chat-fab [unread]="fabUnread()" [pulseKey]="pulse()" [layoutKey]="layoutKey()" (activated)="onFab()" />
 
-    <app-sheet [open]="open()" [tall]="true" [flush]="!!target() || ui.supportOpen()" [title]="title()" [eyebrow]="eyebrow()" (closed)="ui.close()">
+    <app-sheet [open]="open()" [tall]="true" [flush]="!!target() || ui.supportOpen()" [look]="ui.supportOpen() ? 'chat' : 'default'" [title]="title()" [eyebrow]="ui.supportOpen() ? '' : eyebrow()" (closed)="ui.close()">
       @if (target(); as t) {
         <div class="wrap">
           @if (t.fromList) {

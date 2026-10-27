@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { ApiService } from './api.service';
 
-export type HomeSectionType = 'announcement' | 'marquee' | 'banners' | 'hero' | 'image_text' | 'articles' | 'collection' | 'custom';
+export type HomeSectionType = 'announcement' | 'marquee' | 'banners' | 'hero' | 'image_text' | 'articles' | 'collection' | 'steps' | 'custom';
 
 /** An article as shown to customers: name and picture only (prices are internal). */
 export interface HomeArticle {

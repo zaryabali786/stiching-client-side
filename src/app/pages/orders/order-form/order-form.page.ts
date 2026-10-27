@@ -149,6 +149,10 @@ export class OrderFormPage {
       ? [{ n: 2, label: 'Articles' }, { n: 3, label: 'Notes & review' }]
       : this.stepLabels.map((label, i) => ({ n: (i + 1) as Step, label })),
   );
+  /** The name on the tab of a step. */
+  tabLabel(label: string): string {
+    return label === 'Articles' ? 'Your articles' : label === 'Notes & review' ? 'Notes & reviews' : label;
+  }
   stepNo = computed(() => (this.twoStep() ? this.step() - 1 : this.step()));
   stepCount = computed(() => this.stepList().length);
 

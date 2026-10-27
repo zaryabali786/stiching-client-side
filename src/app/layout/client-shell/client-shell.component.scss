@@ -424,38 +424,47 @@
 .drawer-head {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px 12px 14px 16px;
+  gap: 14px;
+  padding: 18px 14px 16px 18px;
   border-bottom: 1px solid var(--c-line);
 
-  .monogram {
+  /* the customer: a round letter in dark red, the name, the email */
+  .avatar {
     flex: none;
-    width: 42px;
-    height: 42px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
-    background: var(--c-brand-fill, linear-gradient(135deg, var(--c-brand) 0%, var(--c-brand-2) 100%));
-    color: var(--c-on-brand, #fff);
-    font-family: var(--font-serif);
-    font-weight: 700;
-    font-size: 21px;
+    background: linear-gradient(135deg, #9B0A63 0%, #62003E 100%);
+    color: #fff;
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: 24px;
+    line-height: 1;
     display: flex;
     align-items: center;
     justify-content: center;
+    box-shadow: 0 4px 12px -4px rgba(98, 0, 62, 0.5);
   }
   .who {
     flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
+    gap: 2px;
 
     strong {
-      font-family: var(--font-serif);
-      font-size: 20px;
-      letter-spacing: 0.04em;
-      color: var(--c-ink);
+      font-family: var(--font-sans);
+      font-size: 19px;
+      font-weight: 600;
+      line-height: 1.2;
+      color: #1f2937;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     small {
-      color: var(--c-muted);
+      font-size: var(--fs-xs);
+      color: #52525b;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -463,27 +472,61 @@
   }
   .drawer-x {
     flex: none;
-    width: 40px;
-    height: 40px;
-    border: 0;
+    width: 34px;
+    height: 34px;
+    border: 1px solid #A1A1AA;
     border-radius: 50%;
-    background: transparent;
-    color: var(--c-ink);
-    font-size: 24px;
+    background: #fff;
+    color: #52525b;
+    font-size: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    &:hover { background: var(--c-surface-3); }
+    &:hover { background: #FBF3F8; border-color: #62003E; color: #62003E; }
+    &:focus-visible { outline: 2px solid #62003E; outline-offset: 2px; }
   }
 }
 .drawer-nav {
   flex: 1;
   overflow-y: auto;
-  padding: 10px 10px;
+  padding: 14px 12px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 10px;
+}
+
+/* a menu item: a white card with its name and one line about it, an arrow at the end */
+.d-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid #E5E7EB;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 14px -10px rgba(15, 23, 42, 0.18);
+  color: #1f2937;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+
+  .d-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+
+    strong { font-size: 17px; font-weight: 600; line-height: 1.2; }
+    small { font-size: var(--fs-sm); color: #6b7280; line-height: 1.3; }
+  }
+  > ion-icon { flex: none; font-size: 20px; color: #52525b; }
+
+  &:hover { border-color: #D4B4C7; }
+  &:focus-visible { outline: 2px solid #62003E; outline-offset: 2px; }
+  &.active { border-color: #62003E; box-shadow: 0 0 0 1px #62003E; }
 }
 .d-item {
   position: relative;
@@ -515,11 +558,6 @@
   }
   &:hover {
     background: var(--c-surface-3);
-  }
-  &.active {
-    background: var(--c-accent-faded, rgba(0, 0, 0, 0.05));
-    color: var(--c-brand);
-    ion-icon { color: var(--c-brand); }
   }
 }
 .d-badge {

@@ -53,6 +53,18 @@ export class HomeSectionsComponent {
     return !!link && !link.startsWith('/app/');
   }
 
+  /** The heading cut around the highlighted word: [before, word, after]. */
+  titleParts(title: string, word: string): [string, string, string] {
+    const t = title ?? '';
+    const w = (word ?? '').trim();
+    const at = w ? t.toLowerCase().indexOf(w.toLowerCase()) : -1;
+    return at < 0 ? [t, '', ''] : [t.slice(0, at), t.slice(at, at + w.length), t.slice(at + w.length)];
+  }
+
+  stepBackground(it: { bg: string; bg2: string }): string {
+    return `linear-gradient(135deg, ${it.bg}, ${it.bg2 || it.bg})`;
+  }
+
   initial(name: string): string {
     return (name || '?').trim().charAt(0).toUpperCase();
   }

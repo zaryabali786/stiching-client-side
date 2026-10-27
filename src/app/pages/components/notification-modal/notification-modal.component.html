@@ -1,24 +1,4 @@
-<app-sheet [open]="notif.isModalOpen()" title="Notifications" eyebrow="Alerts & updates" (closed)="close()">
-  <div class="toolbar">
-    <span class="count">
-      @if (notif.unreadCount() > 0) {
-        <b>{{ notif.unreadCount() }}</b> unread
-      } @else {
-        You're all caught up
-      }
-    </span>
-    @if (notif.unreadCount() > 0) {
-      <button type="button" class="btn btn-ghost btn-sm" (click)="markAll()" [disabled]="notif.markingAll()">
-        @if (notif.markingAll()) {
-          <ion-spinner name="crescent"></ion-spinner>
-        } @else {
-          <ion-icon name="checkmark-done-outline"></ion-icon>
-        }
-        Mark all read
-      </button>
-    }
-  </div>
-
+<app-sheet [open]="notif.isModalOpen()" look="panel" title="Notifications" (closed)="close()">
   @if (notif.loading() && notif.items().length === 0) {
     <div class="feed">
       @for (i of [1, 2, 3, 4]; track i) {
@@ -40,43 +20,61 @@
       message="Updates about your parcels, approvals, invoices and shipping will appear here."
     />
   } @else {
-    <div class="feed">
-      @for (item of notif.items(); track item.id) {
-        <div
-          class="item"
-          [class.unread]="!item.read_at"
-          [class.clickable]="!!item.link || !item.read_at"
-          role="button"
-          tabindex="0"
-          (click)="open(item)"
-          (keydown.enter)="open(item)"
-        >
-          <span class="type-icon" [class]="'type-icon t-' + item.type">
-            <ion-icon [name]="icon(item.type)"></ion-icon>
-          </span>
-          <div class="body">
-            <div class="title-row">
-              <strong>{{ item.title }}</strong>
-              @if (!item.read_at) {
-                <span class="dot" aria-label="Unread"></span>
-              }
-            </div>
-            @if (item.body) {
-              <p>{{ item.body }}</p>
+    <ng-template #card let-item>
+      <div
+        class="item"
+        [class.unread]="!item.read_at"
+        [class.clickable]="!!item.link || !item.read_at"
+        role="button"
+        tabindex="0"
+        (click)="open(item)"
+        (keydown.enter)="open(item)"
+      >
+        <span class="type-icon" [class]="'type-icon t-' + item.type">
+          <img [src]="'assets/notif/' + pic(item) + '.svg'" alt="" width="40" height="40" />
+        </span>
+        <div class="body">
+          <strong class="title">{{ item.title }}</strong>
+          @if (item.body) {
+            <p>{{ item.body }}</p>
+          }
+          <div class="meta-row">
+            <span class="time">{{ item.created_at | timeAgo }}</span>
+            @if (item.link && actionLabel(item.type); as label) {
+              <span class="action-chip" [class.invoice]="item.type === 'invoice'">{{ label }}</span>
             }
-            <div class="meta-row">
-              <span class="time">{{ item.created_at | timeAgo }}</span>
-              @if (item.link && actionLabel(item.type); as label) {
-                <span class="action-chip" [class.invoice]="item.type === 'invoice'">{{ label }}</span>
-              }
-            </div>
           </div>
-          <button type="button" class="dismiss" (click)="dismiss($event, item)" aria-label="Remove notification">
-            <ion-icon name="close-outline"></ion-icon>
-          </button>
         </div>
-      }
-    </div>
+        <button type="button" class="dismiss" (click)="dismiss($event, item)" aria-label="Remove notification">
+          <ion-icon name="close-outline"></ion-icon>
+        </button>
+      </div>
+    </ng-template>
+
+    @if (newItems().length) {
+      <div class="group-head">
+        <span class="group-title new">New</span>
+        @if (notif.unreadCount() > 0) {
+          <button type="button" class="mark-all" (click)="markAll()" [disabled]="notif.markingAll()">
+            @if (notif.markingAll()) { <ion-spinner name="crescent"></ion-spinner> }
+            Mark all read
+          </button>
+        }
+      </div>
+      <div class="feed">
+        @for (item of newItems(); track item.id) {
+          <ng-container *ngTemplateOutlet="card; context: { $implicit: item }" />
+        }
+      </div>
+    }
+    @if (olderItems().length) {
+      <div class="group-head"><span class="group-title">Older Messages</span></div>
+      <div class="feed">
+        @for (item of olderItems(); track item.id) {
+          <ng-container *ngTemplateOutlet="card; context: { $implicit: item }" />
+        }
+      </div>
+    }
 
     @if (notif.hasMore()) {
       <div class="more">

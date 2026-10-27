@@ -109,6 +109,33 @@
       <ng-container *ngTemplateOutlet="artBlock; context: { $implicit: s }" />
     }
 
+    @case ('steps') {
+      @if (s.settings['items']?.length) {
+        <section class="steps">
+          @if (s.settings['title']) {
+            <h2 class="steps-title">{{ titleParts(s.settings['title'], s.settings['highlight'])[0] }}<em [style.color]="s.settings['highlight_color'] || '#6D1D3A'">{{ titleParts(s.settings['title'], s.settings['highlight'])[1] }}</em>{{ titleParts(s.settings['title'], s.settings['highlight'])[2] }}</h2>
+          }
+          @if (s.settings['subtitle']) { <p class="steps-sub">{{ s.settings['subtitle'] }}</p> }
+          <div class="steps-row" [class.grid]="s.settings['layout'] === 'grid'">
+            @for (it of s.settings['items']; track $index; let i = $index) {
+              <a class="step" [style.background]="stepBackground(it)" [style.color]="it.color" [attr.href]="it.link ? href(it.link) : null" [attr.target]="external(it.link) ? '_blank' : null" rel="noopener noreferrer" (click)="it.link && go($event, it.link)">
+                <span class="step-copy">
+                  <strong>{{ it.title }}</strong>
+                  @if (it.text) { <span class="step-text">{{ it.text }}</span> }
+                </span>
+                @if (s.settings['show_numbers']) { <span class="step-no" [style.color]="s.settings['number_color'] || '#FFFFFF'" aria-hidden="true">{{ i + 1 }}</span> }
+                @if (it.icon_url) {
+                  <span class="step-artbox"><img class="step-art" [src]="it.icon_url" alt="" loading="lazy" /></span>
+                } @else if (it.emoji) {
+                  <span class="step-artbox"><span class="step-art step-emoji" aria-hidden="true">{{ it.emoji }}</span></span>
+                }
+              </a>
+            }
+          </div>
+        </section>
+      }
+    }
+
     @case ('custom') {
       @if (s.settings['heading'] || s.settings['body']) {
         <section class="custom" [style.background]="s.settings['bg']" [style.color]="s.settings['color']" [style.text-align]="s.settings['align']">

@@ -40,20 +40,16 @@ export class ApprovalsPage {
   protected busyKey = signal<string | null>(null);
   protected rejectingKey = signal<string | null>(null);
   protected note = signal('');
-  /** Orders the customer opened or closed by hand; the others follow the default (open when something waits for you). */
+  /** Articles whose details the customer opened or closed by hand; the others follow the default (open while the article waits for a decision). */
   private manual = signal<ReadonlyMap<string, boolean>>(new Map());
 
-  protected waiting(o: ApprovalOrder): number {
-    return o.articles.filter((a) => a.status === 'pending').length;
+  protected isOpen(o: ApprovalOrder, a: ApprovalArticle): boolean {
+    return this.manual().get(this.k(o, a)) ?? a.status === 'pending';
   }
 
-  protected isOpen(o: ApprovalOrder): boolean {
-    return this.manual().get(o.order_id) ?? this.waiting(o) > 0;
-  }
-
-  protected toggle(o: ApprovalOrder): void {
-    const next = !this.isOpen(o);
-    this.manual.update((m) => new Map(m).set(o.order_id, next));
+  protected toggle(o: ApprovalOrder, a: ApprovalArticle): void {
+    const next = !this.isOpen(o, a);
+    this.manual.update((m) => new Map(m).set(this.k(o, a), next));
   }
 
   protected totals = computed(() => {

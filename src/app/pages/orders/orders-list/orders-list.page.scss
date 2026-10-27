@@ -371,3 +371,268 @@
   &[data-g='hold'] { background: #fff4e0; color: #8a4505; b { color: #8a4505; } }
   &[data-g='return'] { background: #fdeede; color: #9a4a06; b { color: #9a4a06; } }
   &[data-g='resolved'] { background: #e3f6ea; color: #17703d; b { color: #17703d; } } }
+
+
+/* ───────── The orders page, in the design: round buttons, a rounded search, olive / dark red chips, a picture on each card ───────── */
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  .page-title {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    color: #1f2937;
+  }
+}
+
+.round-btn {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1.5px solid #52525b;
+  background: transparent;
+  color: #27272a;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  text-decoration: none;
+  cursor: pointer;
+  &:hover { background: rgba(109, 29, 58, 0.06); border-color: #6D1D3A; }
+  &:focus-visible { outline: 2px solid #6D1D3A; outline-offset: 2px; }
+}
+
+.new-pill {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: #6D1D3A;
+  color: #fff;
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 14px -6px rgba(109, 29, 58, 0.55);
+  ion-icon { font-size: 17px; }
+  &:hover { background: #7d2848; }
+  &:focus-visible { outline: 2px solid #6D1D3A; outline-offset: 2px; }
+}
+
+.search-field {
+  position: relative;
+  .input {
+    width: 100%;
+    min-height: 48px;
+    padding: 0 48px 0 20px;
+    border: 1px solid #D4D4D8;
+    border-radius: 999px;
+    background: #fff;
+    font-size: var(--fs-md);
+  }
+  .input::placeholder { color: #8b8b92; }
+  .input:focus { border-color: #6D1D3A; box-shadow: 0 0 0 3px rgba(109, 29, 58, 0.12); outline: none; }
+  .search-end {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 20px;
+    color: #27272a;
+    border: 0;
+    background: none;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+  }
+  ion-icon.search-end { pointer-events: none; }
+}
+
+.chips {
+  .chip {
+    position: relative;
+    border: 1px solid #D4D4D8;
+    background: #fff;
+    color: #3f3f46;
+    font-weight: 500;
+    border-radius: 999px;
+    padding: 0 18px;
+  }
+  .chip.active {
+    background: #E9EBD3;
+    border-color: #C9CDA3;
+    color: #1f2937;
+    font-weight: 600;
+  }
+  .chip .count {
+    position: absolute;
+    top: -7px;
+    right: -3px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #6D1D3A !important;
+    color: #fff !important;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+  }
+}
+
+.order-card {
+  gap: 12px;
+  padding: 14px 14px 14px;
+  border-radius: 14px;
+  border: 1px solid #E8E8EC;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 16px -10px rgba(15, 23, 42, 0.18);
+
+  &.is-draft {
+    background: #EAEBD1;
+    border-color: #DADCB6;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+}
+
+.oc-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.oc-thumb {
+  flex: none;
+  width: 62px;
+  height: 78px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #F1F2F4;
+  display: grid;
+  place-items: center;
+
+  img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .brand-swatch { width: 100%; height: 100%; border-radius: 0; font-size: 22px; }
+}
+
+.oc-text {
+  gap: 2px;
+  padding-top: 2px;
+}
+
+.oc-title {
+  font-family: var(--font-sans);
+  font-size: var(--fs-lg, 17px);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: #1f2937;
+}
+
+.oc-sub { font-size: var(--fs-sm); color: #6b7280; }
+
+/* the order's own number (made by the system) and, for a Shopify order, a small "Shopify #1020" tag */
+.oc-ids {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 0 0 2px;
+}
+.oc-ref {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #6D1D3A;
+}
+.oc-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.5;
+
+  ion-icon { font-size: 12px; }
+  b { font-weight: 700; }
+
+  &.shopify { background: #E6F3E1; color: #2f6b22; }
+}
+
+.oc-badges { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.oc-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.4;
+
+  ion-icon { font-size: 14px; }
+
+  &.state { background: #FBE3F6; border: 1px solid #E7A5D8; color: #8A1F6E; }
+  &.state[data-s='done'] { background: #DDF3D6; border-color: #A9D79B; color: #2f6b22; }
+  &.state[data-s='cancelled'] { background: #EEE; border-color: #D4D4D8; color: #52525b; }
+  &.draft { background: #F5EFD9; border: 1px solid #C27A3B; color: #9A4B12; font-size: 11.5px; font-weight: 600; }
+}
+
+.oc-article {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-top: 10px;
+  border-top: 1px solid #ECECEF;
+}
+.is-draft .oc-article { border-top: 0; padding-top: 0; }
+.oc-article-title { margin: 0; font-size: var(--fs-md); font-weight: 600; line-height: 1.3; color: #1f2937; overflow-wrap: anywhere; }
+.oc-article-sub { font-size: var(--fs-xs); color: #6b7280; }
+
+/* the journey: seven dots joined by a line, in dark red (#6D1D3A) */
+.oc-step {
+  &::before { background: #D4D4D8; }
+  .dot { background: #D4D4D8; border-color: #fff; box-shadow: 0 0 0 1px #D4D4D8; }
+  .lbl { color: #6b7280; font-size: 8.5px; }
+
+  &.done, &.current {
+    &::before { background: #6D1D3A; }
+    .dot { background: #6D1D3A; box-shadow: 0 0 0 1.5px #6D1D3A; }
+    .lbl { color: #3f3f46; }
+  }
+  &.current {
+    .dot { background: #6D1D3A; border: 2px solid #fff; box-shadow: 0 0 0 1.5px #6D1D3A, 0 0 0 5px rgba(109, 29, 58, 0.16); }
+    .lbl { color: #1f2937; font-weight: 700; }
+  }
+}
+
+.oc-foot { justify-content: flex-end; }
+.oc-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid #C9CDA3;
+  border-radius: 999px;
+  background: #fff;
+  color: #6D1D3A;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  ion-icon { font-size: 16px; }
+}
+
+.oc-text .oc-title { margin-top: 3px; }

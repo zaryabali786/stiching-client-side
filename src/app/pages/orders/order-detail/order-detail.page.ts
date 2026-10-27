@@ -167,6 +167,27 @@ export class OrderDetailPage {
     const o = this.order();
     return o ? progressIndex(o.status) : 0;
   });
+  /** The article shown at the top of the page: the first one that has a picture (the brand's product picture, else the photos the customer attached). */
+  heroUnit = computed(() => {
+    const units = this.order()?.units ?? [];
+    return units.find((u) => !!this.unitPicture(u)) ?? units[0] ?? null;
+  });
+  heroPicture = computed(() => {
+    const u = this.heroUnit();
+    return u ? this.unitPicture(u) : null;
+  });
+  /** "Marvelle x 1 Unstitched Tea Green", or the first article's name and how many more there are. */
+  heroTitle = computed(() => {
+    const units = this.order()?.units ?? [];
+    if (!units.length) return '';
+    const first = this.heroUnit() ?? units[0];
+    return units.length > 1 ? `${first.unit_title} +${units.length - 1} more` : first.unit_title;
+  });
+  private unitPicture(u: { product_image_url?: string | null; reference_images?: { url: string; type?: string }[] | null }): string | null {
+    if (u.product_image_url) return u.product_image_url;
+    const photo = (u.reference_images ?? []).find((m) => !m.type || m.type.startsWith('image'));
+    return photo?.url ?? null;
+  }
   /** Articles waiting for the customer's decision. */
   pendingUnits = computed(() => (this.order()?.units ?? []).filter((u) => u.approval?.status === 'pending'));
   /** Articles that have (or had) photos sent: cards in every state except "none". */

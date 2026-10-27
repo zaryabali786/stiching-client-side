@@ -21,7 +21,7 @@
         <span class="tile-top">
           <span class="tile-ico" aria-hidden="true"><ion-icon name="pricetag-outline"></ion-icon></span>
           <span class="tile-k">Customer code</span>
-          <span class="tile-copy"><ion-icon [name]="codeCopied() ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon>{{ codeCopied() ? 'Copied' : 'Copy' }}</span>
+          <span class="tile-copy"><ion-icon [name]="codeCopied() ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon></span>
         </span>
         <span class="tile-v code mono">{{ u.customer_code }}</span>
         <span class="tile-note">Write this code on your parcel when you send it.</span>
@@ -33,7 +33,7 @@
           <span class="tile-k">Shopping email</span>
           @if (shoppingEmail()) {
             <button type="button" class="tile-copy" (click)="copyShoppingEmail()" aria-label="Copy your shopping email">
-              <ion-icon [name]="mailCopied() ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon>{{ mailCopied() ? 'Copied' : 'Copy' }}
+              <ion-icon [name]="mailCopied() ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon>
             </button>
           }
         </span>

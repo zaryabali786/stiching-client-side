@@ -310,3 +310,20 @@ app-ship-to-card {
     text-align: right;
   }
 }
+
+// ───────── Figma icons: plain dark outline icons, round outlined copy buttons ─────────
+.tiles .tile-ico { width: 22px; height: 22px; border-radius: 0; background: transparent; color: #27272a; font-size: 18px; }
+.tiles .tile-copy {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  justify-content: center;
+  gap: 0;
+  border: 1px solid #52525b;
+  border-radius: 50%;
+  background: transparent;
+  color: #27272a;
+  font-size: 16px;
+}
+.head-ico { width: 26px; height: 26px; border-radius: 0; background: transparent; color: #27272a; font-size: 20px; }
+.detail .d-ico { width: 34px; height: 34px; border-radius: 0; background: transparent; color: #111827; font-size: 28px; }

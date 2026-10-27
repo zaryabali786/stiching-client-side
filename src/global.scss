@@ -173,6 +173,15 @@ h4 {
   font-variant-numeric: tabular-nums lining-nums;
 }
 
+/* a red star after the name of a field you have to fill in (the words "required" are for screen readers only) */
+.req {
+  margin-left: 3px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  color: #DC2626;
+}
+
 .sr-only {
   position: absolute !important;
   width: 1px;

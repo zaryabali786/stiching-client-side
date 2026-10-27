@@ -16,6 +16,7 @@ import { ShipToCardComponent } from './ship-to-card.component';
   template: `
     <app-sheet
       [open]="ui.isOpen()"
+      look="choice"
       [eyebrow]="ui.view() === 'website' ? 'Place Order on Any Brand Website' : 'New order'"
       [title]="ui.view() === 'website' ? 'Use these at checkout' : 'How are you ordering?'"
       (closed)="ui.close()"
@@ -54,18 +55,19 @@ import { ShipToCardComponent } from './ship-to-card.component';
     :host { display: contents; }
     .choices { display: flex; flex-direction: column; gap: 12px; }
     .opt {
-      display: flex; align-items: center; gap: 14px; width: 100%; padding: 16px; text-align: left;
-      border: 1px solid var(--c-line-strong); border-radius: 18px; background: var(--c-surface);
+      display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px 14px; text-align: left;
+      border: 1px solid #E4E4E7; border-radius: 12px; background: #fff; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
       color: var(--c-ink); font: inherit; cursor: pointer;
     }
-    .opt:hover { border-color: var(--c-brand); }
+    .opt:hover { border-color: #62003E; }
+    .opt > ion-icon { flex: none; color: #27272a; font-size: 16px; }
     .ico {
-      flex: none; width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
-      background: var(--c-surface-3); color: var(--c-brand); font-size: 24px;
+      flex: none; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+      background: transparent; color: #111827; font-size: 30px;
     }
     .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-    .txt strong { font-size: 16px; }
-    .txt small { color: var(--c-muted); }
+    .txt strong { font-size: 14px; font-weight: 600; color: #111827; }
+    .txt small { color: #52525b; font-size: 11px; line-height: 1.35; }
     .steps { margin: 0 0 14px; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; line-height: 1.5; }
     .steps li::marker { color: var(--c-brand); }
     .foot { display: flex; gap: 10px; }

@@ -204,6 +204,9 @@ export interface OrderListRow {
   destination_city: string | null;
   destination_country: string | null;
   units_count: number;
+  /** The first article of the order (its name and a picture), shown on the card. */
+  first_title?: string | null;
+  picture_url?: string | null;
 }
 
 /** Where one article stands in the customer's approval. */
@@ -837,7 +840,7 @@ export interface InboxRow {
   is_read: boolean;
   import_id: string | null;
   match: InboxMatch | null;
-  draft: { status: OrderImport['status']; brand: string | null; items: number } | null;
+  draft: { status: OrderImport['status']; brand: string | null; items: number; picture_url?: string | null } | null;
 }
 
 /** What happened to a follow-up email: it updated an order, or it needs a person to look at it. */

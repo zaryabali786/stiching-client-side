@@ -36,6 +36,12 @@ type TabKey = 'home' | 'orders' | 'shop' | 'new' | 'sizes' | 'profile' | 'inbox'
 })
 export class ClientShellComponent {
   protected auth = inject(AuthService);
+  /** The name shown at the top of the side menu (the email's first part when the customer has no name yet), and its first letter. */
+  protected userName = computed(() => {
+    const u = this.auth.user();
+    return (u?.full_name || u?.email?.split('@')[0] || '').trim();
+  });
+  protected userInitial = computed(() => (this.userName().charAt(0) || '?').toUpperCase());
   protected notif = inject(NotificationService);
   protected config = inject(ConfigService);
   /** Instantiated here so the live connection (and bell refreshes) runs on every page. */

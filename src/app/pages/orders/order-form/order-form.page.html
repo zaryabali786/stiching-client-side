@@ -1,19 +1,43 @@
 <div class="page">
   <header class="title-row">
     @if (isEdit()) {
-      <a class="icon-btn" [routerLink]="['/app/orders', id()]" aria-label="Back to order">
+      <a class="back-btn" [routerLink]="['/app/orders', id()]" aria-label="Back to order">
         <ion-icon name="chevron-back-outline" aria-hidden="true"></ion-icon>
       </a>
     } @else {
-      <a class="icon-btn" routerLink="/app/orders" aria-label="Cancel and go back to orders">
-        <ion-icon name="close-outline" aria-hidden="true"></ion-icon>
+      <a class="back-btn" routerLink="/app/orders" aria-label="Cancel and go back to orders">
+        <ion-icon name="chevron-back-outline" aria-hidden="true"></ion-icon>
       </a>
     }
-    <div>
-      <span class="eyebrow">{{ isDraft() ? 'Draft · from mail' : isEdit() ? 'Edit order' : 'New order' }} · Step {{ stepNo() }} of {{ stepCount() }}</span>
-      <h1 class="page-title">{{ stepTitle() }}</h1>
-    </div>
+    <h1 class="sr-only">{{ stepTitle() }} · Step {{ stepNo() }} of {{ stepCount() }}</h1>
+    @if (!(isEdit() && (loadingOrder() || loadError())) && !notEditable()) {
+      <!-- the steps, as tabs: the name above a bar (dark red for the step you are on and the ones done, grey for the rest) -->
+      <nav class="stepper" aria-label="Order steps" [style.--n]="stepList().length">
+        <ol>
+          @for (st of stepList(); track st.n; let i = $index) {
+            <li>
+              <button
+                type="button"
+                class="step"
+                [class.current]="step() === st.n"
+                [class.done]="step() > st.n"
+                [attr.aria-current]="step() === st.n ? 'step' : null"
+                (click)="goTo(st.n)"
+              >
+                <span class="lbl">{{ tabLabel(st.label) }}</span>
+                @if (step() > st.n) {
+                  <span class="sr-only">(done)</span>
+                }
+              </button>
+            </li>
+          }
+        </ol>
+      </nav>
+    }
   </header>
+  @if (isDraft() || isEdit()) {
+    <p class="mode-note">{{ isDraft() ? 'Draft · from mail' : 'Edit order' }}</p>
+  }
 
   @if (isEdit() && loadingOrder()) {
     <app-skeleton variant="cards" [count]="2" />
@@ -33,35 +57,6 @@
       </div>
     </div>
   } @else {
-    <!-- Stepper -->
-    <nav class="stepper" aria-label="Order steps">
-      <ol>
-        @for (st of stepList(); track st.n; let i = $index) {
-          <li>
-            <button
-              type="button"
-              class="step"
-              [class.current]="step() === st.n"
-              [class.done]="step() > st.n"
-              [attr.aria-current]="step() === st.n ? 'step' : null"
-              (click)="goTo(st.n)"
-            >
-              <span class="num" aria-hidden="true">
-                @if (step() > st.n) {
-                  <ion-icon name="checkmark-outline"></ion-icon>
-                } @else {
-                  {{ i + 1 }}
-                }
-              </span>
-              <span class="lbl">{{ st.label }}</span>
-              @if (step() > st.n) {
-                <span class="sr-only">(done)</span>
-              }
-            </button>
-          </li>
-        }
-      </ol>
-    </nav>
 
     <!-- ───────── STEP 1 · Order details ───────── -->
     @if (step() === 1) {
@@ -255,7 +250,7 @@
                 @if (simple()) {
                   @if (otherFor() === a.key) {
                     <div class="field other-brand">
-                      <label [for]="'other-brand-' + a.key">Brand <span class="req">required</span></label>
+                      <label [for]="'other-brand-' + a.key">Brand <span class="req" aria-hidden="true">*</span><span class="sr-only"> required</span></label>
                       <div class="link-row">
                         <input [id]="'other-brand-' + a.key" class="input" placeholder="Type the brand's name" autocomplete="off" maxlength="80"
                           [ngModel]="otherName()" (ngModelChange)="otherName.set($event)" (keydown.enter)="$event.preventDefault(); saveOther(a)" />
@@ -302,7 +297,7 @@
                     <div class="field grow"><span class="field-label">Product</span><strong class="readonly-text">{{ a.unit_title }}</strong></div>
                   } @else {
                   <div class="field grow">
-                    <label [for]="'title' + a.key">Product name <span class="req">required</span></label>
+                    <label [for]="'title' + a.key">Product name <span class="req" aria-hidden="true">*</span><span class="sr-only"> required</span></label>
                     <input
                       [id]="'title' + a.key"
                       class="input"
@@ -613,7 +608,7 @@
       }
 
       @if (!emailOrder() || needsAddressConfirm()) {
-      <app-ship-to-card [eyebrow]="isEdit() ? 'Receiving address' : 'Next step'" [heading]="isEdit() ? 'Ship your parcel to us' : 'Then ship your parcel to us'" [compact]="true" [showEmail]="true" [partner]="emailOrder() ? shipPartner() : null" />
+      <app-ship-to-card [light]="true" heading="Ship your parcel to" brandLine="Stitch & Ship" [compact]="true" [showEmail]="true" [partner]="emailOrder() ? shipPartner() : null" />
       }
 
       @if (needsAddressConfirm()) {
@@ -680,14 +675,16 @@
 />
 
 <!-- Delivery address, asked when a new order is submitted -->
-<app-sheet [open]="addressOpen()" eyebrow="Almost done" title="Where should we deliver?" (closed)="addressOpen.set(false)">
+<app-sheet [open]="addressOpen()" look="confirm" title="Confirm your Order" (closed)="addressOpen.set(false)">
   @if (!addressEditing()) {
-    <div class="addr-default">
-      <span class="addr-k">Your delivery address</span>
-      <address>{{ addressText() }}</address>
-      @if (addrPhone()) { <span class="addr-phone"><ion-icon name="call-outline" aria-hidden="true"></ion-icon> {{ addrPhone() }}</span> }
-      @if (addrPhone().replace('\D', '').length < 7) { <span class="hint">Add a phone number we can reach: press Change address.</span> }
-      <button type="button" class="link-btn" (click)="addressEditing.set(true)"><ion-icon name="create-outline" aria-hidden="true"></ion-icon> Change address</button>
+    <div class="addr-card">
+      <div class="addr-main">
+        <span class="addr-k">Your delivery address</span>
+        <address>{{ addressText() }}</address>
+        @if (addrPhone()) { <span class="addr-phone"><ion-icon name="call-outline" aria-hidden="true"></ion-icon> {{ addrPhone() }}</span> }
+        @if (addrPhone().replace('\D', '').length < 7) { <span class="hint">Add a phone number we can reach: press Edit address.</span> }
+      </div>
+      <button type="button" class="addr-edit" (click)="addressEditing.set(true)"><ion-icon name="create-outline" aria-hidden="true"></ion-icon> Edit address</button>
     </div>
   } @else {
     <div class="field">
@@ -702,7 +699,10 @@
     </div>
   }
   <div sheet-footer class="addr-foot">
-    <button type="button" class="btn btn-outline" (click)="addressOpen.set(false)">Cancel</button>
-    <button type="button" class="btn btn-primary" (click)="confirmAddress()" [disabled]="submitting()">Confirm &amp; submit</button>
+    <button type="button" class="btn-cancel" (click)="addressOpen.set(false)">Cancel</button>
+    <button type="button" class="btn-submit" (click)="confirmAddress()" [disabled]="submitting()">
+      @if (submitting()) { <ion-spinner name="crescent"></ion-spinner> }
+      {{ addressEditing() ? 'Confirm & submit' : 'Submit' }}
+    </button>
   </div>
 </app-sheet>

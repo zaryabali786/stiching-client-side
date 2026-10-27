@@ -1,29 +1,30 @@
 <div class="page">
   <header class="title-row">
-    <div>
-      <span class="eyebrow">Your orders</span>
-      <h1 class="page-title">Orders</h1>
-    </div>
-    <button type="button" class="btn btn-primary btn-sm new-btn" (click)="newOrder.open()">
-      <ion-icon name="add-outline" aria-hidden="true"></ion-icon> New
+    <a class="round-btn" routerLink="/app/overview" aria-label="Back to home">
+      <ion-icon name="chevron-back-outline" aria-hidden="true"></ion-icon>
+    </a>
+    <h1 class="page-title">Orders</h1>
+    <button type="button" class="new-pill" (click)="newOrder.open()">
+      <ion-icon name="create-outline" aria-hidden="true"></ion-icon> New order
     </button>
   </header>
 
   <div class="search">
-    <div class="input-affix leading">
-      <ion-icon class="affix-icon" name="search-outline" aria-hidden="true"></ion-icon>
+    <div class="search-field">
       <input
         class="input"
         type="search"
-        placeholder="Reference, brand or tracking no."
+        placeholder="Search by reference, brand or tracking no."
         [value]="searchText()"
         (input)="onSearch($any($event.target).value)"
         aria-label="Search orders"
       />
       @if (searchText()) {
-        <button type="button" class="affix-btn" (click)="clearSearch()" aria-label="Clear search">
+        <button type="button" class="search-end" (click)="clearSearch()" aria-label="Clear search">
           <ion-icon name="close-circle" aria-hidden="true"></ion-icon>
         </button>
+      } @else {
+        <ion-icon class="search-end" name="search-outline" aria-hidden="true"></ion-icon>
       }
     </div>
   </div>
@@ -64,36 +65,46 @@
         @let prog = progress(o);
         @let ret = returnInfo(o);
         <a class="order-card" [class.is-draft]="draft" [class.is-done]="prog.done" [class.is-cancelled]="o.status === 'cancelled'" [routerLink]="['/app/orders', o.id]">
-          <div class="oc-head">
-            <span class="oc-kicker">{{ kicker(o) }}</span>
+          <div class="oc-top">
+            <span class="oc-thumb" aria-hidden="true">
+              @if (o.picture_url) {
+                <img [src]="o.picture_url" alt="" loading="lazy" referrerpolicy="no-referrer" />
+              } @else {
+                <span [class]="'brand-swatch ' + swatch(o.brand).cls">{{ swatch(o.brand).initial }}</span>
+              }
+            </span>
+            <div class="oc-text">
+              <span class="oc-ids">
+                @if (o.external_source === 'shopify') {
+                  <span class="oc-tag shopify"><ion-icon name="bag-handle-outline" aria-hidden="true"></ion-icon>Shopify@if (shopifyNo(o); as sn) { <b> {{ sn }}</b> }</span>
+                }
+                <span class="oc-ref" title="Order number">{{ o.reference }}</span>
+              </span>
+              <span class="oc-sub">{{ o.created_at | date: 'd MMM y' }}</span>
+              <h3 class="oc-title">{{ o.brand }}</h3>
+            </div>
             <span class="oc-badges">
               @if (ret) {
                 <span class="oc-pill return" [attr.data-tone]="ret.tone"><ion-icon [name]="ret.icon" aria-hidden="true"></ion-icon> {{ ret.label }}</span>
               }
               @if (draft) {
-                <span class="oc-pill draft"><ion-icon name="bookmark-outline" aria-hidden="true"></ion-icon> Draft Saved</span>
+                <span class="oc-pill draft"><ion-icon name="time-outline" aria-hidden="true"></ion-icon> Draft</span>
               } @else if (!ret || ret.tone === 'ok') {
-                <app-status-badge [status]="o.status" [label]="o.status_label" />
+                <span class="oc-pill state" [attr.data-s]="o.status === 'delivered' ? 'done' : o.status === 'cancelled' ? 'cancelled' : 'active'"><ion-icon [name]="o.status === 'cancelled' ? 'close-circle-outline' : 'checkmark-circle-outline'" aria-hidden="true"></ion-icon> {{ pillLabel(o) }}</span>
               }
             </span>
           </div>
 
-          <div class="oc-main">
-            <span [class]="'brand-swatch ' + swatch(o.brand).cls" aria-hidden="true">{{ swatch(o.brand).initial }}</span>
-            <div class="oc-text">
-              <h3 class="oc-title">{{ draft ? o.reference : o.brand }}</h3>
-              <span class="oc-sub">
-                @if (draft && draftSubtitle(o); as sub) {
-                  {{ sub }}
-                } @else if (draft && o.import_source === 'email') {
-                  <ion-icon name="mail-outline" aria-hidden="true"></ion-icon> Created from your email
-                } @else {
-                  {{ o.created_at | date: 'd MMM y' }}
-                }
+          @if (o.has_issue) {
+            <span class="issue-flag"><ion-icon name="alert-circle-outline" aria-hidden="true"></ion-icon>Needs attention</span>
+          }
+
+          <div class="oc-article">
+            <p class="oc-article-title">{{ articleTitle(o) }}</p>
+            @if (draft) {
+              <span class="oc-article-sub">
+                @if (o.import_source === 'email') { Created from your email } @else if (draftSubtitle(o); as sub) { {{ sub }} } @else { Saved as a draft }
               </span>
-            </div>
-            @if (o.has_issue) {
-              <span class="issue-flag"><ion-icon name="alert-circle-outline" aria-hidden="true"></ion-icon>Needs attention</span>
             }
           </div>
 
@@ -114,8 +125,7 @@
 
           @if (draft) {
             <div class="oc-foot">
-              <span class="oc-hint">Add size to submit</span>
-              <span class="oc-cta">Add size <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon></span>
+              <span class="oc-cta">Add sizes to submit <ion-icon name="chevron-forward-outline" aria-hidden="true"></ion-icon></span>
             </div>
           } @else if (o.status !== 'cancelled') {
             <div class="oc-progress" role="img" [attr.aria-label]="prog.label">

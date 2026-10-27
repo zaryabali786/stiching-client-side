@@ -98,28 +98,31 @@
   <div class="drawer-backdrop" (click)="closeMenu()"></div>
   <aside class="drawer" id="side-menu" role="dialog" aria-modal="true" aria-label="Menu">
     <div class="drawer-head">
-      <span class="monogram" aria-hidden="true">{{ (config.brandName() || '·').charAt(0) }}</span>
+      <span class="avatar" aria-hidden="true">{{ userInitial() }}</span>
       <div class="who">
-        <strong>{{ config.brandName() }}</strong>
-        <small>{{ auth.user()?.full_name || auth.user()?.email }}</small>
+        <strong>{{ userName() }}</strong>
+        @if (auth.user()?.email; as mail) { <small>{{ mail }}</small> }
       </div>
       <button type="button" class="drawer-x" (click)="closeMenu()" aria-label="Close menu"><ion-icon name="close-outline" aria-hidden="true"></ion-icon></button>
     </div>
 
     <nav class="drawer-nav" aria-label="Menu">
       @if (showShop) {
-        <a class="d-item" routerLink="/app/shop" [class.active]="activeTab() === 'shop'">
-          <ion-icon name="storefront-outline" aria-hidden="true"></ion-icon><span>Shop</span>
+        <a class="d-card" routerLink="/app/shop" [class.active]="activeTab() === 'shop'">
+          <span class="d-text"><strong>Shop</strong><small>Browse and buy products.</small></span>
+          <ion-icon name="chevron-forward-outline" aria-hidden="true"></ion-icon>
         </a>
-        <a class="d-item" routerLink="/app/shop/orders">
-          <ion-icon name="cube-outline" aria-hidden="true"></ion-icon><span>Shop orders</span>
+        <a class="d-card" routerLink="/app/shop/orders">
+          <span class="d-text"><strong>Shop orders</strong><small>Your orders from the Shop.</small></span>
+          <ion-icon name="chevron-forward-outline" aria-hidden="true"></ion-icon>
         </a>
       }
-      <a class="d-item" routerLink="/app/approvals" [class.active]="activeTab() === 'approvals'">
-        <ion-icon name="checkmark-done-outline" aria-hidden="true"></ion-icon><span>Approve / Reject</span>
+      <a class="d-card" routerLink="/app/approvals" [class.active]="activeTab() === 'approvals'">
+        <span class="d-text"><strong>View orders</strong><small>Approve or Reject orders.</small></span>
         @if (approvals.count() > 0) {
-          <span class="d-badge">{{ approvals.count() }}</span>
+          <span class="d-badge" [attr.aria-label]="approvals.count() + ' waiting for you'">{{ approvals.count() }}</span>
         }
+        <ion-icon name="chevron-forward-outline" aria-hidden="true"></ion-icon>
       </a>
     </nav>
 

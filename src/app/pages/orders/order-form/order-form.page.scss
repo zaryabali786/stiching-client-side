@@ -1,7 +1,37 @@
+/* ───────── Header: a round back button and the steps as tabs, in one row ───────── */
 .title-row {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.back-btn {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  margin-top: 1px;
+  border-radius: 50%;
+  border: 1.5px solid #52525b;
+  background: transparent;
+  color: #27272a;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+
+  &:hover { background: rgba(98, 0, 62, 0.06); border-color: #62003E; }
+  &:focus-visible { outline: 2px solid #62003E; outline-offset: 2px; }
+}
+
+.mode-note {
+  margin: -6px 0 0;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #62003E;
 }
 
 .stack-lg {
@@ -10,7 +40,6 @@
   gap: 20px;
 }
 
-.req,
 .opt {
   margin-left: 4px;
   font-size: var(--fs-2xs);
@@ -19,18 +48,29 @@
   color: var(--c-faint);
 }
 
+/* a red star after the name of a field you have to fill in */
 .req {
-  color: var(--c-gold-dark);
+  margin-left: 3px;
+  font-size: 1.1em;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  color: #DC2626;
 }
 
-/* ───────── Stepper ───────── */
+/* ───────── Steps as tabs: the name above a bar (dark red = this step and the finished ones, grey = still to come) ───────── */
+.stepper {
+  flex: 1;
+  min-width: 0;
+}
+
 .stepper ol {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(var(--n, 2), minmax(0, 1fr));
+  gap: 14px;
 }
 
 .step {
@@ -39,58 +79,61 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
-  padding: 0 0 2px;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 0 0;
   min-height: 44px;
   border: 0;
   background: none;
-  color: var(--c-muted);
-  font-size: var(--fs-sm);
+  color: #8b8b92;
+  font-size: var(--fs-md);
   font-weight: 500;
+  line-height: 1.2;
   text-align: left;
   cursor: pointer;
 
-  /* progress segment above each label */
-  &::before {
+  .lbl {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* the bar under the name */
+  &::after {
     content: '';
     display: block;
     width: 100%;
-    height: 4px;
-    border-radius: 4px;
-    background: var(--c-surface-3);
-  }
-
-  .num {
-    display: none;
-  }
-
-  .lbl {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
+    height: 5px;
+    border-radius: 5px;
+    background: #D4D4D8;
+    transition: background 0.2s;
   }
 
   &.done {
-    color: var(--c-ink-2);
+    color: #3f3f46;
 
-    &::before {
-      background: var(--c-brand-fill, var(--c-brand));
-    }
+    &::after { background: #62003E; }
   }
 
   &.current {
-    color: var(--c-brand);
-    font-weight: 700;
+    color: #18181b;
+    font-weight: 600;
 
-    &::before {
-      background: var(--c-gold);
-    }
+    &::after { background: #62003E; }
   }
+
+  &:focus-visible { outline: 2px solid #62003E; outline-offset: 3px; border-radius: 6px; }
 }
 
 /* ───────── Articles ───────── */
 .article {
   padding: 0;
+  border: 0;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 18px -8px rgba(15, 23, 42, 0.16);
 
   &.has-error {
     border-color: var(--t-red-line);
@@ -124,23 +167,23 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--c-surface-2);
-    color: var(--c-ink-2);
-    font-size: 17px;
+    background: #FDEAF3;
+    color: #62003E;
+    font-size: 18px;
   }
 }
 
 .article-num {
   flex: none;
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  background: var(--c-gold-tint);
-  border: 1px solid var(--c-gold-line);
-  color: var(--c-gold-dark);
-  font-family: var(--font-serif);
+  background: #fff;
+  border: 1.5px solid #62003E;
+  color: #62003E;
+  font-family: var(--font-sans);
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 500;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -155,7 +198,8 @@
 
   strong {
     font-size: var(--fs-body);
-    font-weight: 600;
+    font-weight: 500;
+    color: var(--c-ink-2);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -393,8 +437,26 @@
     flex: none;
   }
 
+  /* Step 1 of 2 in grey, the action in dark red as a round-ended button (the design) */
+  .ab-k {
+    letter-spacing: 0;
+    text-transform: none;
+    font-size: var(--fs-sm);
+    font-weight: 500;
+    color: #6b7280;
+  }
+
   .btn-primary {
     min-width: 132px;
+    border-radius: 999px;
+    border: 0;
+    background: #62003E;
+    color: #fff;
+    box-shadow: 0 6px 16px -6px rgba(98, 0, 62, 0.55);
+
+    &:hover:not(:disabled) { background: #7B0A52; }
+    &:focus-visible { outline: 2px solid #62003E; outline-offset: 2px; }
+    &:disabled { opacity: 0.55; box-shadow: none; }
   }
 }
 
@@ -665,12 +727,24 @@
   &.total { background: var(--c-brand-soft, var(--c-surface-3)); font-size: 16px; }
 }
 .total-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 16px; strong { font-size: 20px; font-variant-numeric: tabular-nums; } }
-.addr-default {
-  display: flex; flex-direction: column; gap: 6px; padding: 14px; border: 1.5px dashed var(--c-line-strong); border-radius: 14px;
-  .addr-k { font-size: var(--fs-2xs); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-muted); font-weight: 600; }
-  address { font-style: normal; line-height: 1.45; }
+/* the confirmation sheet: the delivery address in a card, "Edit address" as its last row, then Cancel and Submit */
+.addr-card {
+  border: 1px solid #E5E7EB; border-radius: 16px; background: #fff; overflow: hidden;
+  .addr-main { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px 16px; min-height: 116px; }
+  .addr-k { font-size: var(--fs-2xs); letter-spacing: 0.04em; text-transform: uppercase; color: #6b7280; font-weight: 500; }
+  address { font-style: normal; font-size: var(--fs-body); font-weight: 600; line-height: 1.4; color: #1f2937; }
+  .addr-phone { margin-top: 8px; font-size: var(--fs-md); font-weight: 500; gap: 12px; ion-icon { font-size: 20px; color: #1f2937; } }
+  .addr-edit { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 0; border-top: 1px solid #E5E7EB; background: #fff; font: inherit; font-size: var(--fs-md); font-weight: 600; color: #1f2937; text-align: left; cursor: pointer;
+    ion-icon { font-size: 18px; } &:hover { background: #FBF3F8; } &:focus-visible { outline: 2px solid #62003E; outline-offset: -2px; } }
 }
-.addr-foot { display: flex; gap: 10px; .btn { flex: 1; } }
+.addr-foot { display: flex; justify-content: center; gap: 14px; }
+.btn-cancel, .btn-submit {
+  flex: 1; max-width: 190px; min-height: 48px; padding: 0 18px; border-radius: 999px; font: inherit; font-size: var(--fs-md); font-weight: 600;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;
+}
+.btn-cancel { border: 1px solid #E4E4E7; background: #F4F4F6; color: #3f3f46; &:hover { background: #ECECEF; } }
+.btn-submit { border: 0; background: #62003E; color: #fff; box-shadow: 0 6px 16px -6px rgba(98, 0, 62, 0.55); &:hover:not(:disabled) { background: #7B0A52; } &:disabled { opacity: 0.6; cursor: not-allowed; box-shadow: none; } ion-spinner { width: 18px; height: 18px; color: #fff; } }
+.btn-cancel:focus-visible, .btn-submit:focus-visible { outline: 2px solid #62003E; outline-offset: 2px; }
 
 
 /* Order made from an email: fixed facts as readable text, locked articles */
