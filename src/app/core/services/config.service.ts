@@ -12,7 +12,7 @@ export class ConfigService {
   readonly config = signal<PlatformConfig | null>(null);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
-  readonly brandName = computed(() => this.config()?.name || '');
+  readonly brandName = computed(() => 'Stitch&Ship');
 
   private retries = 0;
 

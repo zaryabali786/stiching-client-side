@@ -20,11 +20,13 @@ import { ToastService } from '../../core/services/toast.service';
         <ion-spinner name="crescent"></ion-spinner>
         <p>Checking your payment…</p>
       } @else {
-        <h1>{{ cancelled() ? 'Payment cancelled' : 'Thank you' }}</h1>
+        <h1>{{ cancelled() ? 'Payment cancelled' : review() ? 'Payment under review' : 'Thank you' }}</h1>
         @if (cancelled()) {
           <p>No money was taken. You can try again from your order with Pay Now.</p>
+        } @else if (review()) {
+          <p>We could not confirm this payment automatically (for example, the amount did not match). Your order was not marked paid; our team will check it and contact you.</p>
         } @else {
-          <p>We are confirming your payment with Stripe. Return to the Stitch&amp;Ship app: your order updates by itself once the payment is confirmed.</p>
+          <p>We are confirming your payment with {{ provider() }}. Return to the Stitch&amp;Ship app: your order updates by itself once the payment is confirmed.</p>
         }
         <a class="btn btn-primary" [routerLink]="orderLink()" [queryParams]="orderParams()">Open my order</a>
       }
@@ -45,6 +47,8 @@ export class PayReturnPage implements OnInit {
 
   protected readonly busy = signal(false);
   protected readonly cancelled = signal(false);
+  protected readonly review = signal(false);
+  protected readonly provider = signal('Stripe');
   private orderId = '';
 
   protected orderLink(): string[] {
@@ -59,8 +63,15 @@ export class PayReturnPage implements OnInit {
     const q = this.route.snapshot.queryParamMap;
     this.orderId = /^[0-9a-f-]{36}$/i.test(q.get('order') || '') ? (q.get('order') as string) : '';
     this.cancelled.set(q.get('result') === 'cancel');
+    this.review.set(q.get('result') === 'review');
+    if (q.get('provider') === 'payfast') this.provider.set('PayFast');
     // signed in here (the website): open the order, after the server has checked the payment with Stripe
     if (this.orderId && this.auth.isAuthenticated()) {
+      if (this.review()) {
+        this.toast.info('This payment needs a check by our team. Your order was not marked paid.');
+        void this.router.navigate(['/app/orders', this.orderId], { replaceUrl: true });
+        return;
+      }
       if (this.cancelled()) {
         this.toast.info('Payment cancelled. You can try again with Pay Now.');
         void this.router.navigate(['/app/orders', this.orderId], { replaceUrl: true });

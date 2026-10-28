@@ -10,7 +10,7 @@ import { errorMessage } from '../core/services/api.service';
 import { PaymentStart } from '../core/models/api.models';
 import { SheetComponent } from './sheet.component';
 
-type Phase = 'starting' | 'ready' | 'paying' | 'checking' | 'failed';
+type Phase = 'starting' | 'ready' | 'paying' | 'checking' | 'failed' | 'redirecting';
 
 /**
  * Card payment for an issued invoice, in a bottom sheet. Uses Stripe's Payment Element (cards and wallets,
@@ -22,7 +22,7 @@ type Phase = 'starting' | 'ready' | 'paying' | 'checking' | 'failed';
   imports: [IonIcon, IonSpinner, SheetComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-sheet [open]="open()" title="Pay by card" [eyebrow]="kind() !== 'invoice' ? 'Order ' + reference() : invoiceNumber() ? 'Invoice ' + invoiceNumber() : 'Secure payment'" [locked]="phase() === 'paying' || phase() === 'checking'" (closed)="close()">
+    <app-sheet [open]="open()" title="Pay by card" [eyebrow]="kind() !== 'invoice' ? 'Order ' + reference() : invoiceNumber() ? 'Invoice ' + invoiceNumber() : 'Secure payment'" [locked]="phase() === 'paying' || phase() === 'checking' || phase() === 'redirecting'" (closed)="close()">
       <div class="pay">
         <div class="amount" aria-live="polite">
           <span class="k">Amount due</span>
@@ -33,6 +33,13 @@ type Phase = 'starting' | 'ready' | 'paying' | 'checking' | 'failed';
           <div class="loading" role="status">
             <ion-spinner name="crescent"></ion-spinner>
             <span>Preparing secure payment…</span>
+          </div>
+        }
+
+        @if (phase() === 'redirecting') {
+          <div class="loading" role="status">
+            <ion-spinner name="crescent"></ion-spinner>
+            <span>Taking you to PayFast to pay securely…</span>
           </div>
         }
 
@@ -65,7 +72,7 @@ type Phase = 'starting' | 'ready' | 'paying' | 'checking' | 'failed';
       </div>
 
       <div sheet-footer class="btn-row">
-        <button type="button" class="btn btn-outline" (click)="close()" [disabled]="phase() === 'paying' || phase() === 'checking'">Cancel</button>
+        <button type="button" class="btn btn-outline" (click)="close()" [disabled]="phase() === 'paying' || phase() === 'checking' || phase() === 'redirecting'">Cancel</button>
         <button type="button" class="btn btn-primary" (click)="pay()" [disabled]="phase() !== 'ready' || !complete()">
           @switch (phase()) {
             @case ('paying') { <ion-spinner name="crescent"></ion-spinner> Paying… }
@@ -149,6 +156,10 @@ export class PaymentSheetComponent {
     started$.subscribe({
       next: async ({ data }) => {
         if (run !== this.runId) return;
+        if (data.provider === 'payfast' && data.payfast) {
+          this.redirectToPayfast(data.payfast);
+          return;
+        }
         const stripe = await this.stripeSvc.load(data.publishableKey);
         if (run !== this.runId) return;
         if (!stripe) {
@@ -165,6 +176,27 @@ export class PaymentSheetComponent {
         if (run === this.runId) this.fail(errorMessage(err, 'Payment could not be started.'));
       },
     });
+  }
+
+  /**
+   * Orders delivered inside Pakistan are paid on PayFast's own page: post the server-signed form there (the amount, basket and token
+   * were decided by the server). Coming back proves nothing; the server marks the order paid only after PayFast's verified callback.
+   */
+  private redirectToPayfast(payfast: NonNullable<PaymentStart['payfast']>): void {
+    this.phase.set('redirecting');
+    const form = document.createElement('form');
+    form.method = payfast.method;
+    form.action = payfast.action;
+    form.style.display = 'none';
+    for (const [name, value] of Object.entries(payfast.fields)) {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = name;
+      input.value = value;
+      form.appendChild(input);
+    }
+    document.body.appendChild(form);
+    form.submit();
   }
 
   private mount(data: PaymentStart): void {
@@ -250,7 +282,7 @@ export class PaymentSheetComponent {
   }
 
   close(): void {
-    if (this.phase() === 'paying' || this.phase() === 'checking') return;
+    if (this.phase() === 'paying' || this.phase() === 'checking' || this.phase() === 'redirecting') return;
     this.closed.emit();
   }
 

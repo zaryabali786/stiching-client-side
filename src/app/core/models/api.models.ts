@@ -115,6 +115,10 @@ export interface PlatformConfig {
 /** POST /client/orders/:id/payment-intent */
 export interface PaymentStart {
   reused?: boolean;
+  /** 'payfast': orders delivered inside Pakistan (the customer is sent to PayFast). Missing or 'stripe': the card form. */
+  provider?: 'stripe' | 'payfast';
+  /** The signed form to post to PayFast (only with provider 'payfast'). */
+  payfast?: { action: string; method: 'POST'; fields: Record<string, string> };
   clientSecret: string;
   paymentIntentId: string;
   amount: number;
