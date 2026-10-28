@@ -65,6 +65,9 @@ export class ClientShellComponent {
   protected menuOpen = signal(false);
   /** No logo file at assets/logo.png: the brand's first letter is shown instead. */
   protected logoFailed = signal(false);
+  /** The platform decides whether the customer approves QC photos (default: yes, also while the setting cannot be read). */
+  protected approvalOn = computed(() => this.config.config()?.qcApproval?.required !== false);
+  protected headerReady = computed(() => this.config.config() !== null || !!this.config.error());
   /** Articles waiting for the customer's approval: the badge on the Approvals tab. */
   protected approvals = inject(ApprovalsService);
   private scroller = viewChild<ElementRef<HTMLElement>>('scroller');
@@ -136,6 +139,12 @@ export class ClientShellComponent {
 
   protected closeMenu(): void {
     this.menuOpen.set(false);
+  }
+
+  /** Coming back to the app: pick up the admin's latest settings (the header depends on "client approval after QC"). */
+  @HostListener('document:visibilitychange')
+  onVisible(): void {
+    if (document.visibilityState === 'visible') this.config.load(true);
   }
 
   @HostListener('document:keydown.escape')

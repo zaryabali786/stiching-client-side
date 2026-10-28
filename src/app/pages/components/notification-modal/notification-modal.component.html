@@ -34,9 +34,15 @@
           <img [src]="'assets/notif/' + pic(item) + '.svg'" alt="" width="40" height="40" />
         </span>
         <div class="body">
+          @if (item.priority === 'urgent') {
+            <span class="urgent-tag">Urgent</span>
+          }
           <strong class="title">{{ item.title }}</strong>
           @if (item.body) {
             <p>{{ item.body }}</p>
+          }
+          @if (item.image_url) {
+            <img class="pic" [src]="item.image_url" alt="" loading="lazy" referrerpolicy="no-referrer" />
           }
           <div class="meta-row">
             <span class="time">{{ item.created_at | timeAgo }}</span>

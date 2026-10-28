@@ -19,6 +19,7 @@ const TYPE_ICONS: Record<NotificationType, string> = {
   approval: 'checkmark-circle-outline',
   invoice: 'receipt-outline',
   logistics: 'airplane-outline',
+  broadcast: 'megaphone-outline',
 };
 
 /** Notification centre opened from the header bell (rendered once, by the shell). */
@@ -42,6 +43,7 @@ export class NotificationModalComponent {
   /** The picture of a notification, from what it says. Every notification has one of the six: a problem, shipping, payment, approval, an invoice or a form to fill in, or (for the rest) our own mark. */
   pic(item: AppNotification): Pic {
     const t = (item.title || '').toLowerCase();
+    if (item.priority === 'urgent') return 'alert';
     if (item.type === 'alert' || /failed|not valid|problem|issue/.test(t)) return 'alert';
     if (item.type === 'logistics' || /^(shipped|delivered)|on its way|on the way|dispatch|tracking added/.test(t)) return 'shipped';
     if (/payment confirmed|^paid|payment received/.test(t)) return 'paid';

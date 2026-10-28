@@ -1,4 +1,6 @@
 <header class="shell-header">
+  <!-- nothing is drawn until the platform setting is known (or has failed to load), so the wrong header never flashes -->
+  @if (headerReady() && approvalOn()) {
   <button
     type="button"
     class="menu-btn"
@@ -12,8 +14,10 @@
       <span class="dot" aria-hidden="true">{{ menuBadgeText() }}</span>
     }
   </button>
+  }
 
-  <a class="brand" routerLink="/app/overview" [attr.aria-label]="(config.brandName() || 'Home') + ', home'">
+  @if (headerReady()) {
+  <a class="brand" [class.at-start]="!approvalOn()" routerLink="/app/overview" [attr.aria-label]="(config.brandName() || 'Home') + ', home'">
     @if (!logoFailed()) {
       <img class="logo" src="assets/logo.png" alt="" (error)="logoFailed.set(true)" />
     } @else {
@@ -21,6 +25,7 @@
     }
     <span class="brand-title">{{ config.brandName() }}</span>
   </a>
+  }
 
   <div class="header-actions">
     <a

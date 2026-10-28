@@ -20,7 +20,7 @@ import { ToastService } from '../../../core/services/toast.service';
   template: `
     <div class="auth-wrap">
       <section class="auth-hero">
-        <div class="monogram">{{ (config.brandName() || '·').charAt(0) }}</div>
+        <span class="brand-logo"><img src="assets/logo.png" [alt]="(config.brandName() || 'Company') + ' logo'" width="64" height="64" /></span>
         <span class="eyebrow">{{ config.brandName() }} · Bespoke stitching from Pakistan</span>
         <h1>Sign in with a code</h1>
         <p>Use the email address you used when you placed your order. We send you a code, no password needed.</p>

@@ -630,4 +630,11 @@
   transform: translate(-50%, -50%);
   .brand-title { display: none; }
   .logo { height: 34px; width: auto; max-width: 140px; object-fit: contain; }
+
+  /* client approval switched off: no menu button, the logo takes its place at the start of the header */
+  &.at-start {
+    position: static;
+    transform: none;
+    margin-right: auto;
+  }
 }

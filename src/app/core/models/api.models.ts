@@ -102,6 +102,8 @@ export interface PlatformConfig {
   expressStitching?: { enabled: boolean; days: number; price_pkr?: number };
   /** Fast shipping as the admin decided it: offered or not, and how many days the delivery takes. It has no price. */
   expressShipping?: { enabled: boolean; days: number };
+  /** Does the customer approve the QC photos? Off: QC goes straight to Pressing, and the app header shows the logo where the menu button was. */
+  qcApproval?: { required: boolean };
   /** Card payments: the publishable key is public by design; the secret key never leaves the server. */
   payments?: { stripe: { enabled: boolean; publishableKey: string | null } };
   /** Google sign-in: the OAuth client id is public by design; the client secret stays on the server. */
@@ -131,7 +133,7 @@ export interface PaymentConfirmation {
 
 // ───────────── Notifications ─────────────
 
-export type NotificationType = 'order' | 'update' | 'alert' | 'approval' | 'invoice' | 'logistics';
+export type NotificationType = 'order' | 'update' | 'alert' | 'approval' | 'invoice' | 'logistics' | 'broadcast';
 
 export interface AppNotification {
   id: string;
@@ -142,6 +144,10 @@ export interface AppNotification {
   order_id: string | null;
   read_at: string | null;
   created_at: string;
+  /** 'urgent' for a message the team marked urgent (Notification Center) */
+  priority?: 'normal' | 'urgent';
+  /** a picture sent with the message */
+  image_url?: string | null;
 }
 
 export interface NotificationMeta {

@@ -14,7 +14,7 @@ import { ConfigService } from '../../../core/services/config.service';
   template: `
     <div class="auth-wrap">
       <section class="auth-hero">
-        <div class="monogram">{{ (config.brandName() || '·').charAt(0) }}</div>
+        <span class="brand-logo"><img src="assets/logo.png" [alt]="(config.brandName() || 'Company') + ' logo'" width="64" height="64" /></span>
         <span class="eyebrow">{{ config.brandName() }}</span>
         <h1>Choose a new password</h1>
         <p>Pick a password you have not used before. You will sign in with it right after.</p>
