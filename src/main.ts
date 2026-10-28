@@ -10,6 +10,8 @@ import { routes } from './app/app.routes';
 import { AppComponent } from './app/app.component';
 import { authInterceptor } from './app/core/interceptors/auth.interceptor';
 import { AuthService } from './app/core/services/auth.service';
+import { Location } from '@angular/common';
+import { initBackNavigation } from './app/core/back-navigation';
 import { registerIcons } from './app/core/icons';
 
 registerIcons();
@@ -43,6 +45,7 @@ bootstrapApplication(AppComponent, {
       withInMemoryScrolling({ scrollPositionRestoration: 'disabled' }),
     ),
     provideAppInitializer(() => inject(AuthService).init()),
+    provideAppInitializer(() => initBackNavigation(inject(Location))),
   ],
 })
   .then(() => hideBootSplash())
