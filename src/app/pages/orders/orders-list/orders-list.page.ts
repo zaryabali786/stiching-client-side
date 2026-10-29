@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -65,6 +65,10 @@ export class OrdersListPage {
     { key: 'hold', label: 'Hold' },
     { key: 'cancelled', label: 'Cancelled' },
   ];
+
+  /** the Filter by menu is open */
+  menuOpen = signal(false);
+  currentLabel = computed(() => this.filters.find((f) => f.key === this.status())?.label ?? 'All');
 
   searchText = signal('');
   private search = signal('');
@@ -151,6 +155,11 @@ export class OrdersListPage {
     this.search.set('');
     this.status.set('all');
     this.reload();
+  }
+
+  pickStatus(s: StatusFilter): void {
+    this.menuOpen.set(false);
+    this.setStatus(s);
   }
 
   setStatus(s: StatusFilter): void {

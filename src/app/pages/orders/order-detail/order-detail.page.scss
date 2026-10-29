@@ -22,7 +22,10 @@
       text-overflow: ellipsis;
     }
 
-    .ref-line {
+    .brand-line {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
       font-size: var(--fs-sm);
       font-weight: 600;
       letter-spacing: 0.02em;

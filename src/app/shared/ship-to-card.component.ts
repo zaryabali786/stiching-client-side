@@ -44,8 +44,24 @@ import { ClientPartner } from '../core/models/api.models';
           }
           <div class="row"><dt>{{ light() ? 'Article address' : 'Address' }}</dt><dd>{{ c.address }}</dd>
               <button type="button" class="mini" (click)="copyOne('address', c.address)" aria-label="Copy street address"><ion-icon [name]="done() === 'address' ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon></button></div>
+          @if (c.address2; as v) {
+            <div class="row"><dt>Apartment</dt><dd>{{ v }}</dd>
+              <button type="button" class="mini" (click)="copyOne('address2', v)" aria-label="Copy apartment or suite"><ion-icon [name]="done() === 'address2' ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon></button></div>
+          }
           <div class="row"><dt>City</dt><dd>{{ c.city }}</dd>
               <button type="button" class="mini" (click)="copyOne('city', c.city)" aria-label="Copy city"><ion-icon [name]="done() === 'city' ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon></button></div>
+          @if (c.state; as v) {
+            <div class="row"><dt>State</dt><dd>{{ v }}</dd>
+              <button type="button" class="mini" (click)="copyOne('state', v)" aria-label="Copy state or province"><ion-icon [name]="done() === 'state' ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon></button></div>
+          }
+          @if (c.zip; as v) {
+            <div class="row"><dt>Postal code</dt><dd>{{ v }}</dd>
+              <button type="button" class="mini" (click)="copyOne('zip', v)" aria-label="Copy postal code"><ion-icon [name]="done() === 'zip' ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon></button></div>
+          }
+          @if (c.country; as v) {
+            <div class="row"><dt>Country</dt><dd>{{ v }}</dd>
+              <button type="button" class="mini" (click)="copyOne('country', v)" aria-label="Copy country"><ion-icon [name]="done() === 'country' ? 'checkmark-outline' : 'copy-outline'" aria-hidden="true"></ion-icon></button></div>
+          }
         </dl>
         @if (!compact()) {
           <p class="explain">Use this as the delivery address when you buy from a brand's website.</p>
@@ -97,8 +113,8 @@ import { ClientPartner } from '../core/models/api.models';
     .who-ico { width: 22px; height: 22px; border-radius: 7px; background: rgba(255,255,255,0.16); display: inline-flex; align-items: center; justify-content: center; font-size: 13px; }
     .who-city { opacity: 0.8; }
     .rows { margin: 0; display: flex; flex-direction: column; gap: 6px; position: relative; z-index: 1; }
-    .row { display: grid; grid-template-columns: 64px 1fr auto; align-items: center; gap: 10px; padding: 8px 8px 8px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.07); }
-    .row dt { font-size: var(--fs-2xs); letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.65; font-weight: 600; }
+    .row { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 8px 8px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.07); }
+    .row dt { white-space: nowrap; font-size: var(--fs-2xs); letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.65; font-weight: 600; }
     .row dd { margin: 0; min-width: 0; overflow-wrap: anywhere; color: #fff; font-size: var(--fs-body); line-height: 1.35; }
     .mono-dd { font-family: ui-monospace, monospace; font-size: 12px; word-break: break-all; }
     .mini { flex: none; width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.22); background: rgba(255, 255, 255, 0.1); color: #fff; cursor: pointer; }
@@ -126,8 +142,8 @@ import { ClientPartner } from '../core/models/api.models';
     .light .copy-btn ion-icon { display: none; }
     .light .copy-btn:focus-visible { outline: 2px solid #62003E; outline-offset: 2px; }
     .light .rows { gap: 8px; }
-    .light .row { grid-template-columns: 92px 1fr auto; padding: 6px 7px 6px 14px; border: 1px solid #E8E8EC; background: #fff; border-radius: 14px; min-height: 48px; }
-    .light .row dt { font-size: var(--fs-xs); letter-spacing: 0; text-transform: none; font-weight: 500; opacity: 1; color: #6b7280; }
+    .light .row { grid-template-columns: 104px minmax(0, 1fr) auto; padding: 6px 7px 6px 14px; border: 1px solid #E8E8EC; background: #fff; border-radius: 14px; min-height: 48px; }
+    .light .row dt { white-space: nowrap; font-size: var(--fs-xs); letter-spacing: 0; text-transform: none; font-weight: 500; opacity: 1; color: #6b7280; }
     .light .row dd { color: #1f2937; font-size: var(--fs-md); font-weight: 500; }
     .light .mini { width: 34px; height: 34px; border: 1px solid #D4D4D8; background: #fff; color: #3f3f46; }
     .light .mini:hover { background: #FBF3F8; border-color: #62003E; color: #62003E; }
@@ -166,9 +182,12 @@ export class ShipToCardComponent {
   /** The address to show: the partner's own, else the platform's default receiving address. */
   protected addr = computed(() => {
     const p = this.selected();
-    if (p && p.receiving.address) return p.receiving;
+    if (p && p.receiving.address) return { ...p.receiving, address2: '', state: '', zip: '', country: '' };
     const c = this.cfg();
-    return c ? { name: c.shipToName, address: c.shipToAddress, city: c.shipToCity, phone: c.shipToPhone } : p ? p.receiving : null;
+    // the platform's address carries every line the admin saved (apartment, state, postal code, country); a partner's own address has none of them
+    return c
+      ? { name: c.shipToName, address: c.shipToAddress, city: c.shipToCity, phone: c.shipToPhone, address2: c.shipToAddress2 ?? '', state: c.shipToState ?? '', zip: c.shipToZip ?? '', country: c.shipToCountry ?? '' }
+      : p ? { ...p.receiving, address2: '', state: '', zip: '', country: '' } : null;
   });
 
   /** The generic "admin" login name is not a receiver name: only a real name (a partner's) is printed. */
@@ -207,7 +226,11 @@ export class ShipToCardComponent {
       this.showEmail() && this.email() ? `Email: ${this.email()}` : '',
       c.phone ? `Number: ${c.phone}` : '',
       `Address: ${c.address}`,
+      c.address2 ? `Apartment: ${c.address2}` : '',
       `City: ${c.city}`,
+      c.state ? `State: ${c.state}` : '',
+      c.zip ? `Postal code: ${c.zip}` : '',
+      c.country ? `Country: ${c.country}` : '',
     ]
       .filter(Boolean)
       .join('\n');

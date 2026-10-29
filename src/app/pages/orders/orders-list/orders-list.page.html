@@ -29,15 +29,39 @@
     </div>
   </div>
 
-  <div class="chips scroll" role="group" aria-label="Filter orders">
-    @for (f of filters; track f.key) {
-      <button type="button" class="chip" [class.active]="status() === f.key" [attr.aria-pressed]="status() === f.key" (click)="setStatus(f.key)">
-        {{ f.label }}
-        @if (counts()[f.key]) {
-          <span class="count" [attr.aria-label]="counts()[f.key] + ' orders'">{{ counts()[f.key] }}</span>
+  <div class="filter-row">
+    <span class="filter-label" id="orders-filter-label">Filter by</span>
+    <div class="dd" (keydown.escape)="menuOpen.set(false)">
+      <button
+        type="button"
+        class="dd-btn"
+        [class.open]="menuOpen()"
+        aria-haspopup="listbox"
+        aria-labelledby="orders-filter-label"
+        [attr.aria-expanded]="menuOpen()"
+        (click)="menuOpen.set(!menuOpen())"
+      >
+        <span class="dd-value">{{ currentLabel() }}</span>
+        @if (counts()[status()]) {
+          <span class="dd-count" [attr.aria-label]="counts()[status()] + ' orders'">{{ counts()[status()] }}</span>
         }
+        <ion-icon class="dd-caret" name="chevron-down-outline" aria-hidden="true"></ion-icon>
       </button>
-    }
+      @if (menuOpen()) {
+        <div class="dd-backdrop" (click)="menuOpen.set(false)"></div>
+        <ul class="dd-menu" role="listbox" aria-label="Filter orders by status">
+          @for (f of filters; track f.key) {
+            <li role="option" [attr.aria-selected]="status() === f.key">
+              <button type="button" class="dd-item" [class.active]="status() === f.key" (click)="pickStatus(f.key)">
+                <span class="dd-item-label">{{ f.label }}</span>
+                @if (counts()[f.key]) { <span class="dd-count">{{ counts()[f.key] }}</span> }
+                <ion-icon class="dd-check" name="checkmark-outline" aria-hidden="true"></ion-icon>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </div>
   </div>
 
   @if (loading() && items().length === 0) {

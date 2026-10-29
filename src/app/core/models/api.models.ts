@@ -97,6 +97,11 @@ export interface PlatformConfig {
   shipToAddress: string;
   shipToCity: string;
   shipToPhone: string;
+  /** apartment / suite / floor, state or province, postal code and country of the receiving address (as the admin saved it; may be empty) */
+  shipToAddress2?: string;
+  shipToState?: string;
+  shipToZip?: string;
+  shipToCountry?: string;
   partnerName: string;
   /** Priority stitching as the admin decided it: offered or not, how many days it takes, and its price. */
   expressStitching?: { enabled: boolean; days: number; price_pkr?: number };

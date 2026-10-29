@@ -5,8 +5,8 @@
     </a>
     <div class="top-titles">
       @if (order(); as o) {
-        <h1>{{ o.brand }}</h1>
-        <span class="ref-line">{{ o.reference }}</span>
+        <h1>{{ o.reference }}</h1>
+        <span class="brand-line">{{ o.brand }}</span>
       } @else {
         <span class="skeleton" style="width: 70px; height: 10px; margin-bottom: 6px"></span>
         <span class="skeleton" style="width: 140px; height: 20px"></span>

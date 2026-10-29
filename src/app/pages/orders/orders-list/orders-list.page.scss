@@ -636,3 +636,127 @@
 }
 
 .oc-text .oc-title { margin-top: 3px; }
+
+/* ───────── Filter by menu (replaces the row of status chips; All is the default) ───────── */
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 2px 4px;
+
+  .filter-label {
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    color: #6b7280;
+    letter-spacing: 0.02em;
+    flex: none;
+  }
+}
+
+.dd {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.dd-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 14px 0 18px;
+  border: 1px solid #D4D4D8;
+  border-radius: 999px;
+  background: #fff;
+  color: #1f2937;
+  font: inherit;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+
+  &:hover { border-color: #C9CDA3; }
+  &:focus-visible { outline: 2px solid #6D1D3A; outline-offset: 2px; }
+  &.open { border-color: #6D1D3A; background: #FBF3F8; box-shadow: 0 0 0 3px rgba(109, 29, 58, 0.1); }
+
+  .dd-value { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dd-caret { font-size: 18px; color: #6D1D3A; transition: transform 0.18s ease; flex: none; }
+  &.open .dd-caret { transform: rotate(180deg); }
+}
+
+.dd-count {
+  flex: none;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #6D1D3A;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 22px;
+  text-align: center;
+}
+
+.dd-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+}
+
+.dd-menu {
+  position: absolute;
+  z-index: 31;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  max-height: min(60vh, 380px);
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #E4E4E7;
+  border-radius: 18px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.16);
+  animation: dd-in 0.14s ease-out;
+}
+
+@keyframes dd-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+.dd-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 12px 0 14px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #27272a;
+  font: inherit;
+  font-size: var(--fs-body);
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+
+  .dd-item-label { flex: 1; min-width: 0; }
+  .dd-check { font-size: 18px; color: #6D1D3A; opacity: 0; flex: none; }
+  .dd-count { background: #E9EBD3; color: #3f3f46; }
+  &:hover, &:focus-visible { background: #F7F7F2; outline: none; }
+  &.active { background: #E9EBD3; font-weight: 600; color: #1f2937; }
+  &.active .dd-check { opacity: 1; }
+  &.active .dd-count { background: #6D1D3A; color: #fff; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dd-menu { animation: none; }
+  .dd-btn .dd-caret { transition: none; }
+}
