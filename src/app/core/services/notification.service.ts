@@ -167,7 +167,27 @@ export class NotificationService {
     });
   }
 
+  /** ids already announced in the app, so the live event and the push of one notification never raise two banners */
+  private alerted = new Set<string>();
+
+  /**
+   * A push arrived while the app is open: the phone shows no tray notification then, so it is announced here, once. A "Mobile
+   * application" notification has no live event (and no list entry) at all, so without this nothing would show.
+   */
+  alertPush(title: string | undefined, data: Record<string, unknown> | undefined): void {
+    const id = typeof data?.['notificationId'] === 'string' ? (data['notificationId'] as string) : '';
+    if (id) {
+      if (this.alerted.has(id)) return;
+      this.alerted.add(id);
+    }
+    if (!title) return;
+    if (data?.['dest'] === '1' && id) this.toast.withAction(title, 'Open', () => this.openDestination(id));
+    else this.toast.info(title);
+  }
+
   private alertInApp(n: AppNotification): void {
+    if (this.alerted.has(n.id)) return;
+    this.alerted.add(n.id);
     if (n.destination) {
       this.toast.withAction(n.title, 'Open', () => this.openDestination(n.id));
       return;
