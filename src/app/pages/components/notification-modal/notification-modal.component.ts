@@ -66,6 +66,12 @@ export class NotificationModalComponent {
 
   open(item: AppNotification): void {
     this.notif.markRead(item);
+    // a configured destination (a page, an order, a product, an approved address) is resolved by the server for this customer
+    if (item.destination) {
+      this.notif.closeModal();
+      this.notif.openDestination(item.id);
+      return;
+    }
     if (item.link) {
       this.notif.closeModal();
       this.router.navigateByUrl(item.link, { onSameUrlNavigation: 'reload' }).catch(() => this.toast.error('That link is no longer available.'));

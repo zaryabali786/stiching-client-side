@@ -24,7 +24,7 @@
       <div
         class="item"
         [class.unread]="!item.read_at"
-        [class.clickable]="!!item.link || !item.read_at"
+        [class.clickable]="!!item.link || !!item.destination || !item.read_at"
         role="button"
         tabindex="0"
         (click)="open(item)"

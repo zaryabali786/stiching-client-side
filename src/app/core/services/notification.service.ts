@@ -4,7 +4,7 @@ import { Subscription, filter, switchMap, timer, catchError, EMPTY } from 'rxjs'
 import { ApiService } from './api.service';
 import { AuthService } from './auth.service';
 import { ToastService } from './toast.service';
-import { AppNotification, NotificationMeta } from '../models/api.models';
+import { AppNotification, NotificationDestination, NotificationMeta } from '../models/api.models';
 
 const PAGE_SIZE = 15;
 const POLL_MS = 30_000;
@@ -152,7 +152,26 @@ export class NotificationService {
     this.refreshCount();
   }
 
+  /**
+   * Opens what a notification leads to. The server answers per customer: it re-checks the record (an order must be theirs, a
+   * product must still be for sale) and says "no" in words the customer can read. Never throws: a blank page cannot happen.
+   */
+  openDestination(id: string): void {
+    this.api.get<NotificationDestination>(`/notifications/${encodeURIComponent(id)}/destination`).subscribe({
+      next: (r) => {
+        if (r.kind === 'internal' && r.link.startsWith('/app')) void this.router.navigateByUrl(r.link, { onSameUrlNavigation: 'reload' });
+        // outside the app: a separate window with no reference to this app; nothing of the login is in the address
+        else if (r.kind === 'external') window.open(r.url, '_blank', 'noopener,noreferrer');
+      },
+      error: (err) => this.toast.error(err, 'This link is no longer available.'),
+    });
+  }
+
   private alertInApp(n: AppNotification): void {
+    if (n.destination) {
+      this.toast.withAction(n.title, 'Open', () => this.openDestination(n.id));
+      return;
+    }
     const link = n.link && n.link.startsWith('/app') ? n.link : null;
     // already looking at that page (an open conversation): no banner on top of it
     if (link && this.router.url.split('?')[0] === link.split('?')[0]) return;
