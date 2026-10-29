@@ -31,6 +31,10 @@ export class PushService {
     effect(() => {
       if (this.auth.isAuthenticated()) void this.start();
     });
+    // the microphone (voice notes) is asked after the first sign-in, once the launch questions are answered
+    effect(() => {
+      if (this.auth.isAuthenticated()) void this.askMicrophoneAfterSignIn();
+    });
     // Ask at the first launch, before anybody signs in: on a fresh install the person sits on the sign-in page and the box used to
     // come only after sign-in (or never, when the sign-in is not completed). Asked once the splash is gone, so it is seen, not hidden behind it.
     if (Capacitor.isNativePlatform() && environment.nativePush) this.launchAsk = this.askAtLaunch();
@@ -48,6 +52,14 @@ export class PushService {
     } catch (err) {
       console.warn('[Push] permission not asked:', err);
     }
+    // then the camera and the photo library (one after the other: the phone shows one box at a time)
+    await askCameraAndPhotosOnce();
+  }
+
+  /** The microphone, once, after the first sign-in (the first launch already asked the other four; the box is never stacked on theirs). */
+  private async askMicrophoneAfterSignIn(): Promise<void> {
+    await this.launchAsk;
+    await askMicrophoneOnce();
   }
 
   /** Sign-out: take this device off the user's list (call BEFORE the session is cleared, the API needs the login). */
@@ -199,4 +211,42 @@ function afterSplash(): Promise<void> {
     };
     check();
   });
+}
+
+const CAMERA_ASKED_KEY = 'camera_photos_asked';
+const MIC_ASKED_KEY = 'microphone_asked';
+
+const askedBefore = (key: string): boolean => {
+  try {
+    if (localStorage.getItem(key)) return true;
+    localStorage.setItem(key, '1');
+    return false;
+  } catch {
+    return true;
+  }
+};
+
+/**
+ * First launch only: the camera and the photo library, through the Camera plugin (its own system boxes on Android and iPhone; the
+ * photo box is what lets the app attach pictures from the gallery). A "Don't allow" is final here: the feature asks again when it is used.
+ */
+async function askCameraAndPhotosOnce(): Promise<void> {
+  if (askedBefore(CAMERA_ASKED_KEY)) return;
+  try {
+    const { Camera } = await import('@capacitor/camera');
+    await Camera.requestPermissions({ permissions: ['camera', 'photos'] });
+  } catch (err) {
+    console.warn('[Permissions] camera and photos not asked:', err);
+  }
+}
+
+/** The microphone, once, through the web view (the same request the voice recorder makes: the phone shows its own box). */
+async function askMicrophoneOnce(): Promise<void> {
+  if (!Capacitor.isNativePlatform() || !navigator.mediaDevices?.getUserMedia || askedBefore(MIC_ASKED_KEY)) return;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach((t) => t.stop());
+  } catch {
+    /* not allowed, or no microphone: the voice recorder asks again when it is used */
+  }
 }
