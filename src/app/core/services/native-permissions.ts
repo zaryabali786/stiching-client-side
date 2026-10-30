@@ -2,7 +2,7 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 
 /**
  * The gallery permission, asked the first time a photo or video is picked (not at launch).
- * - Android: no permission is asked; the system picker opens without one.
+ * - Android: our own MediaAccess plugin (READ_MEDIA_* on Android 13+, READ_EXTERNAL_STORAGE before).
  * - iPhone: the system photo-library box, through the Camera plugin.
  * Camera and microphone need no code here: the web view asks the system for them when a feature first opens the camera (QR scanner,
  * photo capture) or the microphone (voice notes). Saying no to the gallery never blocks picking: the system picker still opens.
@@ -33,8 +33,8 @@ const markAsked = (): void => {
 
 export async function requestGalleryPermission(): Promise<void> {
   try {
-    // Android: nothing to ask. The system photo picker needs no storage permission (Google Play does not allow READ_MEDIA_* for this).
-    if (Capacitor.getPlatform() !== 'android') {
+    if (Capacitor.getPlatform() === 'android') await MediaAccess.request();
+    else {
       const { Camera } = await import('@capacitor/camera');
       await Camera.requestPermissions({ permissions: ['photos'] });
     }
