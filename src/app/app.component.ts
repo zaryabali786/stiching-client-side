@@ -5,6 +5,7 @@ import { ToastHostComponent } from './shared/toast-host.component';
 import { NotificationService } from './core/services/notification.service';
 import { ConfigService } from './core/services/config.service';
 import { ThemeService } from './core/services/theme.service';
+import { NotificationsOffComponent } from './shared/notifications-off.component';
 import { PushService } from './core/services/push.service';
 import { installGalleryPermissionPrompt } from './core/services/native-permissions';
 
@@ -12,7 +13,7 @@ import { installGalleryPermissionPrompt } from './core/services/native-permissio
   selector: 'app-root',
   templateUrl: 'app.component.html',
   styleUrl: 'app.component.scss',
-  imports: [IonApp, RouterOutlet, ToastHostComponent],
+  imports: [IonApp, RouterOutlet, ToastHostComponent, NotificationsOffComponent],
 })
 export class AppComponent {
   // Instantiated at startup so unread-count polling follows the auth state.

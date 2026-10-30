@@ -1,4 +1,4 @@
-import { Injectable, effect, inject } from '@angular/core';
+import { Injectable, effect, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
 import { firstValueFrom } from 'rxjs';
@@ -24,11 +24,23 @@ export class PushService {
   private token: string | null = readToken();
   private nativeListening = false;
   private starting = false;
+  private askedThisRun = false;
+  /** The phone's notification permission is off for this app: the app shows a bar with a "Turn on" button. */
+  readonly blocked = signal(false);
 
   constructor() {
     effect(() => {
       if (this.auth.isAuthenticated()) void this.start();
     });
+    // Coming back to the app (for example after the person switched notifications on in the phone's settings): check again, so the
+    // device registers without a new sign-in.
+    if (Capacitor.isNativePlatform() && environment.nativePush) {
+      void import('@capacitor/app').then(({ App }) =>
+        App.addListener('appStateChange', ({ isActive }) => {
+          if (isActive && this.auth.isAuthenticated()) void this.start();
+        }),
+      );
+    }
   }
 
   /** Sign-out: take this device off the user's list (call BEFORE the session is cleared, the API needs the login). */
@@ -75,12 +87,14 @@ export class PushService {
       await PushNotifications.addListener('pushNotificationActionPerformed', (a) => this.open(a.notification?.data));
     }
     let perm = await PushNotifications.checkPermissions();
-    // Ask at most once a week: after a "Don't allow" (or a dismissed dialog) the phone keeps answering "prompt", and asking on every
-    // app start is what made the permission box come back each time the app was opened.
-    if ((perm.receive === 'prompt' || perm.receive === 'prompt-with-rationale') && askedLongAgo()) {
-      markAsked();
+    // Ask whenever it is still undecided (once per app run). The phone itself limits how often its box can appear (iPhone: once ever,
+    // Android 13+: twice), so this is safe, and it is what makes the box show up right after sign-in. A weekly lock used to stop it
+    // from showing at all when an earlier start had already "used" the question.
+    if ((perm.receive === 'prompt' || perm.receive === 'prompt-with-rationale') && !this.askedThisRun) {
+      this.askedThisRun = true;
       perm = await PushNotifications.requestPermissions();
     }
+    this.blocked.set(perm.receive === 'denied');
     if (perm.receive !== 'granted') return;
     if (Capacitor.getPlatform() === 'android') {
       await PushNotifications.createChannel({ id: 'default', name: 'Updates', importance: 4, visibility: 1 }).catch(() => undefined);
@@ -128,27 +142,6 @@ export class PushService {
     const id = data?.['notificationId'];
     if (data?.['dest'] === '1' && typeof id === 'string' && id && this.auth.isAuthenticated()) return this.notifications.openDestination(id);
     if (typeof link === 'string' && link.startsWith('/app')) void this.router.navigateByUrl(link);
-  }
-}
-
-const ASKED_KEY = 'push_token_asked_at';
-const ASK_AGAIN_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
-
-/** The notification permission box was not shown in the last week (or never). */
-function askedLongAgo(): boolean {
-  try {
-    const at = Number(localStorage.getItem(ASKED_KEY));
-    return !at || Date.now() - at > ASK_AGAIN_AFTER_MS;
-  } catch {
-    return true;
-  }
-}
-
-function markAsked(): void {
-  try {
-    localStorage.setItem(ASKED_KEY, String(Date.now()));
-  } catch {
-    /* storage unavailable */
   }
 }
 
