@@ -225,3 +225,67 @@ form {
     flex: none;
   }
 }
+
+/* /login: the simple centred sign-in (round logo, title, two fields, pill buttons) */
+.auth-simple {
+  background: #f8f9fa;
+  box-shadow: none;
+  padding: calc(40px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) 24px 0;
+
+  .auth-head {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 26px;
+
+    .head-logo {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 84px;
+      height: 84px;
+      margin-bottom: 22px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #62003e 0%, #9b0a5d 100%);
+      box-shadow: 0 8px 22px rgba(98, 0, 62, 0.28);
+
+      img { display: block; width: 52px; height: 52px; object-fit: contain; filter: brightness(0) invert(1); }
+
+    }
+
+    h1 {
+      font-family: var(--font-sans, inherit);
+      font-size: 24px;
+      line-height: 1.2;
+      font-weight: 700;
+      color: #111827;
+    }
+
+    p {
+      margin: 8px 0 0;
+      max-width: 300px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #6b7280;
+    }
+  }
+
+  .auth-card {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .field label { font-size: 12.5px; font-weight: 700; color: #111827; }
+  .form-section-title { font-family: var(--font-sans, inherit); font-size: 15px; }
+  .forgot-row { margin-top: -2px; }
+  .auth-switch { padding-top: 14px; padding-bottom: 4px; }
+  .auth-switch:last-child { padding-bottom: calc(28px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))); }
+}
+
+/* the Google / Apple buttons are child components: reach their .btn from here */
+:host ::ng-deep .auth-simple .btn { border-radius: 999px; }

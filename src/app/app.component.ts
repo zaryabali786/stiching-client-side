@@ -6,6 +6,7 @@ import { NotificationService } from './core/services/notification.service';
 import { ConfigService } from './core/services/config.service';
 import { ThemeService } from './core/services/theme.service';
 import { PushService } from './core/services/push.service';
+import { installGalleryPermissionPrompt } from './core/services/native-permissions';
 
 @Component({
   selector: 'app-root',
@@ -23,6 +24,8 @@ export class AppComponent {
   private readonly push = inject(PushService);
 
   constructor() {
+    // phone app: the gallery is asked the first time a photo or video is picked
+    installGalleryPermissionPrompt();
     this.config.load();
   }
 }

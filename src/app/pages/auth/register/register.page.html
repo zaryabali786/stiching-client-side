@@ -1,8 +1,9 @@
-<div class="auth-wrap">
-  <section class="auth-hero">
-    <span class="brand-logo"><img src="assets/logo.png" [alt]="(config.brandName() || 'Company') + ' logo'" width="64" height="64" /></span>
-    <span class="eyebrow">{{ config.brandName() }} · Create your account</span>
-    <h1>Stitched in Lahore, delivered to you</h1>
+<div class="auth-wrap auth-simple">
+  <section class="auth-head">
+    <span class="head-logo">
+      <img src="assets/logo.png" [alt]="(config.brandName() || 'Company') + ' logo'" width="52" height="52" />
+    </span>
+    <h1>Create an Account</h1>
     <p>Order unstitched suits from any Pakistani brand, ship them to us, and we tailor and deliver them worldwide.</p>
   </section>
 
@@ -16,8 +17,8 @@
       }
 
       <div class="field">
-        <label for="fullName">Full name</label>
-        <input id="fullName" class="input" name="fullName" autocomplete="name" placeholder="e.g. Sara Ahmed"
+        <label for="fullName">Full Name</label>
+        <input id="fullName" class="input" name="fullName" autocomplete="name" placeholder="Enter your name"
           [class.invalid]="err('fullName')" [(ngModel)]="fullName" />
         @if (err('fullName'); as m) { <span class="field-error">{{ m }}</span> }
       </div>
@@ -25,7 +26,7 @@
       <div class="field">
         <label for="email">Email</label>
         <input id="email" class="input" type="email" name="email" autocomplete="email" inputmode="email"
-          placeholder="you@example.com" [class.invalid]="err('email')" [(ngModel)]="email" />
+          placeholder="Enter your email" [class.invalid]="err('email')" [(ngModel)]="email" />
         @if (err('email'); as m) { <span class="field-error">{{ m }}</span> }
       </div>
 

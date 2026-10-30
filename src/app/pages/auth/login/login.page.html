@@ -1,9 +1,8 @@
-<div class="auth-wrap">
-  <section class="auth-hero">
-    <span class="brand-logo"><img src="assets/logo.png" [alt]="(config.brandName() || 'Company') + ' logo'" width="64" height="64" /></span>
-    <span class="eyebrow">{{ config.brandName() }} · Bespoke stitching from Pakistan</span>
-    <h1>Welcome back</h1>
-    <p>Sign in to track your parcels, approve your outfits and pay invoices — all in one place.</p>
+<div class="auth-wrap auth-simple">
+  <section class="auth-head">
+    <span class="head-logo"><img src="assets/logo.png" [alt]="(config.brandName() || 'Company') + ' logo'" width="52" height="52" /></span>
+    <h1>Welcome to {{ config.brandName() || 'Stitch&Ship' }}</h1>
+    <p>Sign in to track your parcels, approve your outfits and pay invoices.</p>
   </section>
 
   <section class="auth-card">
@@ -23,8 +22,7 @@
 
       <div class="field">
         <label for="email">Email</label>
-        <div class="input-affix leading">
-          <ion-icon class="affix-icon" name="mail-outline"></ion-icon>
+        <div class="input-affix">
           <input
             id="email"
             class="input"
@@ -32,7 +30,7 @@
             name="email"
             autocomplete="email"
             inputmode="email"
-            placeholder="you@example.com"
+            placeholder="Enter your email"
             [class.invalid]="submitted() && !email().trim()"
             [(ngModel)]="email"
           />
@@ -41,15 +39,14 @@
 
       <div class="field">
         <label for="password">Password</label>
-        <div class="input-affix leading">
-          <ion-icon class="affix-icon" name="lock-closed-outline"></ion-icon>
+        <div class="input-affix">
           <input
             id="password"
             class="input"
             [type]="showPassword() ? 'text' : 'password'"
             name="password"
             autocomplete="current-password"
-            placeholder="Your password"
+            placeholder="Enter your password"
             [class.invalid]="submitted() && !password()"
             [(ngModel)]="password"
           />

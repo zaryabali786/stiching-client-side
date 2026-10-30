@@ -26,6 +26,12 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/auth/register/register.page').then((m) => m.RegisterPage),
   },
   {
+    // public: the store listings and both apps link to it
+    path: 'privacy-policy',
+    title: 'Privacy Policy · Stitch&Ship',
+    loadComponent: () => import('./pages/privacy-policy/privacy-policy.page').then((m) => m.PrivacyPolicyPage),
+  },
+  {
     // where Stripe Checkout returns the customer (no sign-in needed: the page only reports, the server checks the payment)
     path: 'pay-return',
     title: 'Payment',

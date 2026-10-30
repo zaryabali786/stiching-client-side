@@ -55,9 +55,9 @@ import { ToastService } from '../core/services/toast.service';
       background: var(--line);
     }
     .btn-apple {
-      --btn-bg: #000000;
-      --btn-fg: #ffffff;
-      --btn-border: #000000;
+      --btn-bg: #ffffff;
+      --btn-fg: #000000;
+      --btn-border: #dadce0;
       margin-top: 10px;
       letter-spacing: 0.02em;
       text-transform: none;
