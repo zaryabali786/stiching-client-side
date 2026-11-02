@@ -69,11 +69,8 @@
   margin: 0 0 12px;
 }
 
-/* Drawing across the top of its section; it stays in view (sticky) while the fields scroll underneath */
+/* Drawing across the top of its section; it scrolls away together with the fields */
 .fig {
-  position: sticky;
-  top: 0;
-  z-index: 3;
   margin: 0 -2px 10px;
   padding: 4px 2px 8px;
   background: var(--c-bg);
@@ -99,13 +96,18 @@
   min-width: 0;
 }
 
-/* Keyboard open / short screen */
+/* Keyboard open / short screen: the drawing shrinks so the fields keep room */
 .short .fig {
-  position: static;
+  padding-bottom: 6px;
+  margin-bottom: 6px;
 }
 
-.short .fig-card app-size-diagram {
-  height: 300px;
+.short .fig-card {
+  padding: 4px 8px;
+
+  app-size-diagram {
+    height: 120px;
+  }
 }
 
 .mf {
@@ -185,5 +187,5 @@
 
 
 .short .mf {
-  scroll-margin-top: 12px;
+  scroll-margin-top: 150px;
 }
