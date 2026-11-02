@@ -1588,6 +1588,9 @@
 .return-order-card { padding: 16px; background: #fff6ea; border: 1px solid #f0d9b4;
   h4 { margin: 0 0 6px; display: flex; align-items: center; gap: 8px; font-size: var(--fs-body); } p { margin: 0; color: var(--c-ink); line-height: 1.5; } }
 
+.review-card { padding: 16px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start;
+  h4 { margin: 0; display: flex; align-items: center; gap: 8px; font-size: var(--fs-body); } p { margin: 0; color: var(--c-ink-2); line-height: 1.5; } }
+
 .draft-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; .btn { flex: 1 1 160px; justify-content: center; } }
 
 .pay-box { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; padding: 12px 14px; border-radius: 14px; background: var(--c-surface-3); }

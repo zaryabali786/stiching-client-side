@@ -1,6 +1,7 @@
 import { addIcons } from 'ionicons';
 import {
   keyOutline,
+  starOutline,
   globeOutline,
   closeCircleOutline,
   returnUpBackOutline,
@@ -92,6 +93,7 @@ import {
 export function registerIcons(): void {
   addIcons({
     keyOutline,
+    starOutline,
     globeOutline,
     closeCircleOutline,
     returnUpBackOutline,
