@@ -421,6 +421,14 @@
       }
     }
 
+    @if (o.status === 'delivered' && o.order_kind !== 'return') {
+      <section class="card review-card" aria-label="Review this order">
+        <h4><ion-icon name="star-outline" aria-hidden="true"></ion-icon> How was your order?</h4>
+        <p>Rate your stitching experience and tell us what you think.</p>
+        <a class="btn btn-primary" [routerLink]="['/app/orders', o.id, 'review']">Rate this order</a>
+      </section>
+    }
+
     @if (o.order_kind === 'return') {
       <section class="card return-order-card" aria-label="Return shipment">
         <h4><ion-icon name="return-up-back-outline" aria-hidden="true"></ion-icon> Return shipment</h4>

@@ -1,0 +1,68 @@
+<main class="rv">
+  <div class="rv-card">
+    <img class="rv-logo" src="assets/logo-auth.png" alt="Stitch&Ship" width="64" height="64" />
+
+    @if (loading()) {
+      <div class="rv-center" role="status"><ion-spinner name="crescent"></ion-spinner><p>Loading your order…</p></div>
+    } @else if (loadError()) {
+      <div class="rv-center">
+        <h1>We could not open this review</h1>
+        <p>{{ loadError() }}</p>
+        <button type="button" class="btn btn-ghost" (click)="load()">Try again</button>
+        @if (signedIn()) { <a class="btn btn-primary" routerLink="/app/orders">My orders</a> }
+      </div>
+    } @else if (state(); as s) {
+      @if (s.review; as r) {
+        <!-- already reviewed (just now, or earlier): read-only -->
+        <div class="rv-center">
+          @if (justSaved()) {
+            <h1>Thank you for your review!</h1>
+            <p>Your feedback helps us improve our stitching and our service.</p>
+          } @else {
+            <h1>You have already reviewed this order</h1>
+            <p>Thank you for sharing your experience with us.</p>
+          }
+        </div>
+        <div class="rv-order">Order <strong>{{ s.order.reference }}</strong>@if (s.order.delivered_at) { · delivered {{ s.order.delivered_at | date: 'd MMM y' }} }</div>
+        <div class="rv-stars readonly" role="img" [attr.aria-label]="r.rating + ' out of 5 stars'">
+          @for (n of stars; track n) { <span class="star" [class.on]="n <= r.rating" aria-hidden="true">★</span> }
+        </div>
+        @if (r.comment) { <blockquote class="rv-quote">{{ r.comment }}</blockquote> }
+        <p class="rv-meta">Reviewed on {{ r.created_at | date: 'd MMM y' }}</p>
+        @if (signedIn()) { <a class="btn btn-primary" routerLink="/app/orders">Back to my orders</a> }
+      } @else if (!s.reviewable) {
+        <div class="rv-center">
+          <h1>This order cannot be reviewed yet</h1>
+          <p>You can review order {{ s.order.reference }} after it has been delivered.</p>
+          @if (signedIn()) { <a class="btn btn-primary" routerLink="/app/orders">My orders</a> }
+        </div>
+      } @else {
+        <form (submit)="$event.preventDefault(); submit()" novalidate>
+          <h1>How was your experience with Stitch&amp;Ship?</h1>
+          <p class="rv-sub">@if (s.customer_name) { Hi {{ s.customer_name }}, }your feedback on this order helps us improve.</p>
+          <div class="rv-order">Order <strong>{{ s.order.reference }}</strong>@if (s.order.delivered_at) { · delivered {{ s.order.delivered_at | date: 'd MMM y' }} }</div>
+
+          <div class="rv-stars" role="radiogroup" aria-label="Your rating" (keydown)="onKey($event)" (mouseleave)="hover.set(0)">
+            @for (n of stars; track n) {
+              <button type="button" class="star" role="radio" [class.on]="n <= shown()" [attr.aria-checked]="rating() === n" [attr.aria-label]="n + (n === 1 ? ' star' : ' stars')"
+                [attr.tabindex]="rating() === n || (!rating() && n === 1) ? 0 : -1"
+                (click)="pick(n)" (mouseenter)="hover.set(n)" (focus)="hover.set(0)">★</button>
+            }
+          </div>
+          <p class="rv-label" aria-live="polite">{{ label() || 'Tap a star to rate' }}</p>
+
+          <label class="rv-field" for="rv-comment">Write your experience <span>(optional)</span></label>
+          <textarea id="rv-comment" rows="5" [attr.maxlength]="maxComment" placeholder="Share your feedback here…" [value]="comment()" (input)="onComment($event)"></textarea>
+          <div class="rv-count">{{ comment().length }} / {{ maxComment }}</div>
+
+          @if (submitError()) { <p class="rv-error" role="alert">{{ submitError() }}</p> }
+
+          <button type="submit" class="btn btn-primary rv-submit" [disabled]="!canSubmit()">
+            @if (submitting()) { <ion-spinner name="crescent"></ion-spinner> Sending… } @else { Submit Review }
+          </button>
+          @if (!rating()) { <p class="rv-hint">Choose a star rating to continue.</p> }
+        </form>
+      }
+    }
+  </div>
+</main>

@@ -67,7 +67,7 @@ export class SizeChartFormComponent {
   values = signal<Draft>({});
   startFromCopy = signal(true);
   activeKey = signal<string | null>(null);
-  /** On-screen keyboard up / short screen: the diagram stops being sticky so it never covers the field being typed in. */
+  /** On-screen keyboard up / short screen: the diagram stays pinned at the top but shrinks so the field being typed in stays visible. */
   short = signal(false);
   saving = signal(false);
   submitted = signal(false);

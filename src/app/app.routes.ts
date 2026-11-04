@@ -26,6 +26,18 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/auth/register/register.page').then((m) => m.RegisterPage),
   },
   {
+    // public: the store listings and both apps link to it
+    path: 'privacy-policy',
+    title: 'Privacy Policy · Stitch&Ship',
+    loadComponent: () => import('./pages/privacy-policy/privacy-policy.page').then((m) => m.PrivacyPolicyPage),
+  },
+  {
+    // the link in the review email: the signed token names the order, so no sign-in is needed
+    path: 'review/:token',
+    title: 'Review your order',
+    loadComponent: () => import('./pages/review/review.page').then((m) => m.ReviewPage),
+  },
+  {
     // where Stripe Checkout returns the customer (no sign-in needed: the page only reports, the server checks the payment)
     path: 'pay-return',
     title: 'Payment',
@@ -56,6 +68,11 @@ export const routes: Routes = [
         path: 'orders/:id/edit',
         title: 'Edit order',
         loadComponent: () => import('./pages/orders/order-form/order-form.page').then((m) => m.OrderFormPage),
+      },
+      {
+        path: 'orders/:id/review',
+        title: 'Review your order',
+        loadComponent: () => import('./pages/review/review.page').then((m) => m.ReviewPage),
       },
       {
         path: 'orders/:id',

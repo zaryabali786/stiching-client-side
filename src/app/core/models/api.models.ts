@@ -142,7 +142,7 @@ export interface PaymentConfirmation {
 
 // ───────────── Notifications ─────────────
 
-export type NotificationType = 'order' | 'update' | 'alert' | 'approval' | 'invoice' | 'logistics' | 'broadcast';
+export type NotificationType = 'order' | 'update' | 'alert' | 'approval' | 'invoice' | 'logistics' | 'broadcast' | 'review';
 
 export interface AppNotification {
   id: string;

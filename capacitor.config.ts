@@ -5,6 +5,9 @@ const config: CapacitorConfig = {
   appName: 'Stitch&Ship',
   webDir: 'www',
   plugins: {
+    SystemBars: {
+      insetsHandling: 'disable',
+    },
     LiveUpdate: {
       appId: '68c05963-3357-4665-ae0a-5890c7d4a842',
       autoDeleteBundles: true,
