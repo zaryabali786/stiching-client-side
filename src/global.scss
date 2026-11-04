@@ -128,7 +128,12 @@ body {
   font-variant-numeric: lining-nums;
 }
 
-/* Desktop backdrop around the centred 480px column */
+/* Tablets (iPad, Surface): the app fills the whole screen, no empty space on the sides */
+@media (min-width: 600px) {
+  :root { --shell-max: 100%; }
+}
+
+/* Desktop backdrop around the centred app column */
 html,
 body,
 ion-app {
