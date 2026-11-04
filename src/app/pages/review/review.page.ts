@@ -3,6 +3,7 @@ import { DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IonSpinner } from '@ionic/angular';
 import { AuthService } from '../../core/services/auth.service';
+import { StoreReviewService } from '../../core/services/store-review.service';
 import { ReviewService, ReviewState } from '../../core/services/review.service';
 import { ApiError, errorMessage } from '../../core/services/api.service';
 
@@ -25,6 +26,7 @@ export class ReviewPage implements OnInit {
   private route = inject(ActivatedRoute);
   private reviews = inject(ReviewService);
   private auth = inject(AuthService);
+  private storeReview = inject(StoreReviewService);
 
   protected readonly maxComment = MAX_COMMENT;
   protected readonly stars = [1, 2, 3, 4, 5];
@@ -99,6 +101,8 @@ export class ReviewPage implements OnInit {
         this.submitting.set(false);
         this.justSaved.set(true);
         this.state.update((s) => (s ? { ...s, review: saved.review } : s));
+        // a happy customer (4-5 stars) is asked for a store rating, a moment after the thank-you shows (phone app only, the store decides)
+        setTimeout(() => void this.storeReview.askAfterGoodRating(saved.review.rating), 1500);
       },
       error: (err: unknown) => {
         this.submitting.set(false);
