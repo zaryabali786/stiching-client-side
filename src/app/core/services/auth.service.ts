@@ -134,12 +134,17 @@ export class AuthService {
    * Deletes the signed-in customer's account (the login and personal details; finished orders stay without personal details).
    * The proof is the password, or a fresh Apple / Google sign-in token. Afterwards the device is signed out.
    */
-  async deleteAccount(proof: { password?: string; idToken?: string; provider?: 'apple' | 'google'; name?: string }): Promise<void> {
+  async deleteAccount(proof: { password?: string; idToken?: string; provider?: 'apple' | 'google'; name?: string; cancelOrders?: boolean }): Promise<void> {
     await firstValueFrom(this.api.post('/auth/delete-account', { confirm: 'DELETE', ...proof }));
     // the login no longer exists: only this device's leftovers are cleared (the server already removed the push token)
     await this.injector.get(PushService).unregister();
     this.clearSession();
     await this.router.navigateByUrl('/login');
+  }
+
+  /** The orders that would be cancelled if the account were deleted now (for the confirmation popup). */
+  async deletePreview(): Promise<{ openOrders: { reference: string; status: string; willBeCancelled: boolean }[] }> {
+    return firstValueFrom(this.api.get<{ openOrders: { reference: string; status: string; willBeCancelled: boolean }[] }>('/auth/delete-account/preview'));
   }
 
   async updateProfile(patch: ProfilePatch): Promise<string> {

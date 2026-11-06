@@ -87,6 +87,8 @@ import {
   attachOutline,
   documentOutline,
   arrowUndoOutline,
+  logoApple,
+  logoGoogle,
 } from 'ionicons/icons';
 
 /** Register every ionicon the app uses once, at bootstrap. */
@@ -179,5 +181,7 @@ export function registerIcons(): void {
     chatbubblesOutline,
     chatbubbles,
     statsChartOutline,
+    logoApple,
+    logoGoogle,
   });
 }

@@ -1078,7 +1078,7 @@
 
     <!-- ───────── Sticky primary action for the current status (above the tab bar) ───────── -->
     @if (isAwaitingPayment() && o.invoice; as inv) {
-      <div class="action-bar" role="region" aria-label="Payment">
+      <div class="action-bar dock" role="region" aria-label="Payment">
         <div class="ab-text">
           <span class="ab-k">Invoice {{ inv.number }}</span>
           <span class="ab-sub tabular">
@@ -1094,7 +1094,7 @@
         </button>
       </div>
     } @else if (o.status === 'received' && o.details_pending && o.order_source === 'website') {
-      <div class="action-bar" role="region" aria-label="Complete your order">
+      <div class="action-bar dock" role="region" aria-label="Complete your order">
         @if (approvableCount() > 0) {
           <div class="ab-text"><span class="ab-k">Your parcel arrived</span><span class="ab-sub">Approve or reject each article</span></div>
           <button type="button" class="btn btn-primary" (click)="approveParcel()" [disabled]="!!pending()"><ion-icon name="checkmark-done-outline" aria-hidden="true"></ion-icon> Approve all</button>
@@ -1108,7 +1108,7 @@
         }
       </div>
     } @else if (o.status === 'draft' && !confirmDiscard()) {
-      <div class="action-bar" role="region" aria-label="Draft actions">
+      <div class="action-bar dock" role="region" aria-label="Draft actions">
         @if (reviewWaiting() > 0) {
           <div class="ab-text">
             <span class="ab-k">Your parcel arrived</span>
@@ -1137,7 +1137,7 @@
         }
       </div>
     } @else if (o.status === 'submitted' && !confirmCancel()) {
-      <div class="action-bar" role="region" aria-label="Order actions">
+      <div class="action-bar dock" role="region" aria-label="Order actions">
         <div class="ab-text">
           <span class="ab-k">Parcel not arrived yet</span>
           <span class="ab-sub">You can still edit it</span>

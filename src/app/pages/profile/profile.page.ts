@@ -75,22 +75,64 @@ export class ProfilePage {
     this.delOpen.set(true);
   }
 
+  /** Orders still in progress: the person must agree (popup) that they will be cancelled before anything else happens. */
+  warnOrders = signal<{ reference: string; status: string; willBeCancelled: boolean }[] | null>(null);
+  private afterWarn: (() => Promise<void>) | null = null;
+  private cancelOk = false;
+
+  private async guard(next: () => Promise<void>): Promise<void> {
+    if (this.delBusy()) return;
+    this.delError.set(null);
+    this.cancelOk = false;
+    let open: { reference: string; status: string; willBeCancelled: boolean }[] = [];
+    this.delBusy.set(true);
+    try {
+      open = (await this.auth.deletePreview()).openOrders;
+    } catch (err) {
+      this.delError.set(errorMessage(err));
+      return;
+    } finally {
+      this.delBusy.set(false);
+    }
+    if (!open.length) return next();
+    this.afterWarn = next;
+    this.warnOrders.set(open);
+  }
+
+  closeWarn(): void {
+    this.warnOrders.set(null);
+    this.afterWarn = null;
+  }
+
+  async acceptWarn(): Promise<void> {
+    const next = this.afterWarn;
+    this.cancelOk = true;
+    this.closeWarn();
+    if (next) await next();
+  }
+
   async deleteWithPassword(): Promise<void> {
     if (!this.delPassword()) {
       this.delError.set('Enter your password, or confirm with Apple or Google below.');
       return;
     }
-    await this.runDelete({ password: this.delPassword() });
+    if (!this.delConfirmed()) {
+      this.delError.set('Type DELETE to confirm.');
+      return;
+    }
+    await this.guard(() => this.runDelete({ password: this.delPassword() }));
   }
 
   async deleteWithApple(): Promise<void> {
     if (!this.delConfirmed() || this.delBusy()) return;
-    try {
-      const { idToken, name } = await nativeAppleIdToken();
-      await this.runDelete({ idToken, provider: 'apple', name });
-    } catch (err) {
-      if (!(err instanceof AppleSignInCancelled)) this.delError.set(errorMessage(err));
-    }
+    await this.guard(async () => {
+      try {
+        const { idToken, name } = await nativeAppleIdToken();
+        await this.runDelete({ idToken, provider: 'apple', name });
+      } catch (err) {
+        if (!(err instanceof AppleSignInCancelled)) this.delError.set(errorMessage(err));
+      }
+    });
   }
 
   async deleteWithGoogle(): Promise<void> {
@@ -100,12 +142,14 @@ export class ProfilePage {
       this.delError.set('Google confirmation is not available right now.');
       return;
     }
-    try {
-      const idToken = await nativeGoogleIdToken(clientId, this.config.config()?.google?.iosClientId);
-      await this.runDelete({ idToken, provider: 'google' });
-    } catch (err) {
-      if (!(err instanceof GoogleSignInCancelled)) this.delError.set(errorMessage(err));
-    }
+    await this.guard(async () => {
+      try {
+        const idToken = await nativeGoogleIdToken(clientId, this.config.config()?.google?.iosClientId);
+        await this.runDelete({ idToken, provider: 'google' });
+      } catch (err) {
+        if (!(err instanceof GoogleSignInCancelled)) this.delError.set(errorMessage(err));
+      }
+    });
   }
 
   private async runDelete(proof: { password?: string; idToken?: string; provider?: 'apple' | 'google'; name?: string }): Promise<void> {
@@ -116,7 +160,7 @@ export class ProfilePage {
     this.delBusy.set(true);
     this.delError.set(null);
     try {
-      await this.auth.deleteAccount(proof);
+      await this.auth.deleteAccount({ ...proof, cancelOrders: this.cancelOk });
       this.toast.success('Your account has been deleted.');
     } catch (err) {
       this.delError.set(errorMessage(err));

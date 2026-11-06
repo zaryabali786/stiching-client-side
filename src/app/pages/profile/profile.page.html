@@ -194,7 +194,7 @@
         <form class="edit-form" (ngSubmit)="deleteWithPassword()" novalidate>
           <p class="muted">
             This permanently deletes your login and personal details: your profile, size charts, notifications and inbox. Orders that are already delivered or cancelled are kept for our records, without your personal details. This cannot be undone.
-            You can only delete your account when none of your orders is still in progress.
+            Orders that are still in progress will be cancelled: you will be asked to confirm this first.
           </p>
           @if (delError()) {
             <div class="form-error" role="alert"><ion-icon name="alert-circle-outline"></ion-icon><span>{{ delError() }}</span></div>
@@ -217,12 +217,24 @@
             </button>
           </div>
           @if (nativeApp) {
-            <p class="muted">No password? You signed up with Apple or Google: confirm with that instead.</p>
-            <div class="btn-row">
-              @if (iosApp) {
-                <button type="button" class="btn btn-outline btn-sm" (click)="deleteWithApple()" [disabled]="delBusy() || !delConfirmed()">Confirm with Apple</button>
+            <div class="del-alt">
+              <div class="del-alt-head"><span>or</span></div>
+              <p class="muted">No password? You signed up with Apple or Google: confirm with that instead.</p>
+              <div class="del-alt-btns">
+                @if (iosApp) {
+                  <button type="button" class="btn btn-outline del-alt-btn" (click)="deleteWithApple()" [disabled]="delBusy() || !delConfirmed()">
+                    <ion-icon name="logo-apple" aria-hidden="true"></ion-icon>
+                    Confirm with Apple
+                  </button>
+                }
+                <button type="button" class="btn btn-outline del-alt-btn" (click)="deleteWithGoogle()" [disabled]="delBusy() || !delConfirmed()">
+                  <ion-icon name="logo-google" aria-hidden="true"></ion-icon>
+                  Confirm with Google
+                </button>
+              </div>
+              @if (!delConfirmed()) {
+                <p class="muted del-alt-hint">Type DELETE above to enable these buttons.</p>
               }
-              <button type="button" class="btn btn-outline btn-sm" (click)="deleteWithGoogle()" [disabled]="delBusy() || !delConfirmed()">Confirm with Google</button>
             </div>
           }
         </form>
@@ -230,6 +242,25 @@
         <p class="muted">Permanently delete your account and personal details.</p>
       }
     </section>
+
+    @if (warnOrders(); as orders) {
+      <div class="del-modal" role="dialog" aria-modal="true" aria-labelledby="del-modal-title" (click)="closeWarn()">
+        <div class="del-modal-card" (click)="$event.stopPropagation()">
+          <h3 id="del-modal-title">Your open orders will end</h3>
+          <p>If you delete your account now, these orders will be cancelled and will not be made or delivered:</p>
+          <ul>
+            @for (o of orders; track o.reference) {
+              <li><strong>{{ o.reference }}</strong> <span>{{ o.willBeCancelled ? 'will be cancelled' : 'is already shipped and will still be delivered' }}</span></li>
+            }
+          </ul>
+          <p class="del-modal-note">Any payment you made is not returned automatically: our team will review it and contact you. This cannot be undone.</p>
+          <div class="btn-row">
+            <button type="button" class="btn btn-outline btn-sm" (click)="closeWarn()">Keep my account</button>
+            <button type="button" class="btn btn-danger btn-sm" (click)="acceptWarn()">Cancel orders and delete</button>
+          </div>
+        </div>
+      </div>
+    }
 
     <button type="button" class="btn btn-danger-outline btn-block" (click)="logout()" [disabled]="loggingOut()">
       @if (loggingOut()) {

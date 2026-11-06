@@ -193,8 +193,9 @@
    use the full height. --tabbar-h is read by .shell-main padding and the global .action-bar. */
 .shell-main.focus {
   --tabbar-h: 0px;
-  /* the step bar is sticky and in the page flow, so no extra room is needed below it */
-  padding-bottom: var(--safe-bottom);
+  /* the step bar is sticky and in the page flow, so no extra room is needed below it. The bar's own `bottom` already adds
+     the iPhone home-indicator inset; adding it here too counted it twice and floated the bar too high on iPhone. */
+  padding-bottom: 0;
 }
 
 /* ───────── Tab bar ───────── */
