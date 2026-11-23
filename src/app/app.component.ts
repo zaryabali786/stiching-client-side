@@ -7,6 +7,7 @@ import { ConfigService } from './core/services/config.service';
 import { ThemeService } from './core/services/theme.service';
 import { NotificationsOffComponent } from './shared/notifications-off.component';
 import { PushService } from './core/services/push.service';
+import { MetaTrackingService } from './core/services/meta-tracking.service';
 import { installGalleryPermissionPrompt } from './core/services/native-permissions';
 
 @Component({
@@ -24,7 +25,11 @@ export class AppComponent {
   // Registers this device for push notifications while a customer is signed in.
   private readonly push = inject(PushService);
 
+  private readonly meta = inject(MetaTrackingService);
+
   constructor() {
+    // Meta Ads: Pixel on the website, Meta SDK in the phone apps
+    this.meta.start();
     // phone app: the gallery is asked the first time a photo or video is picked
     installGalleryPermissionPrompt();
     this.config.load();

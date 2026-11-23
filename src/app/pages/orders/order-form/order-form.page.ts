@@ -28,6 +28,7 @@ import { VoicePlayerComponent } from '../../../shared/voice-player.component';
 import { VoiceRecording } from '../../../shared/voice-recorder.component';
 import { VoiceNoteFieldComponent } from '../../../shared/voice-note-field.component';
 import { SizeChartFormComponent } from '../../sizes/components/size-chart-form/size-chart-form.component';
+import { MetaTrackingService } from '../../../core/services/meta-tracking.service';
 
 
 const MAX_PHOTOS = 4;
@@ -117,6 +118,7 @@ export class OrderFormPage {
   private chat = inject(ChatService);
   private mailbox = inject(MailboxService);
   private toast = inject(ToastService);
+  private meta = inject(MetaTrackingService);
   private router = inject(Router);
   private destroyRef = inject(DestroyRef);
 
@@ -1126,6 +1128,7 @@ export class OrderFormPage {
         const voiceOk = await this.sendVoiceNote(data.id);
         this.submitting.set(false);
         this.clearDraft();
+        if (!id || wasDraft) this.meta.track('InitiateCheckout', { eventId: `order-${data.id}` });
         if (voiceOk) this.toast.success(message || (id && !wasDraft ? 'Order updated.' : 'Order created.'));
         else this.toast.error('Order created, but the voice note could not be sent. Send it from the chat.', undefined, 7000);
         void this.router.navigate(['/app/orders', data.id], { queryParams: id && !wasDraft ? {} : { created: 1 } });

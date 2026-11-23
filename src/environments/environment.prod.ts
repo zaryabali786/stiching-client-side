@@ -4,6 +4,9 @@ export const environment = {
   privacyPolicyUrl: 'https://www.termsfeed.com/live/9b405225-cdbd-4a58-b133-b16083bd2f02',
   apiUrl: 'https://api.stitchnship.com/api',
   // switch on ONLY after android/app/google-services.json (Firebase) is in the project: without it the app crashes on push
+  // Meta (Facebook) ads tracking. Website = Meta Pixel (this id, the Dataset id from Events Manager); phone apps = the Meta SDK
+  // (App ID + Client Token live in android strings.xml and ios Info.plist). Empty id = tracking is off.
+  metaPixelId: '1405155138070290',
   nativePush: true,
   // this app's iOS OAuth client for Google sign-in (Google Cloud Console -> Credentials -> iOS client of its bundle id)
   googleIosClientId: '1054380947096-b8gqf0b5q8mvgfplem5jmm9hu3cet0mb.apps.googleusercontent.com',

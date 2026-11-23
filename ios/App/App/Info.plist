@@ -81,6 +81,18 @@
 	<true/>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>FacebookAppID</key>
+	<string>YOUR_META_APP_ID</string>
+	<key>FacebookClientToken</key>
+	<string>YOUR_META_CLIENT_TOKEN</string>
+	<key>FacebookDisplayName</key>
+	<string>Stitch&amp;Ship</string>
+	<key>FBSDKAutoLogMetaDataEnabled</key>
+	<false/>
+	<key>FBSDKAutoLogProductImprovementEnabled</key>
+	<false/>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>Your data is used to measure which of our ads brought you to the app. It is never sold.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>The camera is used to take reference photos of your articles and of the problem you want to report.</string>
 	<key>NSMicrophoneUsageDescription</key>

@@ -4,6 +4,9 @@ export const environment = {
   privacyPolicyUrl: '',
   apiUrl: 'http://localhost:5000/api',
   // switch on ONLY after android/app/google-services.json (Firebase) is in the project: without it the app crashes on push
+  // Meta (Facebook) ads tracking. Website = Meta Pixel (this id, the Dataset id from Events Manager); phone apps = the Meta SDK
+  // (App ID + Client Token live in android strings.xml and ios Info.plist). Empty id = tracking is off.
+  metaPixelId: '',
   nativePush: true,
   // this app's iOS OAuth client for Google sign-in (Google Cloud Console -> Credentials -> iOS client of its bundle id)
   googleIosClientId: '1054380947096-b8gqf0b5q8mvgfplem5jmm9hu3cet0mb.apps.googleusercontent.com',

@@ -4,7 +4,7 @@ import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { NewOrderService } from '../../../core/services/new-order.service';
 import { IonIcon, IonSpinner } from '@ionic/angular';
-import { Subject, catchError, debounceTime, map, of, switchMap } from 'rxjs';
+import { Subject, catchError, debounceTime, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 import { OrderService } from '../../../core/services/order.service';
 import { OrderEventsService } from '../../../core/services/order-events.service';
 import { OrderListRow, Paged } from '../../../core/models/api.models';
@@ -109,7 +109,11 @@ export class OrdersListPage {
           return;
         }
         this.page.set(req.page);
-        this.items.update((list) => (firstPage ? res.items : [...list, ...res.items.filter((o) => !list.some((x) => x.id === o.id))]));
+        this.items.update((list) => {
+          if (firstPage) return res.items;
+          const seen = new Set(list.map((x) => x.id)); // O(n) de-duplication of rows already loaded
+          return [...list, ...res.items.filter((o) => !seen.has(o.id))];
+        });
         this.hasMore.set(res.meta.hasMore);
         this.total.set(res.meta.total);
       });
@@ -118,6 +122,7 @@ export class OrdersListPage {
       .pipe(
         map((s) => s.trim()),
         debounceTime(350),
+        distinctUntilChanged(),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((s) => {

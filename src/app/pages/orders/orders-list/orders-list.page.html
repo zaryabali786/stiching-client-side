@@ -94,7 +94,8 @@
               @if (o.picture_url) {
                 <img [src]="o.picture_url" alt="" loading="lazy" referrerpolicy="no-referrer" />
               } @else {
-                <span [class]="'brand-swatch ' + swatch(o.brand).cls">{{ swatch(o.brand).initial }}</span>
+                @let sw = swatch(o.brand);
+                <span [class]="'brand-swatch ' + sw.cls">{{ sw.initial }}</span>
               }
             </span>
             <div class="oc-text">

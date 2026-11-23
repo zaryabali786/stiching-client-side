@@ -4,4 +4,7 @@
     <string name="title_activity_main">Stitch&amp;Ship</string>
     <string name="package_name">com.stitchnship.app</string>
     <string name="custom_url_scheme">com.stitchnship.app</string>
+    <!-- Meta (Facebook) App Events: developers.facebook.com -> your app -> Settings -> Basic (App ID) and Advanced (Client token) -->
+    <string name="facebook_app_id">YOUR_META_APP_ID</string>
+    <string name="facebook_client_token">YOUR_META_CLIENT_TOKEN</string>
 </resources>

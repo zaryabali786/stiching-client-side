@@ -8,6 +8,7 @@ import { ToastService } from '../../../core/services/toast.service';
 import { ShopAddress, ShopCart, ShopCartItem, ShopCheckoutResult } from '../../../core/models/shop.models';
 import { EmptyStateComponent, ErrorStateComponent, SkeletonComponent } from '../../../shared/ui-states';
 import { PaymentSheetComponent } from '../../../shared/payment-sheet.component';
+import { MetaTrackingService } from '../../../core/services/meta-tracking.service';
 
 const COUNTRIES = ['PK', 'US', 'GB', 'AE', 'SA', 'CA', 'AU', 'DE', 'FR', 'IT', 'ES', 'NL', 'SE', 'NO', 'DK', 'IE', 'QA', 'KW', 'BH', 'OM', 'TR', 'MY', 'SG', 'IN', 'BD', 'NZ', 'ZA', 'EG'];
 
@@ -173,6 +174,7 @@ export class ShopCartPage {
   private auth = inject(AuthService);
   private router = inject(Router);
   private toast = inject(ToastService);
+  private meta = inject(MetaTrackingService);
 
   readonly countries = COUNTRIES.map((code) => ({ code, name: this.countryName(code) })).sort((a, b) => a.name.localeCompare(b.name));
 
@@ -281,6 +283,7 @@ export class ShopCartPage {
       next: ({ data }) => {
         this.paying.set(false);
         this.placed.set(data);
+        this.meta.track('InitiateCheckout', { value: data.order.total, currency: data.order.currency, eventId: `checkout-${data.order.id}` });
         this.payOpen.set(true);
       },
       error: (err: Error) => {
@@ -296,6 +299,7 @@ export class ShopCartPage {
   onPaid(p: ShopCheckoutResult): void {
     this.payOpen.set(false);
     this.shop.cart.set(null);
+    this.meta.track('Purchase', { value: p.order.total, currency: p.order.currency, eventId: `purchase-${p.order.id}` });
     this.toast.success('Order placed. Thank you!');
     this.router.navigate(['/app/shop/orders', p.order.id]);
   }

@@ -12,6 +12,7 @@ import { ConfigService } from '../../../core/services/config.service';
 import { errorMessage } from '../../../core/services/api.service';
 import { GeoPickerComponent } from '../../../shared/geo-picker.component';
 import { passwordStrength } from './register.data';
+import { MetaTrackingService } from '../../../core/services/meta-tracking.service';
 
 @Component({
   selector: 'app-register',
@@ -24,6 +25,7 @@ export class RegisterPage {
   private auth = inject(AuthService);
   private router = inject(Router);
   private toast = inject(ToastService);
+  private meta = inject(MetaTrackingService);
   protected config = inject(ConfigService);
 
   fullName = signal('');
@@ -102,11 +104,13 @@ export class RegisterPage {
         password: this.password(),
       });
       if (!user) {
+        this.meta.track('CompleteRegistration');
         // Email confirmation required before the first login.
         this.toast.info(message || 'Account created. Please verify your email, then sign in.', 6000);
         await this.router.navigateByUrl('/login');
         return;
       }
+      this.meta.track('CompleteRegistration');
       this.toast.success(`Welcome! Your customer code is ${user.customer_code}.`, 5000);
       await this.router.navigateByUrl('/app/overview');
     } catch (err) {

@@ -5,6 +5,7 @@ import { ShopService, money } from '../../../core/services/shop.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { ShopProduct, ShopVariant } from '../../../core/models/shop.models';
 import { ErrorStateComponent, SkeletonComponent } from '../../../shared/ui-states';
+import { MetaTrackingService } from '../../../core/services/meta-tracking.service';
 
 @Component({
   selector: 'app-shop-product',
@@ -134,6 +135,7 @@ import { ErrorStateComponent, SkeletonComponent } from '../../../shared/ui-state
 export class ShopProductPage {
   private shop = inject(ShopService);
   private toast = inject(ToastService);
+  private meta = inject(MetaTrackingService);
 
   /** Route parameter (withComponentInputBinding), falls back to the id read from the URL. */
   readonly id = input<string>('');
@@ -226,6 +228,7 @@ export class ShopProductPage {
     this.shop.product(id).subscribe({
       next: (p) => {
         this.product.set(p);
+        this.meta.track('ViewContent', { contentId: p.id, contentName: p.title, contentType: 'product', currency: p.currency, value: (p.variants.find((v) => v.in_stock) ?? p.variants[0])?.price });
         const first = p.variants.find((v) => v.in_stock) ?? p.variants[0];
         this.selected.set(first ? { ...first.options } : {});
         this.loading.set(false);
@@ -248,6 +251,7 @@ export class ShopProductPage {
       next: () => {
         this.adding.set(false);
         this.added.set(true);
+        this.meta.track('AddToCart', { contentId: this.product()?.id, contentName: this.product()?.title, contentType: 'product', currency: this.product()?.currency, value: v.price * this.qty(), quantity: this.qty() });
         this.toast.success('Added to your cart');
       },
       error: (err: Error) => {
