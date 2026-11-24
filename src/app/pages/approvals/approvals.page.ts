@@ -12,7 +12,7 @@ import { EmptyStateComponent, ErrorStateComponent, SkeletonComponent } from '../
 
 type Filter = 'all' | 'pending' | 'approved' | 'rejected';
 
-const LABEL: Record<ApprovalState, string> = {
+const STATE_LABEL: Record<ApprovalState, string> = {
   pending: 'Waiting for you',
   approved: 'Approved',
   rejected: 'Rejected',
@@ -34,22 +34,22 @@ export class ApprovalsPage {
   protected svc = inject(ApprovalsService);
   private toast = inject(ToastService);
 
-  protected readonly label = LABEL;
+  protected readonly label = STATE_LABEL;
   protected filter = signal<Filter>('all');
   /** `orderId:unitId` of the article being sent to the server / being rejected */
   protected busyKey = signal<string | null>(null);
   protected rejectingKey = signal<string | null>(null);
   protected note = signal('');
   /** Articles whose details the customer opened or closed by hand; the others follow the default (open while the article waits for a decision). */
-  private manual = signal<ReadonlyMap<string, boolean>>(new Map());
+  private manuallyToggled = signal<ReadonlyMap<string, boolean>>(new Map());
 
   protected isOpen(o: ApprovalOrder, a: ApprovalArticle): boolean {
-    return this.manual().get(this.k(o, a)) ?? a.status === 'pending';
+    return this.manuallyToggled().get(this.articleKey(o, a)) ?? a.status === 'pending';
   }
 
   protected toggle(o: ApprovalOrder, a: ApprovalArticle): void {
     const next = !this.isOpen(o, a);
-    this.manual.update((m) => new Map(m).set(this.k(o, a), next));
+    this.manuallyToggled.update((m) => new Map(m).set(this.articleKey(o, a), next));
   }
 
   protected totals = computed(() => {
@@ -73,12 +73,12 @@ export class ApprovalsPage {
   });
 
   protected summary(o: ApprovalOrder): string {
-    const done = o.articles.filter((a) => a.status === 'approved').length;
-    const wait = o.articles.filter((a) => a.status === 'pending').length;
-    const rej = o.articles.filter((a) => a.status === 'rejected').length;
-    const parts = [`${done} of ${o.articles.length} approved`];
-    if (wait) parts.push(`${wait} waiting`);
-    if (rej) parts.push(`${rej} rejected`);
+    const approved = o.articles.filter((a) => a.status === 'approved').length;
+    const waiting = o.articles.filter((a) => a.status === 'pending').length;
+    const rejected = o.articles.filter((a) => a.status === 'rejected').length;
+    const parts = [`${approved} of ${o.articles.length} approved`];
+    if (waiting) parts.push(`${waiting} waiting`);
+    if (rejected) parts.push(`${rejected} rejected`);
     return parts.join(' · ');
   }
 
@@ -90,13 +90,13 @@ export class ApprovalsPage {
       .subscribe(() => this.svc.refresh());
   }
 
-  protected k(o: ApprovalOrder, a: ApprovalArticle): string {
+  protected articleKey(o: ApprovalOrder, a: ApprovalArticle): string {
     return this.svc.key(o, a);
   }
 
   protected approve(o: ApprovalOrder, a: ApprovalArticle): void {
     if (this.busyKey()) return;
-    this.busyKey.set(this.k(o, a));
+    this.busyKey.set(this.articleKey(o, a));
     this.svc.approve(o, a).subscribe({
       next: (res) => {
         this.toast.success(res.message || 'Approved.');
@@ -112,7 +112,7 @@ export class ApprovalsPage {
 
   protected startReject(o: ApprovalOrder, a: ApprovalArticle): void {
     this.note.set('');
-    this.rejectingKey.set(this.k(o, a));
+    this.rejectingKey.set(this.articleKey(o, a));
   }
 
   protected cancelReject(): void {
@@ -130,7 +130,7 @@ export class ApprovalsPage {
       return;
     }
     if (this.busyKey()) return;
-    this.busyKey.set(this.k(o, a));
+    this.busyKey.set(this.articleKey(o, a));
     this.svc.reject(o, a, note).subscribe({
       next: (res) => {
         this.toast.success(res.message || 'Your change request was sent.');

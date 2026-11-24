@@ -29,7 +29,7 @@
     <ul class="cards">
       @for (o of shown(); track o.order_id) {
         @for (a of o.visible; track a.unit_id) {
-          <li class="card ap-card" [class.busy]="busyKey() === k(o, a)" [attr.data-state]="a.status">
+          <li class="card ap-card" [class.busy]="busyKey() === articleKey(o, a)" [attr.data-state]="a.status">
             <div class="ap-row">
               <div class="ap-info">
                 <strong class="ap-ref">{{ o.reference }}</strong>
@@ -46,7 +46,7 @@
             </div>
 
             @if (isOpen(o, a)) {
-              <div class="ap-details" [id]="'ap-' + k(o, a)">
+              <div class="ap-details" [id]="'ap-' + articleKey(o, a)">
                 @if (a.status !== 'in_progress' && a.photos.length) {
                   <div class="photos">
                     @for (p of a.photos; track $index) {
@@ -60,11 +60,11 @@
                     @if (a.requested_at) {
                       <p class="a-meta">Photos sent <time>{{ a.requested_at | timeAgo }}</time></p>
                     }
-                    @if (rejectingKey() === k(o, a)) {
-                      <textarea class="note" rows="3" maxlength="500" placeholder="What should be changed?" aria-label="What should be changed" [value]="note()" (input)="onNote($event)" [disabled]="busyKey() === k(o, a)"></textarea>
+                    @if (rejectingKey() === articleKey(o, a)) {
+                      <textarea class="note" rows="3" maxlength="500" placeholder="What should be changed?" aria-label="What should be changed" [value]="note()" (input)="onNote($event)" [disabled]="busyKey() === articleKey(o, a)"></textarea>
                       <div class="actions">
-                        <button type="button" class="ap-btn ghost" (click)="cancelReject()" [disabled]="busyKey() === k(o, a)">Cancel</button>
-                        <button type="button" class="ap-btn reject" (click)="sendReject(o, a)" [disabled]="busyKey() === k(o, a)">Send to tailor</button>
+                        <button type="button" class="ap-btn ghost" (click)="cancelReject()" [disabled]="busyKey() === articleKey(o, a)">Cancel</button>
+                        <button type="button" class="ap-btn reject" (click)="sendReject(o, a)" [disabled]="busyKey() === articleKey(o, a)">Send to tailor</button>
                       </div>
                     } @else {
                       <div class="actions">
@@ -92,7 +92,7 @@
               </div>
             }
 
-            <button type="button" class="ap-more" (click)="toggle(o, a)" [attr.aria-expanded]="isOpen(o, a)" [attr.aria-controls]="'ap-' + k(o, a)">
+            <button type="button" class="ap-more" (click)="toggle(o, a)" [attr.aria-expanded]="isOpen(o, a)" [attr.aria-controls]="'ap-' + articleKey(o, a)">
               {{ isOpen(o, a) ? 'Hide details' : 'View more details' }}
               <ion-icon [name]="isOpen(o, a) ? 'arrow-up-outline' : 'arrow-forward-outline'" aria-hidden="true"></ion-icon>
             </button>
