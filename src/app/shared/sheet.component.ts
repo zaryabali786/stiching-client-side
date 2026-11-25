@@ -123,12 +123,12 @@ export class SheetComponent {
   constructor() {
     const vv = typeof window !== 'undefined' ? window.visualViewport : null;
     if (vv) {
-      const update = () => this.keyboard.set(Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)));
-      vv.addEventListener('resize', update);
-      vv.addEventListener('scroll', update);
+      const updateVal = () => this.keyboard.set(Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)));
+      vv.addEventListener('resize', updateVal);
+      vv.addEventListener('scroll', updateVal);
       inject(DestroyRef).onDestroy(() => {
-        vv.removeEventListener('resize', update);
-        vv.removeEventListener('scroll', update);
+        vv.removeEventListener('resize', updateVal);
+        vv.removeEventListener('scroll', updateVal);
       });
     }
 
